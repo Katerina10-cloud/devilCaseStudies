@@ -6,8 +6,8 @@ require(tidyverse)
 require(Seurat)
 require(scater)
 require(Matrix)
-library(ggplot2)
-library(gridExtra)
+require(ggplot2)
+require(gridExtra)
 
 setwd("/orfeo/LTS/CDSLab/LT_storage/kdavydzenka/sc_devil/")
 
