@@ -5,6 +5,7 @@
 require(tidyverse)
 require(Seurat)
 require(scater)
+require(swissknife)
 require(Matrix)
 require(ggplot2)
 require(gridExtra)
@@ -35,13 +36,12 @@ sc_retina <- AddMetaData(sc_retina, percent.ribo, col.name = "percent.ribo")
 #mt.genes <- grep(pattern = "MT-", x = rownames(rna.mtx), value = TRUE)
 #mt_percentage.per.cell <- 100*colSums(rna.mtx[mt.genes,])/colSums(rna.mtx)
 #rp_percentage.per.cell <- 100*colSums(rna.mtx[rp.genes,])/colSums(rna.mtx)
-library(gridExtra)
 
 p1 <- hist(nFeature_RNA, breaks=100) %>% abline(v=1000, col="red", lwd=2)
 p2 <- hist(mt_percentage.per.cell, breaks=100) %>% abline(v=5, col="red", lwd=2)
 p3 <- hist(rp_percentage.per.cell, breaks=100) %>% abline(v=5, col="red", lwd=2)
 
-plot1 <- grid.arrange(p1, p2, p3, nrow = 1)
+plot1 <- grid.arrange(p1, p2, p3, nrow = 2)
 
 ggsave(plot1,
        filename = "plot1.png",
@@ -49,13 +49,17 @@ ggsave(plot1,
        height = 6, width = 5, units = "in")
 
 ### Filtering ###
-#Cell-level filtering#
+
+## Cell-level filtering ##
 #filter the cell with low (low quality libraries) and high (putative doublets) gene detection
 nGenes.per.cell <- Matrix::colSums(rna.mtx>0)
-p2 <- hist(nGenes.per.cell, breaks=100) %>% abline(v=1000, col="red", lwd=2)
+p4 <- hist(nGenes.per.cell, breaks=100) %>% abline(v=1000, col="red", lwd=2)
 
+metadata <- subset(metadata_filtered, 
+                   metadata_filtered$nFeatures_RNA >= 3000 & metadata_filtered$nFeatures_RNA <= 8000)
+rna_counts <- rna_counts[,colnames(rna_counts) %in% rownames(metadata)]
 
-#Gene-level filtering#
+## Gene-level filtering ##
 #Remove absent genes from dataset:
 absent_genes=which(rowSums(sc_retina)==0)
 sc_retina=sc_retina[-absent_genes,]
@@ -63,3 +67,20 @@ sc_retina=sc_retina[-absent_genes,]
 #Remove other genes
 rna_counts <- rna_counts[!rownames(rna_counts) %in% mt.genes, ]
 rna_counts <- rna_counts[!rownames(rna_counts) %in% rp.genes, ]
+
+# Remove genes that do not present cell-to-cell fluctuations above what is expected due to technical variation
+# use the mean-variance trend fit and keep only genes falling above the fitted line
+
+#Using Single cell experiment function
+# create SCE
+sce <- SingleCellExperiment(list(counts = rna_counts))
+
+# calculate sizeFactors
+libsizes <- colSums(rna_counts)
+sizeFactors(sce) <- libsizes / mean(libsizes)
+
+# select variable genes
+varGenes <- swissknife::selVarGenes(sce, assay.type="counts")
+plot <- swissknife::plotSelVarGenes(varGenes)
+
+
