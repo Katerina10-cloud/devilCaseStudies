@@ -37,23 +37,19 @@ sc_retina <- AddMetaData(sc_retina, percent.ribo, col.name = "percent.ribo")
 #mt_percentage.per.cell <- 100*colSums(rna.mtx[mt.genes,])/colSums(rna.mtx)
 #rp_percentage.per.cell <- 100*colSums(rna.mtx[rp.genes,])/colSums(rna.mtx)
 
-p1 <- hist(nFeature_RNA, breaks=100) %>% abline(v=1000, col="red", lwd=2)
-p2 <- hist(mt_percentage.per.cell, breaks=100) %>% abline(v=5, col="red", lwd=2)
-p3 <- hist(rp_percentage.per.cell, breaks=100) %>% abline(v=5, col="red", lwd=2)
+p1 <- hist(nReads.per.cell, breaks = 100) %>% abline(v=1000, col="red", lwd=2)
+p2 <- hist(nGenes.per.cell, breaks=100) %>% abline(v=1000, col="red", lwd=2) %>% abline(v=6000, col="red", lwd=2)
+p3 <- hist(mt_percentage.per.cell, breaks=100) %>% abline(v=5, col="red", lwd=2)
+p4 <- hist(percent.ribo, breaks=100) %>% abline(v=5, col="red", lwd=2)
 
-plot1 <- grid.arrange(p1, p2, p3, nrow = 2)
-
-ggsave(plot1,
-       filename = "plot1.png",
-       device = "pdf",
-       height = 6, width = 5, units = "in")
 
 ### Filtering ###
 
 ## Cell-level filtering ##
 #filter the cell with low (low quality libraries) and high (putative doublets) gene detection
 nGenes.per.cell <- Matrix::colSums(rna.mtx>0)
-p4 <- hist(nGenes.per.cell, breaks=100) %>% abline(v=1000, col="red", lwd=2)
+
+cells.to.keep <- mt_percentage.per.cell<5 & nGenes.per.cell>1000 & nGenes.per.cell<8000 & nReads.per.cell>100
 
 metadata <- subset(metadata_filtered, 
                    metadata_filtered$nFeatures_RNA >= 3000 & metadata_filtered$nFeatures_RNA <= 8000)

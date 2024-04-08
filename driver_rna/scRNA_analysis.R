@@ -53,3 +53,19 @@ rna_counts <- rna.mtx[i=1:36503, j=cell_barcodes, drop = FALSE]
 
 #Convert Large dgCMatrix to normal matrix
 rna_counts <- as.matrix(rna.mtx)
+
+### Non-Linear dimensionality reduction ###
+seurat <- RunUMAP(seurat, dims = 1:10, n.neighbors = 30, min.dist = 0.3)
+
+#saving plot cluster
+options(bitmapType='cairo')
+png(file="plots/umap.png", width = 480, height = 480)
+
+DimPlot(seurat, 
+        dims = c(1, 2),
+        reduction = "umap",
+        group.by = 'cell_type',
+        split.by = 'cell_type')
+
+dev.off()
+
