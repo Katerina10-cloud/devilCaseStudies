@@ -1,6 +1,27 @@
 #!/usr/bin/env Rscript
 
-# Volcano Plot
+
+### UMAP plot ###
+library(Seurat)
+library(ggplot2)
+library(ggmin)
+#saving plot cluster
+options(bitmapType='cairo')
+png(file="plots/umap.png", width = 900, height = 600)
+
+clustering <- DimPlot(seurat, 
+                      dims = c(1, 2),
+                      reduction = "umap",
+                      group.by = 'cell_type',
+                      repel = TRUE, 
+                      label = FALSE
+)
+clustering + ggmin::theme_powerpoint() +
+  labs(title = "Human Fetal retina, 223 288 (Human Cell Atlas)") +
+  theme(plot.title=element_text(hjust=0.5, vjust=0.5))
+dev.off()
+
+### Volcano Plot ###
 
 library(ggplot2)
 library(gridExtra)
