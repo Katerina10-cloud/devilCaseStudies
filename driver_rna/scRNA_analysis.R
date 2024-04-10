@@ -35,7 +35,7 @@ metadata_filtered <- metadata %>%
 metadata <- metadata_filtered %>% select("cell_type") %>%
   mutate(cell_clusters = case_when(
     cell_type == "retinal progenitor cell"  ~ '0',
-    #cell_type == "retinal rod cell"  ~ '1',
+    #cell_type == "retinal rod cell"  ~ '1'))  
     cell_type == "retinal ganglion cell"  ~ '1')) %>%
   select("cell_clusters")
 
