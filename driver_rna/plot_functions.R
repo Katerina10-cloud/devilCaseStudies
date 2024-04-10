@@ -55,19 +55,18 @@ p1
 library(EnhancedVolcano)
 library(ggrepel)
 
-res <- stat_test_res %>% remove_rownames %>% column_to_rownames(var="name")
+res <- stat_test_retina %>% remove_rownames %>% column_to_rownames(var="name")
 
-p1 <- EnhancedVolcano(res,
+p1 <- EnhancedVolcano::EnhancedVolcano(res,
                 lab = rownames(res),
                 x = 'lfc',
                 y = 'adj_pval',
-                selectLab = c("PRUNE2", "MTUS2", "KLHL1", "CDH18", 
-                              "FGFR2", "FGF19", "CASP7"),
+                selectLab = c("KNL1", "LEF1", "CDK1", "FOXN4", "WFDC1", "PPEF2", "ABCC9", "MTUS2"),
                 xlab = bquote(~Log[2]~ 'fold change'),
                 pCutoff = 0.05,
-                FCcutoff = 1.0,
+                FCcutoff = 0.5,
                 pointSize = 1.0,
-                labSize = 4.0,
+                labSize = 3.0,
                 labCol = 'black',
                 labFace = 'bold',
                 boxedLabels = TRUE,
@@ -85,6 +84,11 @@ p1 <- EnhancedVolcano(res,
                 drawConnectors = TRUE,
                 widthConnectors = 1.0,
                 colConnectors = 'black')
-plot <- p1 + ggplot2::labs(title="Human neural retina DGE: single patient (7400 cells)") +
+plot <- p1 + ggplot2::labs(title="Human neural retina DGE: single patient, tissue types (27 000 cells)") +
                      theme(plot.title=element_text(hjust=0.5, vjust=0.5))
-plot                     
+plot         
+
+
+res <- res[!rownames(res) %in% c("THRA1/BTR", "NUGGC", "AC226118.1", "FOXG1-AS1", "LINC01767", 	
+                                 "CD69", "MYOZ2", "CLEC2B", "LINC01741", "SLC22A16", "SLC2A4",
+                                 "NKX6-2", "XXbac-BCX196D17.5", "C2CD4D", "H3C3", "LINC02747", "CTA-992D9.11"), ]
