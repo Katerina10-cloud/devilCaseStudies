@@ -28,15 +28,17 @@ metadata <- sc_retina@meta.data
 
 #Data filtering for donor ID and cell type
 metadata_filtered <- metadata %>%
-  filter(donor_id %in% c("Donor_1"),
-         cell_type %in% c("retinal progenitor cell", "retinal ganglion cell"),
+  filter(donor_id %in% c("Donor_1", "Donor_2", "Donor_3", "Donor_4", "Donor_5", "Donor_6", "Donor_7", "Donor_8", 
+                         "Donor_9", "Donor_10", "Donor_11", "Donor_12"),
+         cell_type %in% c("retinal progenitor cell", "retinal ganglion cell", "midget ganglion cell of retina", "Mueller cell"),
          sequencing_platform %in% c("Illumina NovaSeq 6000"))
 
 metadata <- metadata_filtered %>% select("cell_type") %>%
   mutate(cell_clusters = case_when(
     cell_type == "retinal progenitor cell"  ~ '0',
-    #cell_type == "retinal rod cell"  ~ '1'))  
-    cell_type == "retinal ganglion cell"  ~ '1')) %>%
+    cell_type == "midget ganglion cell of retina"  ~ '1',  
+    cell_type == "retinal ganglion cell"  ~ '1',
+    cell_type == "Mueller cell"  ~ '1')) %>%
   select("cell_clusters")
 
 cell_barcodes <- rownames(metadata_filtered)
