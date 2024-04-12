@@ -34,8 +34,7 @@ metadata_filtered <- metadata %>%
          sequencing_platform %in% c("Illumina NovaSeq 6000"))
 
 metadata_filtered <- metadata %>%
-  filter(donor_id %in% c("Donor_1", "Donor_2", "Donor_3", "Donor_4", "Donor_5", "Donor_6", "Donor_7", "Donor_8", 
-                         "Donor_9", "Donor_10", "Donor_11", "Donor_12"),
+  filter(donor_id %in% c("Donor_1", "Donor_2", "Donor_3", "Donor_4", "Donor_5", "Donor_6", "Donor_7", "Donor_8"),
          tissue %in% c("macula lutea", "peripheral region of retina"),
          sequencing_platform %in% c("Illumina NovaSeq 6000"))
 
@@ -50,9 +49,8 @@ metadata <- metadata_filtered %>% select("cell_type") %>%
 metadata <- metadata_filtered %>% select("tissue") %>%
   mutate(tissue_clusters = case_when(
     tissue == "macula lutea"  ~ '1',
-    cell_type == "peripheral region of retina"  ~ '0',  
-    cell_type == "retinal ganglion cell"  ~ '1')) %>%
-  select("tussue_clusters")
+    tissue == "peripheral region of retina"  ~ '0')) %>%
+  select("tissue_clusters")
 
 cell_barcodes <- rownames(metadata_filtered)
 #gene_ids <- meta_features$feature_name
