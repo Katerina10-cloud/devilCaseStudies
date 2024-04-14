@@ -9,17 +9,18 @@ library(ggmin)
 options(bitmapType='cairo')
 png(file="plots/umap.png", width = 900, height = 600)
 
-clustering <- DimPlot(seurat, 
+clustering <- DimPlot(sc_retina_atac, 
                       dims = c(1, 2),
                       reduction = "umap",
-                      group.by = 'cell_type',
+                      group.by = 'tissue',
                       repel = TRUE, 
                       label = FALSE
 )
 clustering + ggmin::theme_powerpoint() +
-  labs(title = "Human Fetal retina, 223 288 (Human Cell Atlas)") +
+  labs(title = "Human fetal retina snATAC tissue specific clustering (223 288 cells)") +
   theme(plot.title=element_text(hjust=0.5, vjust=0.5))
 dev.off()
+git status
 
 
 

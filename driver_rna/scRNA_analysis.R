@@ -60,10 +60,6 @@ rownames(rna.mtx) <- meta_features$feature_name
 #subsetting sparse matrix
 rna_counts <- rna.mtx[i=1:36503, j=cell_barcodes, drop = FALSE]
 
-#rna_counts <- rna_counts %>%
-  #select(colnames(rna_counts) %in% rownames(metadata_filtered))
-#atac_counts_ret <- subset(atac_counts_retina, subset = colnames(atac_counts_retina) %in% rownames(metadata_filtered_atac))
-
 #Convert Large dgCMatrix to normal matrix
 rna_counts <- as.matrix(rna.mtx)
 
@@ -71,3 +67,58 @@ rna_counts <- as.matrix(rna.mtx)
 seurat <- RunUMAP(seurat, dims = 1:10, n.neighbors = 30, min.dist = 0.3)
 
 
+### Gene set Enrichement analysis ###
+
+# Filter DEG #
+resSig_up <- subset(stat_test_res, stat_test_res$adj_pval < 0.05 & lfc > 1)
+resSig_down <- subset(stat_test_res, stat_test_res$adj_pval < 0.05 & lfc < -1)
+deg <- rbind(resSig_down, resSig_up)
+
+# Convert Gene symbols to EntrezID #
+#BiocManager::install("org.Hs.eg.db")
+library(org.Hs.eg.db)
+hs <- org.Hs.eg.db
+my_symbols <- deg$name
+gene_list <- select(hs,
+       keys = my_symbols,
+       columns = c("ENTREZID", "SYMBOL"),
+       keytype = "SYMBOL")
+gene_list <- na.omit(gene_list)
+
+# GSEA using fsea #
+#BiocManager::install("fgsea")
+#BiocManager::install("reactome.db")
+library(reactome.db)
+library(fgsea)
+library(data.table)
+library(ggplot2)
+library(tidyverse)
+
+# Preparing input #
+gene_list <- gene_list[!duplicated(gene_list$SYMBOL),]
+gene_list <- gene_list[gene_list$SYMBOL %in% rownames(deg),]
+gene_list_rank <- as.vector(deg$lfc)
+names(gene_list_rank) <- gene_list$ENTREZID
+gene_list_rank <- sort(gene_list_rank, decreasing = TRUE)
+
+# Running fgsea #
+pathways <- reactomePathways(names(gene_list_rank))
+fseaRes <- fgsea::fgsea(pathways = pathways,
+                         stats = gene_list_rank,
+                         minSize = 15,
+                         maxSize = 500)
+
+# Make table plot for a bunch of selected pathways #
+topPathwaysUp <- fseaRes[ES > 0][head(order(pval), n=10), pathway]
+topPathwaysDown <- fseaRes[ES < 0][head(order(pval), n=10), pathway]
+topPathways <- c(topPathwaysUp, rev(topPathwaysDown))
+plot_fgsea <- plotGseaTable(pathways[topPathways], gene_list_rank, fseaRes, gseaParam = 0.5)
+plot_fgsea
+
+# Remove redundant terms #
+collapsePathways <- collapsePathways(fseaRes[order(pval)][padj < 0.01],
+                                     pathways, gene_list_rank)
+mainPathways <- fseaRes[pathway %in% collapsePathways$mainPathways][
+  order(-NES), pathway]
+plot_fgsea <- plotGseaTable(pathways[mainPathways], gene_list_rank, fseaRes, gseaParam = 0.5)
+plot_fgsea
