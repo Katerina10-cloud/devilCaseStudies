@@ -20,7 +20,7 @@ clustering + ggmin::theme_powerpoint() +
   labs(title = "Human fetal retina snATAC tissue specific clustering (223 288 cells)") +
   theme(plot.title=element_text(hjust=0.5, vjust=0.5))
 dev.off()
-git status
+
 
 
 
@@ -58,11 +58,11 @@ library(ggrepel)
 
 res <- stat_test_retina %>% remove_rownames %>% column_to_rownames(var="name")
 
-p1 <- EnhancedVolcano::EnhancedVolcano(res,
-                lab = rownames(res),
+p1 <- EnhancedVolcano::EnhancedVolcano(res1,
+                lab = rownames(res1),
                 x = 'lfc',
                 y = 'adj_pval',
-                selectLab = c("KNL1", "LEF1", "CDK1", "FOXN4", "WFDC1", "PPEF2", "ABCC9", "MTUS2"),
+                selectLab = c("RGS16", "ATOH7", "GADD45G", "HES1", "OTX2", "SFRP2", "HKDC1", "CNGB1", "NFIC"),
                 xlab = bquote(~Log[2]~ 'fold change'),
                 pCutoff = 0.05,
                 FCcutoff = 0.5,
@@ -85,11 +85,17 @@ p1 <- EnhancedVolcano::EnhancedVolcano(res,
                 drawConnectors = TRUE,
                 widthConnectors = 1.0,
                 colConnectors = 'black')
-plot <- p1 + ggplot2::labs(title="Human neural retina DGE: single patient, tissue types (27 000 cells)") +
+plot <- p1 + ggplot2::labs(title="Differentiated neurons vs RPCs, (145 000 cells)") +
                      theme(plot.title=element_text(hjust=0.5, vjust=0.5))
 plot         
 
+res <- res[!rownames(res) %in% c(), ]
 
-res <- res[!rownames(res) %in% c("THRA1/BTR", "NUGGC", "AC226118.1", "FOXG1-AS1", "LINC01767", 	
-                                 "CD69", "MYOZ2", "CLEC2B", "LINC01741", "SLC22A16", "SLC2A4",
-                                 "NKX6-2", "XXbac-BCX196D17.5", "C2CD4D", "H3C3", "LINC02747", "CTA-992D9.11"), ]
+### Visualize fgsea enrichment results ###
+ggplot(data=screencast, aes(x=Reason,y=Percentage,fill=factor(Type))) +
+  geom_bar(position="dodge",stat="identity") + 
+  coord_flip() +
+  ggtitle("Strategies for Using Homework Solution and Mini-Lecture Screencasts")
+
+
+
