@@ -160,12 +160,12 @@ pathways <- reactomePathways(names(gene_list_rank))
 fseaRes <- fgsea::fgsea(pathways = pathways,
                          stats = gene_list_rank,
                          minSize = 15,
-                         maxSize = 500)
+                         maxSize = 350)
 
 # Make table plot for a bunch of selected pathways #
-topPathwaysUp <- fseaRes[ES > 0][head(order(pval), n=5), pathway]
-topPathwaysDown <- fseaRes[ES < 0][head(order(pval), n=5), pathway]
-topPathways <- c(topPathwaysUp, rev(topPathwaysDown))
+topPathwaysUp <- fseaRes[ES > 0][head(order(pval), n=7), pathway]
+topPathwaysDown <- fseaRes[ES < 0][head(order(pval), n=7), pathway]
+topPathways <- c(topPathwaysUp, topPathwaysDown)
 plot_fgsea <- plotGseaTable(pathways[topPathways], gene_list_rank, fseaRes, gseaParam = 0.5)
 plot_fgsea
 
