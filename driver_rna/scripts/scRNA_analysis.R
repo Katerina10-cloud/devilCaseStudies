@@ -2,8 +2,6 @@
 
 ### scRNA analysis ###
 
-setwd("D:/PhD_AI/sc_devil/")
-
 #setwd("/orfeo/LTS/CDSLab/LT_storage/kdavydzenka/sc_devil/")
 
 library(tidyverse)
@@ -80,6 +78,12 @@ metadata2 <- metadata2 %>%
     cell_type == "midget ganglion cell of retina" ~ '1')) %>% 
   dplyr::select(c("cell_clusters", "cell_type"))
 
+metadata_filtered <- metadata %>%
+  filter(donor_id %in% c("Donor_1", "Donor_2", "Donor_3", "Donor_4", "Donor_5", "Donor_6", "Donor_7", "Donor_8", 
+                         "Donor_9", "Donor_10", "Donor_11", "Donor_12"),
+         cell_type %in% c("retinal progenitor cell", "retinal rod cell"),
+         sequencing_platform %in% c("Illumina NovaSeq 6000"))
+
 
 # Filtering based on development stage
 metadata_filtered <- metadata %>%
@@ -133,7 +137,7 @@ deg <- rbind(resSig_down, resSig_up)
 library(org.Hs.eg.db)
 hs <- org.Hs.eg.db
 my_symbols <- deg$name
-gene_list <- select(hs,
+gene_list <- AnnotationDbi::select(hs,
        keys = my_symbols,
        columns = c("ENTREZID", "SYMBOL"),
        keytype = "SYMBOL")
@@ -155,7 +159,7 @@ gene_list_rank <- as.vector(deg$lfc)
 names(gene_list_rank) <- gene_list$ENTREZID
 gene_list_rank <- sort(gene_list_rank, decreasing = TRUE)
 
-# Running fgsea #
+### Running fgsea ###
 pathways <- reactomePathways(names(gene_list_rank))
 fseaRes <- fgsea::fgsea(pathways = pathways,
                          stats = gene_list_rank,
@@ -175,4 +179,40 @@ collapsePathways <- collapsePathways(fseaRes[order(pval)][padj < 0.01],
 mainPathways <- fseaRes[pathway %in% collapsePathways$mainPathways][order(-NES), pathway]
 plot_fgsea <- plotGseaTable(pathways[mainPathways], gene_list_rank, fseaRes, gseaParam = 0.5)
 plot_fgsea
+
+
+### GO Enrichment clusterProfiler###
+library(tidyverse)
+library(clusterProfiler)
+library(enrichplot)
+library(org.Hs.eg.db)
+
+res_gseGO <- gseGO(geneList = gene_list_rank, ont = "BP", OrgDb = org.Hs.eg.db,
+                   keyType = "ENTREZID", minGSSize = 10, maxGSSize = 350)
+
+# Select enriched pathways #
+res_gse <- res_gseGO@result
+res_gse <- res_gse %>%
+  filter(Description %in% c("neurotransmitter transport", "acetylcholine receptor signaling pathway", "photoreceptor cell development",
+                            "synapse assembly", "regulation of protein secretion", "DNA metabolic process", "mitotic cell cycle", 
+                            "chromosome organization", "Wnt signaling pathway", "DNA replication" )) %>% 
+  mutate(gene_clusters = case_when(
+    NES > 0  ~ 'up-regulated',
+    NES < 0  ~ 'down-regulated'))
+
+res_gse <- res_gse %>%
+  filter(Description %in% c("DNA metabolic process", "mitotic cell cycle", "DNA replication",
+                            "canonical Wnt signaling pathway", "chromosome organization",
+                            "neurotransmitter secretion", "dopamine receptor signaling pathway",
+                            "synapse organization", "eye photoreceptor cell development","myotube cell development" )) %>% 
+  mutate(gene_clusters = case_when(
+    NES > 0  ~ 'up-regulated',
+    NES < 0  ~ 'down-regulated'))
+
+
+res_gse <- res_gse %>% mutate(gene_clusters = case_when(
+  NES > 0  ~ 'up-regulated',
+  NES < 0  ~ 'down-regulated'))
+  
+
 

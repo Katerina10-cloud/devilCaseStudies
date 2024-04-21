@@ -1,7 +1,6 @@
-#!/usr/bin/env Rscript
-
 
 ### UMAP plot ###
+
 library(Seurat)
 library(ggplot2)
 library(ggmin)
@@ -20,7 +19,6 @@ clustering + ggmin::theme_powerpoint() +
   labs(title = "Human fetal retina snATAC tissue specific clustering (223 288 cells)") +
   theme(plot.title=element_text(hjust=0.5, vjust=0.5))
 dev.off()
-
 
 
 
@@ -85,17 +83,84 @@ p1 <- EnhancedVolcano::EnhancedVolcano(res1,
                 drawConnectors = TRUE,
                 widthConnectors = 1.0,
                 colConnectors = 'black')
-plot <- p1 + ggplot2::labs(title="Differentiated neurons vs RPCs, (145 000 cells)") +
-                     theme(plot.title=element_text(hjust=0.5, vjust=0.5))
-plot         
 
-res <- res[!rownames(res) %in% c(), ]
+plot1 <- p1 + ggplot2::labs(title="Macula vs Peripheral retina, RPCs (66 000 cells)") +
+  theme(plot.title=element_text(hjust=0.5, vjust=0.5))
+
+plot2 <- p1 + ggplot2::labs(title="Differentiated neurons vs RPCs (145 000 cells)") +
+  theme(plot.title=element_text(hjust=0.5, vjust=0.5))
+
+plot3 <- p1 + ggplot2::labs(title="RGCs vs RPCs (107 000 cells)") +
+  theme(plot.title=element_text(hjust=0.5, vjust=0.5))
+
+plot4 <- p1 + ggplot2::labs(title="Early RPCs vs Late RPCs + Muller cells (75 000 cells)") +
+  theme(plot.title=element_text(hjust=0.5, vjust=0.5))
+
+
 
 ### Visualize fgsea enrichment results ###
-ggplot(data=screencast, aes(x=Reason,y=Percentage,fill=factor(Type))) +
-  geom_bar(position="dodge",stat="identity") + 
-  coord_flip() +
-  ggtitle("Strategies for Using Homework Solution and Mini-Lecture Screencasts")
+# making ggdotchart
+library(ggpubr)
+
+res_gse$log_padjust <- -log10(res_gse$p.adjust)
+
+plot1 <- ggdotchart(res_gse, x = "Description", y = "log_padjust",
+                    color = "gene_clusters",
+                    palette = c("#00AFBB", "#FC4E07"),
+                    sorting = "descending",
+                    rotate = TRUE,
+                    group = "gene_clusters",
+                    dot.size = 6,
+                    add = "segments",
+                    title = "Late RPCs + Muller cells vs Early RPCs",
+                    xlab = "Pathways",
+                    ylab = "-log10(padjust)",
+                    ggtheme = theme_pubr()
+)
+plot1 + plot2
+
+
+### Heatmap of the most significant genes ###
+library("ComplexHeatmap")
+library("RcolorBrewer")
+library("circlize")
+library("grid")
+
+# Extract DEG #
+
+# Macula vs Peripheral retina
+res_deg1 <- res_deg %>%
+  filter(name %in% c("CYP1B1", "FGF19", "HES1", "FOXG1", "TBX20", "DIO2", "ANXA2", "FRZB", "CRYAB", "CYP26A1",
+                     "CDKN1A", "PTGDS", "GPX3", "APOE"))
+
+# RGCs vs RPCs
+res_deg2 <- res_deg %>%
+  filter(name %in% c("HES1", "SFRP2", "NFIA", "FRZB", "PTFA1", "ATOH7", "MYC", "POU4F1", "ISL2", "EBF3",
+                     "POUGF2"))
+
+# Differentiated neurons vs RPCs
+res_deg3 <- res_deg %>%
+  filter(name %in% c("HKDC1", "SFRP2", "HES1", "ATOH7", "NFIC", "GADD456", "OTX2", "CNGB1", "PCA3", "MYO3B"))
+
+# Early RPCs vs Late RPCs
+res_deg4 <- res_deg %>%
+  filter(name %in% c("HAS2", "FGF19", "ZNF676", "ATOH7", "PTF1A", "OTX2", "FOS", "NFIB", "PID1", 
+                     "NETO1", "PTGDS", "FGF19"))
+
+ann_col_info <- as.data.frame(metadata)
+anno_info_colors <- list(cell_type = c(retinal progenitor cell = "lightblue",
+                                       retinal ganglion cell = "red"))
+
+plot1 <- pheatmap(rna_exp,
+                  cluster_rows = FALSE,
+                  cluster_cols = TRUE,
+                  show_rownames = TRUE,
+                  show_colnames = FALSE,
+                  scale = "row",
+                  color =colorRampPalette(c("navy", "white", "firebrick3"))(50),
+                  annotation_col = ann_col_info,
+                  annotation_colors = anno_info_colors,
+                  main = "DGE ")
 
 
 
