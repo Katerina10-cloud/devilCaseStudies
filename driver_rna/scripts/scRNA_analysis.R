@@ -92,19 +92,19 @@ metadata_filtered <- metadata %>%
          cell_type %in% c("retinal progenitor cell", "Mueller cell"),
          sequencing_platform %in% c("Illumina NovaSeq 6000"))
 
-metadata2 <- metadata_filtered %>% 
+metadata2 <- metadata2 %>% 
   mutate(dev_stage = case_when(
-    development_stage == "9th week post-fertilization human stage" & cell_type == "retinal progenitor cell"  ~ '0',
-    development_stage == "11th week post-fertilization human stage" & cell_type == "retinal progenitor cell"~ '0',
-    development_stage == "12th week post-fertilization human stage" & cell_type == "retinal progenitor cell" ~ '0',
-    development_stage == "13th week post-fertilization human stage" & cell_type == "retinal progenitor cell" ~ '0',
-    development_stage == "14th week post-fertilization human stage" & cell_type == "retinal progenitor cell" ~ '0',
-    development_stage == "15th week post-fertilization human stage" & cell_type == "retinal progenitor cell" ~ '1',
-    development_stage == "17th week post-fertilization human stage" & cell_type == "retinal progenitor cell" ~ '1',
-    development_stage == "20th week post-fertilization human stage" & cell_type == "retinal progenitor cell" ~ '1',
-    development_stage == "21st week post-fertilization human stage" & cell_type == "retinal progenitor cell" ~ '1',
-    development_stage == "24th week post-fertilization human stage" & cell_type == "retinal progenitor cell" ~ '1',
-    cell_type == "Mueller cell" ~ '1')) %>% 
+    development_stage == "9th week post-fertilization human stage" & cell_type == "retinal progenitor cell"  ~ 'Early RPCs',
+    development_stage == "11th week post-fertilization human stage" & cell_type == "retinal progenitor cell"~ 'Early RPCs',
+    development_stage == "12th week post-fertilization human stage" & cell_type == "retinal progenitor cell" ~ 'Early RPCs',
+    development_stage == "13th week post-fertilization human stage" & cell_type == "retinal progenitor cell" ~ 'Early RPCs',
+    development_stage == "14th week post-fertilization human stage" & cell_type == "retinal progenitor cell" ~ 'Early RPCs',
+    development_stage == "15th week post-fertilization human stage" & cell_type == "retinal progenitor cell" ~ 'Late RPCs',
+    development_stage == "17th week post-fertilization human stage" & cell_type == "retinal progenitor cell" ~ 'Late RPCs',
+    development_stage == "20th week post-fertilization human stage" & cell_type == "retinal progenitor cell" ~ 'Late RPCs',
+    development_stage == "21st week post-fertilization human stage" & cell_type == "retinal progenitor cell" ~ 'Late RPCs',
+    development_stage == "24th week post-fertilization human stage" & cell_type == "retinal progenitor cell" ~ 'Late RPCs',
+    cell_type == "Mueller cell" ~ 'Mueller')) %>% 
   dplyr::select(c("dev_stage", "cell_type"))
 
 

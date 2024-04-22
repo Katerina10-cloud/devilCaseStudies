@@ -6,7 +6,7 @@ library(ggplot2)
 library(ggmin)
 #saving plot cluster
 options(bitmapType='cairo')
-png(file="plots/umap.png", width = 900, height = 600)
+png(file="plots/heatmap1.png", width = 500, height = 500)
 
 clustering <- DimPlot(sc_retina_atac, 
                       dims = c(1, 2),
@@ -19,7 +19,6 @@ clustering + ggmin::theme_powerpoint() +
   labs(title = "Human fetal retina snATAC tissue specific clustering (223 288 cells)") +
   theme(plot.title=element_text(hjust=0.5, vjust=0.5))
 dev.off()
-
 
 
 ### Volcano Plot ###
@@ -49,6 +48,15 @@ p1 <- ggplot(data = stat_test_res, aes(x = lfc, y = -log10(adj_pval), col = diff
 p1
 
 ### Enhanced volcano ###
+
+# Tissue specific markers RPC: "FGF19", "CYP1B1", "CYP26A1", "DIO2", "CDKN1A", "ANXA2", "FRZB", "CRYAB", "HES1", "PTGDS", 
+#"GPX3", "APOE", "FOXG1", "TBX20"
+
+# Dev.stage: "FGF19", "HAS2", "ZNF676", "FOS", "NFIB", "PID1", "NETO1", "PTGDS", "ATOH7", "PTF1A", "OTX2", "LUM", "CRYAB", "APOE"
+
+# Diff. neurons vs RPCs : "HKDC1", "HES1", "SFRP2", "ATOH7", "RGS1G", "GADD45G", "NFIC", "OTX2", "CNGB1"
+# RGCs vs RPCs : "HES1", "SFRP2", "FRZB", "ATOH7", "NFIA", "PTF1A", "MYC", "ISL1", "POU4F1", "POU6F2", "EBF3"
+# Retinal rod cells vs RPCs: "HES1", "ATOH7", "SFRP2", "ISL2", "NFIC", "RD3", "RAX2"
 
 #BiocManager::install('EnhancedVolcano')
 library(EnhancedVolcano)
@@ -96,6 +104,9 @@ plot3 <- p1 + ggplot2::labs(title="RGCs vs RPCs (107 000 cells)") +
 plot4 <- p1 + ggplot2::labs(title="Early RPCs vs Late RPCs + Muller cells (75 000 cells)") +
   theme(plot.title=element_text(hjust=0.5, vjust=0.5))
 
+plot5 <- p1 + ggplot2::labs(title="Retinal rod cells vs RPCs (104 000 cells)") +
+  theme(plot.title=element_text(hjust=0.5, vjust=0.5))
+plot5
 
 
 ### Visualize fgsea enrichment results ###
@@ -121,46 +132,20 @@ plot1 + plot2
 
 
 ### Heatmap of the most significant genes ###
-library("ComplexHeatmap")
-library("RcolorBrewer")
-library("circlize")
-library("grid")
 
-# Extract DEG #
+heatmap1 <- Seurat::DoHeatmap(subset(seurat, downsample = 20000), 
+                              features = gene_list1, 
+                              group.by = "tissue", 
+                              size = 3)
+heatmap1 + scale_fill_gradientn(colors = c("darkblue", "white", "yellow")) +
+  labs(title = "Macula lutea vs Peripheral retina") +
+  theme(plot.title=element_text(hjust=0.5, vjust=0.5))
 
-# Macula vs Peripheral retina
-res_deg1 <- res_deg %>%
-  filter(name %in% c("CYP1B1", "FGF19", "HES1", "FOXG1", "TBX20", "DIO2", "ANXA2", "FRZB", "CRYAB", "CYP26A1",
-                     "CDKN1A", "PTGDS", "GPX3", "APOE"))
 
-# RGCs vs RPCs
-res_deg2 <- res_deg %>%
-  filter(name %in% c("HES1", "SFRP2", "NFIA", "FRZB", "PTFA1", "ATOH7", "MYC", "POU4F1", "ISL2", "EBF3",
-                     "POUGF2"))
 
-# Differentiated neurons vs RPCs
-res_deg3 <- res_deg %>%
-  filter(name %in% c("HKDC1", "SFRP2", "HES1", "ATOH7", "NFIC", "GADD456", "OTX2", "CNGB1", "PCA3", "MYO3B"))
-
-# Early RPCs vs Late RPCs
-res_deg4 <- res_deg %>%
-  filter(name %in% c("HAS2", "FGF19", "ZNF676", "ATOH7", "PTF1A", "OTX2", "FOS", "NFIB", "PID1", 
-                     "NETO1", "PTGDS", "FGF19"))
-
-ann_col_info <- as.data.frame(metadata)
-anno_info_colors <- list(cell_type = c(retinal progenitor cell = "lightblue",
-                                       retinal ganglion cell = "red"))
-
-plot1 <- pheatmap(rna_exp,
-                  cluster_rows = FALSE,
-                  cluster_cols = TRUE,
-                  show_rownames = TRUE,
-                  show_colnames = FALSE,
-                  scale = "row",
-                  color =colorRampPalette(c("navy", "white", "firebrick3"))(50),
-                  annotation_col = ann_col_info,
-                  annotation_colors = anno_info_colors,
-                  main = "DGE ")
+### Using dittoSeq ###
+#BiocManager::install("dittoSeq")
+library(dittoSeq)
 
 
 
