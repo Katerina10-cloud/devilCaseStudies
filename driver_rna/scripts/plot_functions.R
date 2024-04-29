@@ -1,12 +1,13 @@
-
+###--------------------------------------------------------------###
 ### UMAP plot ###
+###--------------------------------------------------------------###
 
 library(Seurat)
 library(ggplot2)
 library(ggmin)
 #saving plot cluster
 options(bitmapType='cairo')
-png(file="plots/heatmap1.png", width = 500, height = 500)
+png(file="plots/heatmap2.png", width = 500, height = 400)
 
 clustering <- DimPlot(sc_retina_atac, 
                       dims = c(1, 2),
@@ -14,6 +15,7 @@ clustering <- DimPlot(sc_retina_atac,
                       group.by = 'tissue',
                       repel = TRUE, 
                       label = FALSE
+        
 )
 clustering + ggmin::theme_powerpoint() +
   labs(title = "Human fetal retina snATAC tissue specific clustering (223 288 cells)") +
@@ -21,7 +23,9 @@ clustering + ggmin::theme_powerpoint() +
 dev.off()
 
 
+###-----------------------------------------------------------------###
 ### Volcano Plot ###
+###-----------------------------------------------------------------###
 
 library(ggplot2)
 library(gridExtra)
@@ -133,14 +137,30 @@ plot1 + plot2
 
 ### Heatmap of the most significant genes ###
 
-heatmap1 <- Seurat::DoHeatmap(subset(seurat, downsample = 20000), 
+gene_list1 <- c("FGF19", "CYP1B1", "CYP26A1", "DIO2", "ANXA2", "FRZB", "CRYAB", "HES1", "PTGDS", 
+                "GPX3", "FOXG1", "TBX20")
+
+gene_list2 <- c("FGF19", "HAS2", "ZNF676", "FOS", "NFIB", "PID1", "NETO1", "PTGDS", "ATOH7", 
+                "PTF1A", "OTX2", "LUM")
+
+heatmap1 <- Seurat::DoHeatmap(subset(sc_retina, downsample = 10000), 
                               features = gene_list1, 
                               group.by = "tissue", 
-                              size = 3)
-heatmap1 + scale_fill_gradientn(colors = c("darkblue", "white", "yellow")) +
+                              size = 3,
+                              group.label.rot = TRUE)
+
+heatmap1 <- heatmap1 + scale_fill_gradientn(colors = c("darkblue", "white", "yellow")) +
   labs(title = "Macula lutea vs Peripheral retina") +
   theme(plot.title=element_text(hjust=0.5, vjust=0.5))
 
+heatmap2 <- Seurat::DoHeatmap(subset(sc_retina, downsample = 10000), 
+                              features = gene_list2, 
+                              group.by = "dev_stage", 
+                              size = 3)
+
+heatmap2 <- heatmap2 + scale_fill_gradientn(colors = c("darkblue", "white", "yellow")) +
+  labs(title = "Late RPCs vs Early RPCs") +
+  theme(plot.title=element_text(hjust=0.5, vjust=0.5))
 
 
 ### Using dittoSeq ###

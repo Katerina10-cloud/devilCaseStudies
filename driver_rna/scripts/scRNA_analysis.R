@@ -1,74 +1,66 @@
-#!/usr/bin/env Rscript
-
+###---------------------------------------------------------###
 ### scRNA analysis ###
+###---------------------------------------------------------###
 
 #setwd("/orfeo/LTS/CDSLab/LT_storage/kdavydzenka/sc_devil/")
 
 library(tidyverse)
-library(ggplot2)
 library(Seurat)
-library(scater)
-library(scran)
-#library(BPCells) #high performance single cell analysis
-#library(SeuratObject)
-#library(sva)
-#library(BiocParallel)
-#library(MatrixExtra)
+library(SingleCellExperiment)
+library(swissknife)
 
-PATH <- "/orfeo/LTS/CDSLab/LT_storage/kdavydzenka/sc_devil/data/"
-sc_retina <- readRDS(file = paste(PATH, "/sc_retina.rds", sep = ""))
-#sc_retina <- readRDS("/u/cdslab/kdavydzenka/fast/sc_multiome/sc_retina/scRNA_retina.rds")
+#PATH <- "/orfeo/LTS/CDSLab/LT_storage/kdavydzenka/sc_devil/data/"
+#sc_retina <- readRDS(file = paste(PATH, "/sc_retina.rds", sep = ""))
+sc_retina <- readRDS("/u/cdslab/kdavydzenka/fast/sc_multiome/sc_retina/scRNA_retina.rds")
 
-#Extract data from Seurat object
+### Rename features in Seurat object ###
+meta_features <- sc_retina@assays[["RNA"]]@meta.features
+rownames(sc_retina@assays$RNA@counts) <- meta_features$feature_name
+rownames(sc_retina@assays$RNA@data) <- meta_features$feature_name
+
+### Extract data from Seurat object ###
 rna_counts <- GetAssayData(object = sc_retina, layer = "counts")
 meta_features <- sc_retina@assays[["RNA"]]@meta.features
 metadata <- sc_retina@meta.data
 
-### Data filtering for donor ID and cell type ###
+### Data filtering (donor ID, cell type) ###
 
-#Differentiated vs non diff. neurons
 metadata_filtered <- metadata %>%
-  filter(donor_id %in% c("Donor_1", "Donor_2", "Donor_3", "Donor_4", "Donor_5", "Donor_6", "Donor_7", "Donor_8", 
-                         "Donor_9", "Donor_10", "Donor_11", "Donor_12"),
-         cell_type %in% c("retinal progenitor cell", "Mueller cell", "amacrine cell", "retinal rod cell", "diffuse bipolar 1 cell", 
-                          "GABAergic amacrine cell", "retinal bipolar neuron", "retinal cone cell"),
+  filter(donor_id %in% c("Donor_2", "Donor_3", "Donor_4", "Donor_5", "Donor_6", "Donor_8", "Donor_10", "Donor_11", "Donor_12"),
+         #cell_type %in% c("retinal progenitor cell", "Mueller cell", "amacrine cell", "retinal rod cell", 
+                          #"diffuse bipolar 1 cell", "GABAergic amacrine cell", "retinal bipolar neuron", "retinal cone cell"),
          sequencing_platform %in% c("Illumina NovaSeq 6000"))
 
-metadata2 <- subset(metadata_filtered,
-                    metadata_filtered$nFeatures_RNA >= 1000 & metadata_filtered$nFeatures_RNA <= 8000)
 
-metadata2 <- metadata2 %>% 
-  mutate(cell_clusters = case_when(
-    cell_type == "retinal progenitor cell"  ~ '0',
-    cell_type == "Mueller cell"  ~ '0',  
+metadata_filtered <- metadata_filtered[ !(metadata_filtered$cell_type %in% c("diffuse bipolar 4 cell", "diffuse bipolar 6 cell",
+                                                                             "S cone cell", "OFFx cell", "OFF parasol ganglion cell")), ]
+
+metadata_filtered <- metadata_filtered %>% 
+  mutate(cluster = case_when(
     cell_type == "amacrine cell"  ~ '1',
-    cell_type == "retinal rod cell"  ~ '1',
-    cell_type == "diffuse bipolar 1 cell" ~ '1',
-    cell_type == "GABAergic amacrine cell" ~ '1',
-    cell_type == "retinal bipolar neuron" ~ '1',
-    cell_type == "retinal cone cell" ~ '1')) %>% 
-  dplyr::select(c("cell_clusters", "cell_type"))
+    cell_type == "retinal cone cell"  ~ '2',  
+    cell_type == "retinal rod cell"  ~ '3',
+    cell_type == "Mueller cell"  ~ '4',
+    cell_type == "retinal ganglion cell" ~ '5',
+    cell_type == "retinal horizontal cell" ~ '6',
+    cell_type == "retinal bipolar neuron" ~ '7',
+    cell_type == "ON-bipolar cell" ~ '8',
+    cell_type == "rod bipolar cell" ~ '9',
+    cell_type == "retinal progenitor cell" ~ '10',
+    cell_type == "H1 horizontal cell" ~ '11',
+    cell_type == "H2 horizontal cell" ~ '12',
+    cell_type == "starburst amacrine cell" ~ '13',
+    cell_type == "midget ganglion cell of retina" ~ '14',
+    cell_type == "GABAergic amacrine cell" ~ '15',
+    cell_type == "glycinergic amacrine cell" ~ '16',
+    cell_type == "diffuse bipolar 1 cell" ~ '17',
+    cell_type == "diffuse bipolar 2 cell" ~ '18',
+    cell_type == "diffuse bipolar 3a cell" ~ '19',
+    cell_type == "diffuse bipolar 3b cell" ~ '20',
+    cell_type == "flat midget bipolarvcell" ~ '21',
+    cell_type == "invaginating midget bipolar cell" ~ '22',
+    cell_type == "ON parasol ganglion cell" ~ '23'))
 
-
-# Tissue specific filtering
-metadata_filtered <- metadata %>%
-  filter(donor_id %in% c("Donor_1", "Donor_2", "Donor_3", "Donor_4", "Donor_5", "Donor_6", "Donor_7", "Donor_8"),
-         tissue %in% c("macula lutea", "peripheral region of retina"),
-         sequencing_platform %in% c("Illumina NovaSeq 6000"))
-
-metadata <- metadata_filtered %>% select("tissue") %>%
-  mutate(tissue_clusters = case_when(
-    tissue == "macula lutea"  ~ '1',
-    tissue == "peripheral region of retina"  ~ '0')) %>%
-  select("tissue_clusters")
-
-
-# Cell specific filtering
-metadata_filtered <- metadata %>%
-  filter(donor_id %in% c("Donor_1", "Donor_2", "Donor_3", "Donor_4", "Donor_5", "Donor_6", "Donor_7", "Donor_8", 
-                         "Donor_9", "Donor_10", "Donor_11", "Donor_12"),
-         cell_type %in% c("retinal progenitor cell", "Mueller cell", "retinal ganglion cell", "midget ganglion cell of retina"),
-         sequencing_platform %in% c("Illumina NovaSeq 6000"))
 
 metadata2 <- metadata2 %>% 
   mutate(cell_clusters = case_when(
@@ -78,54 +70,98 @@ metadata2 <- metadata2 %>%
     cell_type == "midget ganglion cell of retina" ~ '1')) %>% 
   dplyr::select(c("cell_clusters", "cell_type"))
 
-metadata_filtered <- metadata %>%
-  filter(donor_id %in% c("Donor_1", "Donor_2", "Donor_3", "Donor_4", "Donor_5", "Donor_6", "Donor_7", "Donor_8", 
-                         "Donor_9", "Donor_10", "Donor_11", "Donor_12"),
-         cell_type %in% c("retinal progenitor cell", "retinal rod cell"),
-         sequencing_platform %in% c("Illumina NovaSeq 6000"))
+
+### Calculate the proportion of mitochondrial reads and add to the metadata table ###
+mt.genes <- rownames(rna_counts)[grep("^MT-",rownames(rna_counts))]
+percent.mito <- colSums(rna_counts[mt.genes,])/Matrix::colSums(rna_counts)*100
+sc_retina <- AddMetaData(sc_retina, percent.mito, col.name = "percent.mito")
+
+### Calculate ribosomal proportion ###
+rp.genes <- rownames(rna_counts)[grep("^RP",rownames(rna_counts))]
+percent.ribo <- colSums(rna_counts[rb.genes,])/Matrix::colSums(rna_counts)*100
+sc_retina <- AddMetaData(sc_retina, percent.ribo, col.name = "percent.ribo")
 
 
-# Filtering based on development stage
-metadata_filtered <- metadata %>%
-  filter(donor_id %in% c("Donor_1", "Donor_2", "Donor_3", "Donor_4", "Donor_5", "Donor_6", "Donor_7", "Donor_8", 
-                         "Donor_9", "Donor_10", "Donor_11", "Donor_12"),
-         cell_type %in% c("retinal progenitor cell", "Mueller cell"),
-         sequencing_platform %in% c("Illumina NovaSeq 6000"))
+###---------------------------------------------------------------------------###
+### Data Filtering ###
+###---------------------------------------------------------------------------###
 
-metadata2 <- metadata2 %>% 
-  mutate(dev_stage = case_when(
-    development_stage == "9th week post-fertilization human stage" & cell_type == "retinal progenitor cell"  ~ 'Early RPCs',
-    development_stage == "11th week post-fertilization human stage" & cell_type == "retinal progenitor cell"~ 'Early RPCs',
-    development_stage == "12th week post-fertilization human stage" & cell_type == "retinal progenitor cell" ~ 'Early RPCs',
-    development_stage == "13th week post-fertilization human stage" & cell_type == "retinal progenitor cell" ~ 'Early RPCs',
-    development_stage == "14th week post-fertilization human stage" & cell_type == "retinal progenitor cell" ~ 'Early RPCs',
-    development_stage == "15th week post-fertilization human stage" & cell_type == "retinal progenitor cell" ~ 'Late RPCs',
-    development_stage == "17th week post-fertilization human stage" & cell_type == "retinal progenitor cell" ~ 'Late RPCs',
-    development_stage == "20th week post-fertilization human stage" & cell_type == "retinal progenitor cell" ~ 'Late RPCs',
-    development_stage == "21st week post-fertilization human stage" & cell_type == "retinal progenitor cell" ~ 'Late RPCs',
-    development_stage == "24th week post-fertilization human stage" & cell_type == "retinal progenitor cell" ~ 'Late RPCs',
-    cell_type == "Mueller cell" ~ 'Mueller')) %>% 
-  dplyr::select(c("dev_stage", "cell_type"))
+rna_counts <- rna_counts[,colnames(rna_counts) %in% rownames(metadata_filtered)]
 
+## Cell-level filtering ##
 
+#filter the cell with low (low quality libraries) and high (putative doublets) gene detection
+total_counts <- colSums(rna_counts)
+total_features <- colSums(rna_counts > 0)
 
-cell_barcodes <- rownames(metadata_filtered)
-#gene_ids <- meta_features$feature_name
-rownames(rna.mtx) <- meta_features$feature_name
+mad5_filter <- total_counts > median(total_counts) + 5 * mad(total_counts)
+feat100_filter <- total_features < 100
+feat_mad_filter <- total_features > 5 * mad(total_features)
+
+ribosomal_genes <- grepl("^RPS", rownames(rna_counts)) | grepl("^RPL", rownames(rna_counts))
+ribosomal_prop <- colSums(rna_counts[ribosomal_genes, ]) / colSums(rna_counts)
+rib_prop_filter <- ribosomal_prop > .1
+
+cell_outliers_filter <- mad5_filter | feat100_filter | feat_mad_filter | rib_prop_filter
+
+rna_counts <- rna_counts[, !cell_outliers_filter]
+metadata_filtered <- metadata_filtered[!cell_outliers_filter, ]
 
 
-#subsetting sparse matrix
-rna_counts <- rna.mtx[i=1:36503, j=cell_barcodes, drop = FALSE]
+## Gene-level filtering ##
+#Remove absent genes from dataset:
+not_expressed_genes <- which(rowSums(rna_counts)<=0.05)
+rna_counts <- rna_counts[-not_expressed_genes,]
 
-#Convert Large dgCMatrix to normal matrix
-rna_counts <- as.matrix(rna.mtx)
+#Remove other genes
+rna_counts <- rna_counts[!rownames(rna_counts) %in% mt.genes, ]
+rna_counts <- rna_counts[!rownames(rna_counts) %in% rp.genes, ]
 
-### Non-Linear dimensionality reduction ###
-seurat <- RunUMAP(seurat, dims = 1:10, n.neighbors = 30, min.dist = 0.3)
+# Remove genes that do not present cell-to-cell fluctuations above what is expected due to technical variation
+# use the mean-variance trend fit and keep only genes falling above the fitted line
+
+#Using Single cell experiment function
+# create SCE
+sce <- SingleCellExperiment::SingleCellExperiment(list(counts = rna_counts))
+
+# calculate sizeFactors
+libsizes <- colSums(rna_counts)
+sizeFactors(sce) <- libsizes / mean(libsizes)
+
+# select variable genes
+varGenes <- swissknife::selVarGenes(sce, assay.type="counts")
+var_genes <- varGenes[["geneInfo"]]
+rna_counts <- rna_counts[rownames(rna_counts) %in% rownames(var_genes), ]
+
+
+### Create Seurat object
+
+seurat_scRetina = SeuratObject::CreateSeuratObject(counts = rna_counts, meta.data = metadata)
+seurat_scRetina <- Seurat::NormalizeData(seurat_scRetina)
+seurat_scRetina <- Seurat::FindVariableFeatures(seurat_scRetina)
+seurat_scRetina <- Seurat::ScaleData(seurat_scRetina)
+
+# Perform clustering
+seurat_scRetina <- Seurat::RunPCA(
+  seurat_scRetina,
+  features = Seurat::VariableFeatures(object = seurat_scRetina)
+)
+
+seurat_scRetina <- Seurat::FindNeighbors(seurat_scRetina)
+seurat_scRetina <- Seurat::FindClusters(seurat_scRetina)
+
+# Optional: Run UMAP
+
+seurat_scRetina <- Seurat::RunUMAP(seurat_scRetina, dims=1:20)
+
+#seurat <- RunUMAP(seurat, dims = 1:10, n.neighbors = 30, min.dist = 0.3)
 
 
 
+
+###-----------------------------------------------------------------###
 ### Gene set Enrichement analysis ###
+###-----------------------------------------------------------------###
 
 # Filter DEG #
 resSig_up <- subset(res, res$adj_pval < 0.05 & lfc > 0.5)
