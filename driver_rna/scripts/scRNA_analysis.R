@@ -3,7 +3,8 @@
 ###---------------------------------------------------------###
 
 #setwd("/orfeo/LTS/CDSLab/LT_storage/kdavydzenka/sc_devil/")
-
+setwd("~/Documents/PhD_AI/sc_devil")
+#install.packages("Seurat")
 library(tidyverse)
 library(Seurat)
 library(SingleCellExperiment)
@@ -12,6 +13,7 @@ library(swissknife)
 #PATH <- "/orfeo/LTS/CDSLab/LT_storage/kdavydzenka/sc_devil/data/"
 #sc_retina <- readRDS(file = paste(PATH, "/sc_retina.rds", sep = ""))
 sc_retina <- readRDS("/u/cdslab/kdavydzenka/fast/sc_multiome/sc_retina/scRNA_retina.rds")
+#sc_retina <- readRDS("seurat_scRetina.rds")
 
 ### Rename features in Seurat object ###
 meta_features <- sc_retina@assays[["RNA"]]@meta.features
@@ -25,6 +27,7 @@ metadata <- sc_retina@meta.data
 
 ### Data filtering (donor ID, cell type) ###
 
+# Human fetal retina #
 metadata_filtered <- metadata %>%
   filter(donor_id %in% c("Donor_2", "Donor_3", "Donor_4", "Donor_5", "Donor_6", "Donor_8", "Donor_10", "Donor_11", "Donor_12"),
          #cell_type %in% c("retinal progenitor cell", "Mueller cell", "amacrine cell", "retinal rod cell", 
@@ -35,31 +38,38 @@ metadata_filtered <- metadata %>%
 metadata_filtered <- metadata_filtered[ !(metadata_filtered$cell_type %in% c("diffuse bipolar 4 cell", "diffuse bipolar 6 cell",
                                                                              "S cone cell", "OFFx cell", "OFF parasol ganglion cell")), ]
 
+# Human retina #
+
+metadata_filtered <- metadata %>%
+  filter(sequencing_platform %in% c("unknown"))
+
+metadata_filtered <- metadata_filtered[ !(metadata_filtered$donor_id %in% c("17-010", "17-011", "Hu11", "SC",
+                                                          "donor1-hafler", "donor1-scheetz", "donor2-scheetz", "donor2-hafler", "donor3-hafler",
+                                                          "donor3-scheetz", "sanes_Pt2", "H1", "H9", "R-00646_03")), ]
 metadata_filtered <- metadata_filtered %>% 
   mutate(cluster = case_when(
-    cell_type == "amacrine cell"  ~ '1',
-    cell_type == "retinal cone cell"  ~ '2',  
-    cell_type == "retinal rod cell"  ~ '3',
-    cell_type == "Mueller cell"  ~ '4',
-    cell_type == "retinal ganglion cell" ~ '5',
-    cell_type == "retinal horizontal cell" ~ '6',
-    cell_type == "retinal bipolar neuron" ~ '7',
-    cell_type == "ON-bipolar cell" ~ '8',
-    cell_type == "rod bipolar cell" ~ '9',
-    cell_type == "retinal progenitor cell" ~ '10',
-    cell_type == "H1 horizontal cell" ~ '11',
-    cell_type == "H2 horizontal cell" ~ '12',
-    cell_type == "starburst amacrine cell" ~ '13',
-    cell_type == "midget ganglion cell of retina" ~ '14',
-    cell_type == "GABAergic amacrine cell" ~ '15',
-    cell_type == "glycinergic amacrine cell" ~ '16',
-    cell_type == "diffuse bipolar 1 cell" ~ '17',
-    cell_type == "diffuse bipolar 2 cell" ~ '18',
-    cell_type == "diffuse bipolar 3a cell" ~ '19',
-    cell_type == "diffuse bipolar 3b cell" ~ '20',
-    cell_type == "flat midget bipolarvcell" ~ '21',
-    cell_type == "invaginating midget bipolar cell" ~ '22',
-    cell_type == "ON parasol ganglion cell" ~ '23'))
+    cell_type == "GABAergic amacrine cell"  ~ '0',
+    cell_type == "H1 horizontal cell"  ~ '1',  
+    cell_type == "H2 horizontal cell"  ~ '2',
+    cell_type == "Mueller cell"  ~ '3',
+    cell_type == "S cone cell" ~ '4',
+    cell_type == "amacrine cell" ~ '5',
+    cell_type == "astrocyte" ~ '6',
+    cell_type == "glycinergic amacrine cell" ~ '7',
+    cell_type == "microglial cell" ~ '8',
+    cell_type == "midget ganglion cell of retina" ~ '9',
+    cell_type == "parasol ganglion cell of retina" ~ '10',
+    cell_type == "retinal bipolar neuron" ~ '11',
+    cell_type == "retinal cone cell" ~ '12',
+    cell_type == "retinal ganglion cell" ~ '13',
+    cell_type == "retinal pigment epithelial cell" ~ '14',
+    cell_type == "retinal rod cell" ~ '15',
+    cell_type == "retinal bipolar cell" ~ '16',
+    cell_type == "starburst amacrine cell" ~ '17',
+    cell_type == "rod bipolar cell" ~ '18'
+    ))
+
+metadata_filtered$cluster <- as.factor(metadata_filtered$cluster)
 
 
 metadata2 <- metadata2 %>% 
@@ -100,7 +110,7 @@ feat_mad_filter <- total_features > 5 * mad(total_features)
 
 ribosomal_genes <- grepl("^RPS", rownames(rna_counts)) | grepl("^RPL", rownames(rna_counts))
 ribosomal_prop <- colSums(rna_counts[ribosomal_genes, ]) / colSums(rna_counts)
-rib_prop_filter <- ribosomal_prop > .1
+rib_prop_filter <- ribosomal_prop > 0.1
 
 cell_outliers_filter <- mad5_filter | feat100_filter | feat_mad_filter | rib_prop_filter
 
@@ -110,7 +120,7 @@ metadata_filtered <- metadata_filtered[!cell_outliers_filter, ]
 
 ## Gene-level filtering ##
 #Remove absent genes from dataset:
-not_expressed_genes <- which(rowSums(rna_counts)<=0.05)
+not_expressed_genes <- which(rowSums(rna_counts) < 10)
 rna_counts <- rna_counts[-not_expressed_genes,]
 
 #Remove other genes
@@ -136,7 +146,7 @@ rna_counts <- rna_counts[rownames(rna_counts) %in% rownames(var_genes), ]
 
 ### Create Seurat object
 
-seurat_scRetina = SeuratObject::CreateSeuratObject(counts = rna_counts, meta.data = metadata)
+seurat_scRetina <- CreateSeuratObject(counts = rna_counts, meta.data = metadata)
 seurat_scRetina <- Seurat::NormalizeData(seurat_scRetina)
 seurat_scRetina <- Seurat::FindVariableFeatures(seurat_scRetina)
 seurat_scRetina <- Seurat::ScaleData(seurat_scRetina)
@@ -144,18 +154,15 @@ seurat_scRetina <- Seurat::ScaleData(seurat_scRetina)
 # Perform clustering
 seurat_scRetina <- Seurat::RunPCA(
   seurat_scRetina,
-  features = Seurat::VariableFeatures(object = seurat_scRetina)
-)
+  npcs = 50,
+  features = Seurat::VariableFeatures(object = seurat_scRetina))
 
-seurat_scRetina <- Seurat::FindNeighbors(seurat_scRetina)
-seurat_scRetina <- Seurat::FindClusters(seurat_scRetina)
+seurat_scRetina <- Seurat::FindNeighbors(seurat_scRetina, dims = 1:10, k.param = 20)
+seurat_scRetina <- Seurat::FindClusters(seurat_scRetina, resolution = 0.5)
 
 # Optional: Run UMAP
 
-seurat_scRetina <- Seurat::RunUMAP(seurat_scRetina, dims=1:20)
-
-#seurat <- RunUMAP(seurat, dims = 1:10, n.neighbors = 30, min.dist = 0.3)
-
+seurat_scRetina <- Seurat::RunUMAP(seurat_scRetina, dims=1:20, n.neighbors = 30, min.dist = 0.3)
 
 
 

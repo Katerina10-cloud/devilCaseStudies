@@ -7,18 +7,18 @@ library(ggplot2)
 library(ggmin)
 #saving plot cluster
 options(bitmapType='cairo')
-png(file="plots/heatmap2.png", width = 500, height = 400)
+png(file="plots/umap_retina.png", width = 800, height = 600)
 
-clustering <- DimPlot(sc_retina_atac, 
+clustering <- DimPlot(seurat_scRetina, 
                       dims = c(1, 2),
                       reduction = "umap",
-                      group.by = 'tissue',
+                      group.by = 'cell_type',
                       repel = TRUE, 
                       label = FALSE
         
 )
 clustering + ggmin::theme_powerpoint() +
-  labs(title = "Human fetal retina snATAC tissue specific clustering (223 288 cells)") +
+  labs(title = "Human retina cell clustering (178 000 cells)") +
   theme(plot.title=element_text(hjust=0.5, vjust=0.5))
 dev.off()
 
