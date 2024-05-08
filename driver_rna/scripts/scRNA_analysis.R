@@ -3,8 +3,11 @@
 ###---------------------------------------------------------###
 
 #setwd("/orfeo/LTS/CDSLab/LT_storage/kdavydzenka/sc_devil/")
-setwd("~/Documents/PhD_AI/sc_devil")
+setwd("~/Documents/PhD_AI/sc_devil/results/res_retina/")
 #install.packages("Seurat")
+
+#/u/cdslab/kdavydzenka/fast/sc_multiome/blood
+
 library(tidyverse)
 library(Seurat)
 library(SingleCellExperiment)
@@ -13,17 +16,18 @@ library(swissknife)
 #PATH <- "/orfeo/LTS/CDSLab/LT_storage/kdavydzenka/sc_devil/data/"
 #sc_retina <- readRDS(file = paste(PATH, "/sc_retina.rds", sep = ""))
 sc_retina <- readRDS("/u/cdslab/kdavydzenka/fast/sc_multiome/sc_retina/scRNA_retina.rds")
-#sc_retina <- readRDS("seurat_scRetina.rds")
+seurat_blood <- readRDS("/u/cdslab/kdavydzenka/fast/sc_multiome/blood/blood_seurat.rds")
+#seurat_blood <- readRDS("seurat_blood.rds")
 
 ### Rename features in Seurat object ###
-meta_features <- sc_retina@assays[["RNA"]]@meta.features
-rownames(sc_retina@assays$RNA@counts) <- meta_features$feature_name
-rownames(sc_retina@assays$RNA@data) <- meta_features$feature_name
+meta_features <- seurat_blood@assays[["RNA"]]@meta.features
+rownames(seurat_blood@assays$RNA@counts) <- meta_features$feature_name
+rownames(seurat_blood@assays$RNA@data) <- meta_features$feature_name
 
 ### Extract data from Seurat object ###
-rna_counts <- GetAssayData(object = sc_retina, layer = "counts")
+rna_counts <- GetAssayData(object = seurat_blood, layer = "counts")
 meta_features <- sc_retina@assays[["RNA"]]@meta.features
-metadata <- sc_retina@meta.data
+metadata <- seurat_blood@meta.data
 
 ### Data filtering (donor ID, cell type) ###
 
@@ -96,7 +100,7 @@ sc_retina <- AddMetaData(sc_retina, percent.ribo, col.name = "percent.ribo")
 ### Data Filtering ###
 ###---------------------------------------------------------------------------###
 
-rna_counts <- rna_counts[,colnames(rna_counts) %in% rownames(metadata_filtered)]
+rna_counts <- rna_counts[,colnames(rna_counts) %in% rownames(metadata)]
 
 ## Cell-level filtering ##
 
@@ -115,7 +119,7 @@ rib_prop_filter <- ribosomal_prop > 0.1
 cell_outliers_filter <- mad5_filter | feat100_filter | feat_mad_filter | rib_prop_filter
 
 rna_counts <- rna_counts[, !cell_outliers_filter]
-metadata_filtered <- metadata_filtered[!cell_outliers_filter, ]
+metadata <- metadata[!cell_outliers_filter, ]
 
 
 ## Gene-level filtering ##
@@ -146,25 +150,24 @@ rna_counts <- rna_counts[rownames(rna_counts) %in% rownames(var_genes), ]
 
 ### Create Seurat object
 
-seurat_scRetina <- CreateSeuratObject(counts = rna_counts, meta.data = metadata)
-seurat_scRetina <- Seurat::NormalizeData(seurat_scRetina)
-seurat_scRetina <- Seurat::FindVariableFeatures(seurat_scRetina)
-seurat_scRetina <- Seurat::ScaleData(seurat_scRetina)
+seurat_blood <- CreateSeuratObject(counts = rna_counts, meta.data = metadata)
+seurat_blood <- Seurat::NormalizeData(seurat_blood)
+seurat_blood <- Seurat::FindVariableFeatures(seurat_blood)
+seurat_blood <- Seurat::ScaleData(seurat_blood)
 
 # Perform clustering
-seurat_scRetina <- Seurat::RunPCA(
-  seurat_scRetina,
-  npcs = 50,
-  features = Seurat::VariableFeatures(object = seurat_scRetina))
+seurat_blood <- Seurat::RunPCA(
+  seurat_blood,
+  features = Seurat::VariableFeatures(object = seurat_blood))
 
-seurat_scRetina <- Seurat::FindNeighbors(seurat_scRetina, dims = 1:10, k.param = 20)
-seurat_scRetina <- Seurat::FindClusters(seurat_scRetina, resolution = 0.5)
+seurat_blood <- Seurat::FindNeighbors(seurat_blood, dims = 1:20)
+seurat_blood <- Seurat::FindClusters(seurat_blood)
 
 # Optional: Run UMAP
 
-seurat_scRetina <- Seurat::RunUMAP(seurat_scRetina, dims=1:20, n.neighbors = 30, min.dist = 0.3)
+seurat_blood <- Seurat::RunUMAP(seurat_blood, dims=1:20)
 
-
+#n.neighbors = 30, min.dist = 0.3
 
 ###-----------------------------------------------------------------###
 ### Gene set Enrichement analysis ###

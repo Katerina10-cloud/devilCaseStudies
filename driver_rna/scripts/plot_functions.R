@@ -7,19 +7,35 @@ library(ggplot2)
 library(ggmin)
 #saving plot cluster
 options(bitmapType='cairo')
-png(file="plots/umap_retina.png", width = 800, height = 600)
+png(file="plots/umap_blood.png", width = 1800, height = 500)
 
-clustering <- DimPlot(seurat_scRetina, 
+clustering1 <- DimPlot(seurat_blood, 
                       dims = c(1, 2),
                       reduction = "umap",
-                      group.by = 'cell_type',
+                      group.by = 'seurat_clusters',
                       repel = TRUE, 
-                      label = FALSE
+                      label = TRUE
         
 )
-clustering + ggmin::theme_powerpoint() +
-  labs(title = "Human retina cell clustering (178 000 cells)") +
+p1 <- clustering1 + ggmin::theme_powerpoint() +
+  labs(title = "Seurat clusters (blood dataset, ~155 000 cells)") +
   theme(plot.title=element_text(hjust=0.5, vjust=0.5))
+
+clustering2 <- DimPlot(seurat_blood, 
+                       dims = c(1, 2),
+                       reduction = "umap",
+                       group.by = 'celltype.l2',
+                       repel = TRUE, 
+                       label = TRUE
+                       
+)
+
+p2 <- clustering2 + ggmin::theme_powerpoint() +
+  labs(title = "Custom labels (cell types)") +
+  theme(plot.title=element_text(hjust=0.5, vjust=0.5))
+
+p1+p2
+
 dev.off()
 
 
