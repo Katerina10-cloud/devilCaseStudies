@@ -5,26 +5,27 @@
 library(Seurat)
 library(ggplot2)
 library(ggmin)
-#saving plot cluster
-options(bitmapType='cairo')
-png(file="plots/umap_blood.png", width = 1800, height = 500)
 
-clustering1 <- DimPlot(seurat_blood, 
+#saving plot cluster 
+options(bitmapType='cairo')
+png(file="plots/umap_retina.png", width = 1500, height = 500)
+
+clustering1 <- DimPlot(seurat_retina, 
                       dims = c(1, 2),
                       reduction = "umap",
-                      group.by = 'seurat_clusters',
+                      group.by = 'cluster',
                       repel = TRUE, 
                       label = TRUE
         
 )
 p1 <- clustering1 + ggmin::theme_powerpoint() +
-  labs(title = "Seurat clusters (blood dataset, ~155 000 cells)") +
+  labs(title = "Seurat clusters (retina dataset, ~165 000 cells)") +
   theme(plot.title=element_text(hjust=0.5, vjust=0.5))
 
-clustering2 <- DimPlot(seurat_blood, 
+clustering2 <- DimPlot(seurat_retina, 
                        dims = c(1, 2),
                        reduction = "umap",
-                       group.by = 'celltype.l2',
+                       group.by = 'majorclass',
                        repel = TRUE, 
                        label = TRUE
                        
@@ -69,15 +70,6 @@ p1
 
 ### Enhanced volcano ###
 
-# Tissue specific markers RPC: "FGF19", "CYP1B1", "CYP26A1", "DIO2", "CDKN1A", "ANXA2", "FRZB", "CRYAB", "HES1", "PTGDS", 
-#"GPX3", "APOE", "FOXG1", "TBX20"
-
-# Dev.stage: "FGF19", "HAS2", "ZNF676", "FOS", "NFIB", "PID1", "NETO1", "PTGDS", "ATOH7", "PTF1A", "OTX2", "LUM", "CRYAB", "APOE"
-
-# Diff. neurons vs RPCs : "HKDC1", "HES1", "SFRP2", "ATOH7", "RGS1G", "GADD45G", "NFIC", "OTX2", "CNGB1"
-# RGCs vs RPCs : "HES1", "SFRP2", "FRZB", "ATOH7", "NFIA", "PTF1A", "MYC", "ISL1", "POU4F1", "POU6F2", "EBF3"
-# Retinal rod cells vs RPCs: "HES1", "ATOH7", "SFRP2", "ISL2", "NFIC", "RD3", "RAX2"
-
 #BiocManager::install('EnhancedVolcano')
 library(EnhancedVolcano)
 library(ggrepel)
@@ -114,19 +106,6 @@ p1 <- EnhancedVolcano::EnhancedVolcano(res1,
 
 plot1 <- p1 + ggplot2::labs(title="Macula vs Peripheral retina, RPCs (66 000 cells)") +
   theme(plot.title=element_text(hjust=0.5, vjust=0.5))
-
-plot2 <- p1 + ggplot2::labs(title="Differentiated neurons vs RPCs (145 000 cells)") +
-  theme(plot.title=element_text(hjust=0.5, vjust=0.5))
-
-plot3 <- p1 + ggplot2::labs(title="RGCs vs RPCs (107 000 cells)") +
-  theme(plot.title=element_text(hjust=0.5, vjust=0.5))
-
-plot4 <- p1 + ggplot2::labs(title="Early RPCs vs Late RPCs + Muller cells (75 000 cells)") +
-  theme(plot.title=element_text(hjust=0.5, vjust=0.5))
-
-plot5 <- p1 + ggplot2::labs(title="Retinal rod cells vs RPCs (104 000 cells)") +
-  theme(plot.title=element_text(hjust=0.5, vjust=0.5))
-plot5
 
 
 ### Visualize fgsea enrichment results ###

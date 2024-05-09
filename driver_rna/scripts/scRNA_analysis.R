@@ -3,10 +3,13 @@
 ###---------------------------------------------------------###
 
 #setwd("/orfeo/LTS/CDSLab/LT_storage/kdavydzenka/sc_devil/")
-setwd("~/Documents/PhD_AI/sc_devil/results/res_retina/")
+setwd("~/Documents/PhD_AI/sc_devil/results/blood/")
 #install.packages("Seurat")
 
 #/u/cdslab/kdavydzenka/fast/sc_multiome/blood
+#/orfeo/LTS/CDSLab/LT_storage/kdavydzenka/sc_devil/results/blood
+#/orfeo/LTS/CDSLab/LT_storage/kdavydzenka/sc_devil/results/human_retina/top_res
+# seurat_blood.rds
 
 library(tidyverse)
 library(Seurat)
@@ -25,22 +28,11 @@ rownames(seurat_blood@assays$RNA@counts) <- meta_features$feature_name
 rownames(seurat_blood@assays$RNA@data) <- meta_features$feature_name
 
 ### Extract data from Seurat object ###
-rna_counts <- GetAssayData(object = seurat_blood, layer = "counts")
+counts <- GetAssayData(object = seurat_blood, layer = "counts")
 meta_features <- sc_retina@assays[["RNA"]]@meta.features
 metadata <- seurat_blood@meta.data
 
 ### Data filtering (donor ID, cell type) ###
-
-# Human fetal retina #
-metadata_filtered <- metadata %>%
-  filter(donor_id %in% c("Donor_2", "Donor_3", "Donor_4", "Donor_5", "Donor_6", "Donor_8", "Donor_10", "Donor_11", "Donor_12"),
-         #cell_type %in% c("retinal progenitor cell", "Mueller cell", "amacrine cell", "retinal rod cell", 
-                          #"diffuse bipolar 1 cell", "GABAergic amacrine cell", "retinal bipolar neuron", "retinal cone cell"),
-         sequencing_platform %in% c("Illumina NovaSeq 6000"))
-
-
-metadata_filtered <- metadata_filtered[ !(metadata_filtered$cell_type %in% c("diffuse bipolar 4 cell", "diffuse bipolar 6 cell",
-                                                                             "S cone cell", "OFFx cell", "OFF parasol ganglion cell")), ]
 
 # Human retina #
 
@@ -74,16 +66,6 @@ metadata_filtered <- metadata_filtered %>%
     ))
 
 metadata_filtered$cluster <- as.factor(metadata_filtered$cluster)
-
-
-metadata2 <- metadata2 %>% 
-  mutate(cell_clusters = case_when(
-    cell_type == "retinal progenitor cell"  ~ '0',
-    cell_type == "Mueller cell"  ~ '0',  
-    cell_type == "retinal ganglion cell"  ~ '1',
-    cell_type == "midget ganglion cell of retina" ~ '1')) %>% 
-  dplyr::select(c("cell_clusters", "cell_type"))
-
 
 ### Calculate the proportion of mitochondrial reads and add to the metadata table ###
 mt.genes <- rownames(rna_counts)[grep("^MT-",rownames(rna_counts))]
@@ -148,26 +130,28 @@ var_genes <- varGenes[["geneInfo"]]
 rna_counts <- rna_counts[rownames(rna_counts) %in% rownames(var_genes), ]
 
 
-### Create Seurat object
+### Create Seurat object ###
 
-seurat_blood <- CreateSeuratObject(counts = rna_counts, meta.data = metadata)
-seurat_blood <- Seurat::NormalizeData(seurat_blood)
-seurat_blood <- Seurat::FindVariableFeatures(seurat_blood)
-seurat_blood <- Seurat::ScaleData(seurat_blood)
+seurat_retina <- CreateSeuratObject(counts = rna_counts, meta.data = metadata)
+seurat_retina <- Seurat::NormalizeData(seurat_retina)
+seurat_retina <- Seurat::FindVariableFeatures(seurat_retina)
+seurat_retina <- Seurat::ScaleData(seurat_retina)
 
 # Perform clustering
-seurat_blood <- Seurat::RunPCA(
-  seurat_blood,
-  features = Seurat::VariableFeatures(object = seurat_blood))
+seurat_retina <- Seurat::RunPCA(
+  seurat_retina,
+  features = Seurat::VariableFeatures(object = seurat_retina))
 
-seurat_blood <- Seurat::FindNeighbors(seurat_blood, dims = 1:20)
-seurat_blood <- Seurat::FindClusters(seurat_blood)
+seurat_retina <- Seurat::FindNeighbors(seurat_retina, dims = 1:20)
+seurat_retina <- Seurat::FindClusters(seurat_retina)
 
 # Optional: Run UMAP
 
-seurat_blood <- Seurat::RunUMAP(seurat_blood, dims=1:20)
+seurat_retina <- Seurat::RunUMAP(seurat_retina, dims=1:20)
 
 #n.neighbors = 30, min.dist = 0.3
+
+
 
 ###-----------------------------------------------------------------###
 ### Gene set Enrichement analysis ###
@@ -246,19 +230,7 @@ res_gse <- res_gse %>%
     NES > 0  ~ 'up-regulated',
     NES < 0  ~ 'down-regulated'))
 
-res_gse <- res_gse %>%
-  filter(Description %in% c("DNA metabolic process", "mitotic cell cycle", "DNA replication",
-                            "canonical Wnt signaling pathway", "chromosome organization",
-                            "neurotransmitter secretion", "dopamine receptor signaling pathway",
-                            "synapse organization", "eye photoreceptor cell development","myotube cell development" )) %>% 
-  mutate(gene_clusters = case_when(
-    NES > 0  ~ 'up-regulated',
-    NES < 0  ~ 'down-regulated'))
 
-
-res_gse <- res_gse %>% mutate(gene_clusters = case_when(
-  NES > 0  ~ 'up-regulated',
-  NES < 0  ~ 'down-regulated'))
   
 
 
