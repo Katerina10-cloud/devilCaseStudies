@@ -180,6 +180,7 @@ plot_dot(test="GSEA", annot.GSEA)
 ### Annotation using scMayoMap ###
 ###------------------------------------------------------------------###
 
+setwd("~/Documents/PhD_AI/sc_devil/results/blood/")
 #devtools::install_github("chloelulu/scMayoMap")
 pkgs <- c("ggplot2", "dplyr","tidyr","tibble","reshape2")
 sapply(pkgs, require, character.only = TRUE)
@@ -188,16 +189,16 @@ library(scMayoMap)
 dd <- scMayoMap::scMayoMapDatabase
 dd$tissue %>% unique()
 
-input_scMayo <- whole_res %>% 
+input_scMayo <- whole_res_blood %>% 
   dplyr::rename(gene=name, p_val_adj=adj_pval, p_val=pval, pct.1=pct.1, pct.2=pct.2, cluster=cluster, avg_log2FC=lfc) %>% 
   as.data.frame()
 rownames(input_scMayo) <- input_scMayo$gene
 
 #input_scMayo %>% pull(cluster) %>% table()
 
-obj <- scMayoMap(data = input_scMayo, tissue = 'Peripheral blood')
+obj <- scMayoMap(data = input_scMayo, tissue = 'blood')
 obj$res
-plt <- scMayoMap.plot(scMayoMap.object = obj, directory = '~/Desktop/', width = 8, height = 6)
+plt <- scMayoMap.plot(scMayoMap.object = obj, width = 12, height = 8)
 
 
 
