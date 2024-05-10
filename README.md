@@ -3,13 +3,11 @@ Case studies of single cell RNAseq Differential Expression using Devil satistica
 
 Public datasets:
 
-1) scRNA-seq of human retina - n ~ 265.767 cells, https://cellxgene.cziscience.com/e/be41a86a-b606-4b1c-8055-32f334898775.cxg/
-   Identification of cell type marker genes (8 patients, 18 cell clusters)
-   
-   Single-cell transcriptomic atlas for adult human retina: https://cellxgene.cziscience.com/collections/af893e86-8e9f-41f1-a474-ef05359b1fb7
+1) PBMC dataset (normal, ~ 155 000 cells): https://cellxgene.cziscience.com/e/ed5d841d-6346-47d4-ab2f-7119ad7e3a35.cxg/
+   Cell type indentification/annotation using the list of differntially expressed genes for each cell cluster
    
 
-Reference papers: 
-1) Single-cell multiome of the human retina: https://www.sciencedirect.com/science/article/pii/S2666979X22001069
-
-  
+2) Multiomics dataset (snRNA (~290 000 cells) + snATAC (~ 95 000 cells) 
+   Human Muscle Ageing Atlas Database: https://db.cngb.org/cdcp/hlma/
+   
+   Reference paper: https://www.nature.com/articles/s41586-024-07348-6
