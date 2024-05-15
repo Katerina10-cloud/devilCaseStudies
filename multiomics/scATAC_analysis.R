@@ -42,11 +42,16 @@ rownames(metadata_atac) <- colnames(peak_counts)
 peak_counts <- atac@assays@data@listData[["PeakMatrix"]]
 granges <- atac@rowRanges
 
-#genomic_ranges <- genomic_ranges %>% mutate(ranges = paste(genomic_ranges$seqnames, genomic_ranges$ranges))
+genomic_ranges <- genomic_ranges %>% mutate(ranges = paste(genomic_ranges$seqname,genomic_ranges$start,genomic_ranges$end, sep = ":"))
 rownames(peak_counts) <- genomic_ranges$ranges
 
+annot <- annot %>% mutate(ranges = paste(annot$seqname,annot$start,annot$end, sep = ":"))
+peak_counts <- peak_counts[ rownames(peak_counts) %in% annot$ranges,]
+peak_counts <- peak_counts[ ,colnames(peak_counts) %in% rownames(metadata_filtered) ]
+
+
 save(genomic_ranges, file = "genomic_ranges.Rdata")
-save(peak_counts, file = "peak_counts.Rdata")
+saveRDS(peak_counts, file = "peak_counts.RDS")
 saveRDS(granges, file = "granges.RDS")
 
 ### Create Seurat object ###

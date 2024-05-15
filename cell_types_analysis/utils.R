@@ -48,6 +48,9 @@ read_data <- function(dataset_name) {
     seurat_data <- readRDS(data_path)
     counts <- Seurat::GetAssayData(object = seurat_data, layer = "counts")
     metadata <- seurat_data@meta.data
+    meta_features <- seurat_data@assays[["RNA"]]@meta.features
+    rownames(counts) <- meta_features$feature_name
+    metadata <- dplyr::rename(metadata,c("donor" = "donor_id"))
     tissue = "liver"
   }  else {
     stop("Dataset name not recognized")

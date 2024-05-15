@@ -10,6 +10,8 @@ setwd("~/Documents/PhD_AI/sc_devil/data/muscle/")
 #/orfeo/LTS/CDSLab/LT_storage/kdavydzenka/sc_devil/results/blood
 #/orfeo/LTS/CDSLab/LT_storage/kdavydzenka/sc_devil/results/human_retina/top_res
 # seurat_blood.rds
+#/orfeo/LTS/CDSLab/LT_storage/kdavydzenka/sc_devil/devilCaseStudies/cell_types_analysis/utils.R
+
 
 library(tidyverse)
 library(Seurat)
