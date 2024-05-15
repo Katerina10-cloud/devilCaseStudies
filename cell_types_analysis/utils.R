@@ -44,7 +44,7 @@ read_data <- function(dataset_name) {
     metadata <- seurat_data@meta.data
     metadata <- dplyr::rename(metadata,c("celltype.l2" = "cell_type", "cell_type" = "cell_type_2", "donor_id" = "donor"))
     tissue = "blood"
-  } else if (dataset_name == 'BigBloodLiver') {
+  } else if (dataset_name == 'BigLiverData') {
     seurat_data <- readRDS(data_path)
     counts <- Seurat::GetAssayData(object = seurat_data, layer = "counts")
     metadata <- seurat_data@meta.data
