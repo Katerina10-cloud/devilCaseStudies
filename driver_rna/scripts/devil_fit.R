@@ -36,6 +36,14 @@ res <- devil::test_de(devil.fit = devil_fit_retina,
 ### Devil test on cluster ###
 ###----------------------------------------------------------------------------###
 
+# Measure running time #
+sleep_for_a_minute <- function() { Sys.sleep(60) }
+start_time <- Sys.time()
+sleep_for_a_minute()
+end_time <- Sys.time()
+end_time - start_time
+
+
 c <- seurat_obj$seurat_clusters[1]
 whole_res <- lapply(unique(seurat_obj$seurat_clusters), function(c) {
   print(c)
