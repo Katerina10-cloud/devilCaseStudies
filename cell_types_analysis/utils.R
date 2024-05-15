@@ -1,5 +1,6 @@
 
-DATASET_NAMES <- c("BaronPancreasData", 'ZhaoImmuneLiverDataBlood', 'DarmanisBrainData', 'ZhaoImmuneLiverDataLiver')
+DATASET_NAMES <- c("BaronPancreasData", 'ZhaoImmuneLiverDataBlood', 'DarmanisBrainData', 'ZhaoImmuneLiverDataLiver',
+                   "BigBloodData", "BigLiverData")
 
 read_data <- function(dataset_name) {
   if (dataset_name == "BaronPancreasData") {
@@ -37,7 +38,18 @@ read_data <- function(dataset_name) {
     counts <- data@assays@data[[1]]
     counts <- counts[,filter_cell]
     tissue <- "liver"
-  } else {
+  } else if (dataset_name == 'BigBloodData') {
+    seurat_data <- readRDS(data_path)
+    counts <- Seurat::GetAssayData(object = seurat_data, layer = "counts")
+    metadata <- seurat_data@meta.data
+    metadata <- dplyr::rename(metadata,c("celltype.l2" = "cell_type", "cell_type" = "cell_type_2", "donor_id" = "donor"))
+    tissue = "blood"
+  } else if (dataset_name == 'BigBloodLiver') {
+    seurat_data <- readRDS(data_path)
+    counts <- Seurat::GetAssayData(object = seurat_data, layer = "counts")
+    metadata <- seurat_data@meta.data
+    tissue = "liver"
+  }  else {
     stop("Dataset name not recognized")
   }
 
