@@ -108,7 +108,7 @@ perform_analysis <- function(seurat_obj, method = "devil") {
       bad_genes <- gg[gg == T] %>% names()
       counts <- counts[!(rownames(counts) %in% bad_genes),]
 
-      fit <- devil::fit_devil(as.matrix(counts), design_matrix, verbose = T, size_factors = T)
+      fit <- devil::fit_devil(counts, design_matrix, verbose = T, size_factors = T, parallel.cores = 1)
 
       clusters <- as.numeric(as.factor(seurat_obj$donor))
       res <- devil::test_de(fit, contrast = c(0,1), clusters = clusters, max_lfc = Inf)
@@ -128,7 +128,7 @@ perform_analysis <- function(seurat_obj, method = "devil") {
       counts <- counts[!(rownames(counts) %in% bad_genes),]
 
       clusters <- as.numeric(as.factor(seurat_obj$donor))
-      fit <- nebula::nebula(as.matrix(counts), id = clusters, pred = design_matrix)
+      fit <- nebula::nebula(counts, id = clusters, pred = design_matrix, ncore = 1)
 
       res <- dplyr::tibble(
         name = fit$summary$gene,
@@ -150,7 +150,7 @@ perform_analysis <- function(seurat_obj, method = "devil") {
       bad_genes <- gg[gg == T] %>% names()
       counts <- counts[!(rownames(counts) %in% bad_genes),]
 
-      fit <- glmGamPoi::glm_gp(as.matrix(counts), design_matrix, size_factors = T, verbose = T)
+      fit <- glmGamPoi::glm_gp(counts, design_matrix, size_factors = T, verbose = T)
       res <- glmGamPoi::test_de(fit, contrast = c(0,1), max_lfc = Inf)
       res <- res %>% select(name, pval, adj_pval, lfc)
 
