@@ -6,6 +6,7 @@ source("utils.R")
 set.seed(12345)
 
 ## Input data
+data_path = ""
 dataset_name <- 'BaronPancreasData'
 input_data <- read_data(dataset_name)
 seurat_obj <- prep_seurat_object(input_data, NPC = 50, cluster_res = .2)

@@ -3,7 +3,7 @@
 ###---------------------------------------------------------###
 
 #setwd("/orfeo/LTS/CDSLab/LT_storage/kdavydzenka/sc_devil/")
-setwd("~/Documents/PhD_AI/sc_devil/results/blood/")
+setwd("~/Documents/PhD_AI/sc_devil/data/muscle/")
 #install.packages("Seurat")
 
 #/u/cdslab/kdavydzenka/fast/sc_multiome/blood
@@ -20,7 +20,7 @@ library(swissknife)
 #sc_retina <- readRDS(file = paste(PATH, "/sc_retina.rds", sep = ""))
 sc_retina <- readRDS("/u/cdslab/kdavydzenka/fast/sc_multiome/sc_retina/scRNA_retina.rds")
 seurat_blood <- readRDS("/u/cdslab/kdavydzenka/fast/sc_multiome/blood/blood_seurat.rds")
-#seurat_blood <- readRDS("seurat_blood.rds")
+seurat_muscl <- readRDS("seurat_rna_muscl.RDS")
 
 ### Rename features in Seurat object ###
 meta_features <- seurat_blood@assays[["RNA"]]@meta.features
@@ -233,4 +233,6 @@ res_gse <- res_gse %>%
 
   
 
+seurat_muscl@meta.data[["cluster"]] <- as.factor(seurat_muscl@meta.data[["cluster"]])
 
+c <- seurat_muscl@meta.data[["cluster"]][1]
