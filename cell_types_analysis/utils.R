@@ -143,7 +143,7 @@ perform_analysis <- function(seurat_obj, method = "devil") {
       counts <- counts[!(rownames(counts) %in% bad_genes),]
 
       fit <- glmGamPoi::glm_gp(counts, design_matrix, size_factors = T, verbose = T)
-      res <- glmGamPoi::test_de(fit, contrast = c(0,1), max_lfc = Inf)
+      res <- glmGamPoi::test_de(fit, contrast = c(0,1))
       res <- res %>% select(name, pval, adj_pval, lfc)
 
       res %>% dplyr::mutate(cluster = c)
