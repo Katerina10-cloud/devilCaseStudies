@@ -109,7 +109,7 @@ prep_seurat_object <- function(input_data, NPC=50, cluster_res=1) {
 }
 
 perform_analysis <- function(seurat_obj, method = "devil") {
-  if (!(method %in% c('devil', 'nebula', "glmGamPoi"))) {stop('method not recognized')}
+  if (!(method %in% c('devil', "glmGamPoi", 'nebula'))) {stop('method not recognized')}
 
   if (method == 'devil') {
     c <- 1
@@ -130,30 +130,7 @@ perform_analysis <- function(seurat_obj, method = "devil") {
       res %>% dplyr::mutate(cluster = c)
 
     }) %>% do.call("bind_rows", .)
-  } else if (method == 'nebula') {
-    c <- 1
-    whole_res <- lapply(unique(seurat_obj$seurat_clusters), function(c) {
-      print(c)
-
-      design_matrix <- model.matrix(~group, dplyr::tibble(group = seurat_obj$seurat_clusters == c))
-      counts <- as.matrix(seurat_obj@assays$RNA$counts)
-
-      gg <- ((counts[,seurat_obj$seurat_clusters == c] %>% rowSums()) == 0)
-      bad_genes <- gg[gg == T] %>% names()
-      counts <- counts[!(rownames(counts) %in% bad_genes),]
-
-      clusters <- as.numeric(as.factor(seurat_obj$donor))
-      fit <- nebula::nebula(counts, id = clusters, pred = design_matrix, ncore = 1)
-
-      res <- dplyr::tibble(
-        name = fit$summary$gene,
-        pval = fit$summary$p_groupTRUE,
-        adj_pval = p.adjust(fit$summary$p_groupTRUE, "BH"),
-        lfc=fit$summary$logFC_groupTRUE
-      )
-
-      res %>% dplyr::mutate(cluster = c)
-    }) %>% do.call("bind_rows", .)
+  
   } else if (method == "glmGamPoi") {
     whole_res <- lapply(unique(seurat_obj$seurat_clusters), function(c) {
       print(c)
@@ -171,6 +148,33 @@ perform_analysis <- function(seurat_obj, method = "devil") {
 
       res %>% dplyr::mutate(cluster = c)
 
+    }) %>% do.call("bind_rows", .)
+  } else if (method == 'nebula') {
+    c <- 1
+    whole_res <- lapply(unique(seurat_obj$seurat_clusters), function(c) {
+      print(c)
+      
+      design_matrix <- model.matrix(~group, dplyr::tibble(group = seurat_obj$seurat_clusters == c))
+      counts <- as.matrix(seurat_obj@assays$RNA$counts)
+    
+      
+      gg <- ((counts[,seurat_obj$seurat_clusters == c] %>% rowSums()) == 0)
+      bad_genes <- gg[gg == T] %>% names()
+      counts <- counts[!(rownames(counts) %in% bad_genes),]
+      
+      clusters <- as.numeric(as.factor(metadata$donor))
+      data_g = group_cell(count=counts,id=clusters,pred=design_matrix)
+      
+      fit <- nebula::nebula(data_g$counts, id = data_g$clusters, pred = data_g$design_matrix, ncore = 1)
+      
+      res <- dplyr::tibble(
+        name = fit$summary$gene,
+        pval = fit$summary$p_groupTRUE,
+        adj_pval = p.adjust(fit$summary$p_groupTRUE, "BH"),
+        lfc=fit$summary$logFC_groupTRUE
+      )
+      
+      res %>% dplyr::mutate(cluster = c)
     }) %>% do.call("bind_rows", .)
   }
   whole_res
