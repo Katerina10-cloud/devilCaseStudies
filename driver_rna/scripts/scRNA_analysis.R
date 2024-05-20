@@ -34,6 +34,10 @@ counts <- GetAssayData(object = seurat_blood, layer = "counts")
 meta_features <- sc_retina@assays[["RNA"]]@meta.features
 metadata <- seurat_blood@meta.data
 
+rownames(seurat_rna@meta.data) <- seurat_rna@meta.data$cellID 
+
+dim_red_rna <- seurat_rna@reductions
+
 ### Data filtering (donor ID, cell type) ###
 
 # Human retina #
@@ -235,6 +239,3 @@ res_gse <- res_gse %>%
 
   
 
-seurat_muscl@meta.data[["cluster"]] <- as.factor(seurat_muscl@meta.data[["cluster"]])
-
-c <- seurat_muscl@meta.data[["cluster"]][1]

@@ -74,12 +74,12 @@ whole_res <- lapply(unique(seurat_obj$seurat_clusters), function(c) {
     top_res <- res %>%
       dplyr::filter(lfc > .2, adj_pval <= min_pval * 100) %>%
       dplyr::arrange(-lfc) %>%
-      dplyr::slice(1:40)
+      dplyr::slice(1:50)
   } else {
     top_res <- res %>%
       dplyr::filter(lfc > .2, adj_pval <= 1e-50) %>%
       dplyr::arrange(-lfc) %>%
-      dplyr::slice(1:40)
+      dplyr::slice(1:50)
   }
   top_res$cluster <- c
   
@@ -140,48 +140,6 @@ mm <- metadata %>% as.tibble()
 
 celltype_data$cluster <- as.numeric(as.factor(celltype_data$cluster))
 
-
-###-----------------------------------------------------------------------###
-### Annotation using EasyCellType ###
-###-----------------------------------------------------------------------###
-
-#BiocManager::install("EasyCellType")
-library(EasyCellType)
-
-#Get the expressed markers for each cluster, then convert the gene symbols to Entrez IDs.
-library(org.Hs.eg.db)
-library(AnnotationDbi)
-
-res_blood_top$entrezid <- mapIds(org.Hs.eg.db,
-                           keys=res_blood_top$name, #Column containing Ensembl gene ids
-                           column="ENTREZID",
-                           keytype="SYMBOL",
-                           multiVals="first")
-res_blood_top <- na.omit(res_blood_top)
-
-markers_sort <- data.frame(gene=res_blood_top$entrezid, cluster=res_blood_top$cluster, 
-                           score=res_blood_top$lfc) %>%
-  group_by(cluster) %>% 
-  mutate(rank = rank(score),  ties.method = "random") %>% 
-  arrange(desc(rank)) 
-
-input.d <- markers_sort %>% as.data.frame() %>% dplyr::select(gene,cluster,score)
-
-
-annot.GSEA <- easyct(input.d, 
-                     db="cellmarker", 
-                     species="Human", 
-                     tissue=c("Blood"), 
-                     p_cut=0.7,
-                     scoretype="pos",
-                     test="GSEA")
-
-data("cellmarker_tissue") 
-cellmarker_tissue[["Human"]] %>% unique()
-data("clustermole_tissue")
-data("panglao_tissue")
-
-plot_dot(test="GSEA", annot.GSEA)
 
 
 ###------------------------------------------------------------------###

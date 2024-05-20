@@ -79,7 +79,7 @@ for (m in c("devil", "nebula", "glmGamPoi")) {
     labs(x = "Fold Change (log2)", y = '-Log10 P', col="Marker") #+
     #theme(legend.position = 'bottom')
 
-  obj <- scMayoMap(data = input_scMayo, tissue = "pancreas", pct.cutoff = 0)
+  obj <- scMayoMap(data = input_scMayo, tissue = "liver", pct.cutoff = 0)
   mayoMatrix <- plot_scMayoOutput(obj) +
     theme_minimal()
 

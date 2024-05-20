@@ -37,8 +37,6 @@ for (m in c("devil", "nebula", "glm")) {
   s <- Sys.time()
   de_res_total <- perform_analysis(seurat_obj, method = m)
   e <- Sys.time()
-
-
 }
 
 

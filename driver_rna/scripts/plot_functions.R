@@ -8,18 +8,18 @@ library(ggmin)
 
 #saving plot cluster 
 options(bitmapType='cairo')
-png(file="plots/umap_retina.png", width = 1500, height = 500)
+png(file="umap_muscl_rna.png", width = 500, height = 500)
 
-clustering1 <- DimPlot(seurat_retina, 
+clustering1 <- DimPlot(seurat_rna, 
                       dims = c(1, 2),
                       reduction = "umap",
-                      group.by = 'cluster',
+                      group.by = 'cell_cluster',
                       repel = TRUE, 
                       label = TRUE
         
 )
 p1 <- clustering1 + ggmin::theme_powerpoint() +
-  labs(title = "Seurat clusters (retina dataset, ~165 000 cells)") +
+  labs(title = "Custom clusters(muscle dataset, ~290 000 cells)") +
   theme(plot.title=element_text(hjust=0.5, vjust=0.5))
 
 clustering2 <- DimPlot(seurat_retina, 
