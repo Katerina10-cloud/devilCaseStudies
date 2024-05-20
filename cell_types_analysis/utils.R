@@ -132,6 +132,7 @@ perform_analysis <- function(seurat_obj, method = "devil") {
     }) %>% do.call("bind_rows", .)
   
   } else if (method == "glmGamPoi") {
+    c <- 1
     whole_res <- lapply(unique(seurat_obj$seurat_clusters), function(c) {
       print(c)
 
@@ -184,6 +185,8 @@ prepScMayoInput <- function(de_res, count_matrix, seurat_clusters, n_markers=50,
   if (!(all(colnames(de_res) == c("name", "pval", "adj_pval", "lfc", "cluster")))) {stop('input de_res have wrong column names')}
 
   cluster_values <- de_res$cluster %>% unique()
+  remove_genes <- grepl("^ENS", de_res$name)
+  de_res <- de_res[!remove_genes, ]
 
   scMayoInput <- dplyr::tibble()
   for (c in cluster_values) {
