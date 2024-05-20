@@ -6,6 +6,9 @@ Public datasets:
 1) PBMC dataset (normal, ~155 000 cells): https://cellxgene.cziscience.com/e/ed5d841d-6346-47d4-ab2f-7119ad7e3a35.cxg/
    
    Cell type indentification/annotation using the list of differntially expressed genes for each cell cluster.
+
+Human liver dataset (normal, ~165 000 cells)
+https://cellxgene.cziscience.com/e/e84f2780-51e8-4cfa-8aa0-13bbfef677c7.cxg/
    
 
 2) Multiomics dataset (snRNA(~290 000 cells), snATAC(~95 000 cells)) 
