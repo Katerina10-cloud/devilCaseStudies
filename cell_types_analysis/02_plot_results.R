@@ -1,4 +1,4 @@
-setwd("~/Desktop/cell_types_analysis")
+setwd("~/GitHub/cell_types_analysis")
 rm(list=ls())
 pkgs <- c("ggplot2", "dplyr","tidyr","tibble","reshape2")
 sapply(pkgs, require, character.only = TRUE)
@@ -8,7 +8,7 @@ source("utils.R")
 
 set.seed(12345)
 
-dataset_name <- 'BaronPancreasData'
+dataset_name <- 'BigBloodData'
 
 seurat_obj <- readRDS(paste0('results/', dataset_name, '_seurat.RDS'))
 
