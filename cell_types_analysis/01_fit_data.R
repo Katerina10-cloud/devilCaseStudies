@@ -5,10 +5,12 @@ source("utils.R")
 
 set.seed(12345)
 
+args = commandArgs(trailingOnly=TRUE)
+
 ## Input data
-data_path = ""
-dataset_name <- 'BaronPancreasData'
-input_data <- read_data(dataset_name)
+data_path <- args[2]
+dataset_name <- args[1]
+input_data <- read_data(dataset_name, data_path)
 seurat_obj <- prep_seurat_object(input_data, NPC = 50, cluster_res = .2)
 saveRDS(seurat_obj, paste0('results/', dataset_name, '_seurat.RDS'))
 

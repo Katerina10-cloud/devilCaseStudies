@@ -2,7 +2,7 @@
 DATASET_NAMES <- c("BaronPancreasData", 'ZhaoImmuneLiverDataBlood', 'DarmanisBrainData', 'ZhaoImmuneLiverDataLiver',
                    "BigBloodData", "BigLiverData")
 
-read_data <- function(dataset_name) {
+read_data <- function(dataset_name, data_path=NULL) {
   if (dataset_name == "BaronPancreasData") {
     data <- scRNAseq::BaronPancreasData(which = "human")
     metadata <- data@colData

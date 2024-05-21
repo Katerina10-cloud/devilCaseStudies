@@ -1,4 +1,4 @@
-setwd("~/GitHub/cell_types_analysis")
+#setwd("~/GitHub/cell_types_analysis")
 rm(list=ls())
 pkgs <- c("ggplot2", "dplyr","tidyr","tibble","reshape2")
 sapply(pkgs, require, character.only = TRUE)
@@ -8,7 +8,11 @@ source("utils.R")
 
 set.seed(12345)
 
-dataset_name <- 'BigBloodData'
+args = commandArgs(trailingOnly=TRUE)
+
+## Input data
+data_path <- args[2]
+dataset_name <- args[1]
 
 seurat_obj <- readRDS(paste0('results/', dataset_name, '_seurat.RDS'))
 
@@ -92,7 +96,7 @@ for (m in c("devil", "nebula", "glmGamPoi")) {
 
 # Extract average results ####
 whole_results <- dplyr::tibble()
-for (pval_cut in c(.05, 1e-10, 1e-50)) {
+for (pval_cut in c(.05, .01, 1e-3, 1e-5,  1e-10,1e-20, 1e-40, 1e-50)) {
   print(pval_cut)
   for (n_markers in c(5, 10, 50, 100)) {
     print(n_markers)
@@ -143,18 +147,28 @@ for (pval_cut in c(.05, 1e-10, 1e-50)) {
   }
 }
 
+saveRDS(whole_results, paste0("results/", dataset_name, "_res_class.rds"))
+
 n_clusters <- length(unique(seurat_obj$seurat_clusters))
 
 whole_results %>%
   group_by(model, pval_cut, n_markers) %>%
   summarise(ACC = sum(final_score) / n_clusters) %>%
   ggplot(mapping = aes(x=as.factor(n_markers), y=ACC, fill=model)) +
-  geom_boxplot() +
-  ggtitle("la bellezza è orribile") +
-  theme_bw()
+  geom_violin() +
+  geom_jitter() +
+  theme_bw() +
+  labs(x = "N markers", y="Assignment score") +
+  theme(legend.position = 'bottom')
+
+ggsave(paste0("plot/", dataset_name, "_assigment_score.pdf"), dpi=300, width = 8, height = 5)
 
 whole_results %>%
   group_by(model, pval_cut, n_markers) %>%
   summarise(IR = sum(final_score == 0) / n_clusters) %>%
   ggplot(mapping = aes(x=as.factor(n_markers), y=IR, fill=model)) +
-  geom_boxplot()
+  geom_violin() +
+  theme_bw() +
+  labs(x = "N markers", y="Non-assignment score") +
+  theme(legend.position = 'bottom')
+ggsave(paste0("plot/", dataset_name, "_indecisive_score.pdf"), dpi=300, width = 8, height = 5)
