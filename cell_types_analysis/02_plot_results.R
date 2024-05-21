@@ -1,6 +1,6 @@
 #setwd("~/GitHub/cell_types_analysis")
 rm(list=ls())
-pkgs <- c("ggplot2", "dplyr","tidyr","tibble","reshape2")
+pkgs <- c("ggplot2", "dplyr","tidyr","tibble","reshape2", "AnnotationDbi", "org.Hs.eg.db")
 sapply(pkgs, require, character.only = TRUE)
 library(scMayoMap)
 library(Seurat)

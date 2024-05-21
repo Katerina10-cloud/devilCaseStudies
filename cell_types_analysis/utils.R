@@ -195,10 +195,28 @@ prepScMayoInput <- function(de_res, count_matrix, seurat_clusters, n_markers=50,
       dplyr::arrange(-lfc) %>%
       dplyr::slice(1:n_markers)
 
+    names <- rownames(count_matrix)
+    if (all(grepl("ENSG", names))) {
+      ensembl_names <- names
+      symbol_names <- AnnotationDbi::mapIds(org.Hs.eg.db, keys=ensembl_names,column='SYMBOL', keytype="ENSEMBL", multiVals="first")
+    } else {
+      symbol_names <- names
+      ensembl_names <- AnnotationDbi::mapIds(org.Hs.eg.db, keys=symbol_names,column="ENSEMBL", keytype='SYMBOL', multiVals="first")
+    }
+
     gene_percentage <- dplyr::tibble()
     for (gene_name in top_res$name) {
-      g_counts <- count_matrix[gene_name, seurat_clusters == c]
-      non_g_counts <- count_matrix[gene_name, !(seurat_clusters == c)]
+      print(gene_name)
+      if (length(which(gene_name == symbol_names)) > 0) {
+        f <- gene_name == symbol_names
+        f[is.na(f)] <- F
+      } else {
+        f <- gene_name == ensembl_names
+        f[is.na(f)] <- F
+      }
+
+      g_counts <- count_matrix[f, seurat_clusters == c]
+      non_g_counts <- count_matrix[f, !(seurat_clusters == c)]
 
       pct.1 <- sum(g_counts > 0) / length(g_counts)
       pct.2 <- sum(non_g_counts > 0) / length(non_g_counts)
