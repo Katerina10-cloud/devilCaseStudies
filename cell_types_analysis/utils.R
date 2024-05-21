@@ -130,7 +130,7 @@ perform_analysis <- function(seurat_obj, method = "devil") {
       res %>% dplyr::mutate(cluster = c)
 
     }) %>% do.call("bind_rows", .)
-  
+
   } else if (method == "glmGamPoi") {
     c <- 1
     whole_res <- lapply(unique(seurat_obj$seurat_clusters), function(c) {
@@ -154,27 +154,27 @@ perform_analysis <- function(seurat_obj, method = "devil") {
     c <- 1
     whole_res <- lapply(unique(seurat_obj$seurat_clusters), function(c) {
       print(c)
-      
+
       design_matrix <- model.matrix(~group, dplyr::tibble(group = seurat_obj$seurat_clusters == c))
       counts <- as.matrix(seurat_obj@assays$RNA$counts)
-    
-      
+
+
       gg <- ((counts[,seurat_obj$seurat_clusters == c] %>% rowSums()) == 0)
       bad_genes <- gg[gg == T] %>% names()
       counts <- counts[!(rownames(counts) %in% bad_genes),]
-      
+
       clusters <- as.numeric(as.factor(metadata$donor))
       data_g = group_cell(count=counts,id=clusters,pred=design_matrix)
-      
+
       fit <- nebula::nebula(data_g$count, id = data_g$id, pred = data_g$pred, ncore = 1)
-      
+
       res <- dplyr::tibble(
         name = fit$summary$gene,
         pval = fit$summary$p_groupTRUE,
         adj_pval = p.adjust(fit$summary$p_groupTRUE, "BH"),
         lfc=fit$summary$logFC_groupTRUE
       )
-      
+
       res %>% dplyr::mutate(cluster = c)
     }) %>% do.call("bind_rows", .)
   }
@@ -245,7 +245,7 @@ plot_scMayoOutput <- function(scMayoObj) {
     s <- strsplit(r$ES.norm, split = ";") %>% unlist() %>% as.numeric()
     c <- strsplit(r$celltype, split = ";") %>% unlist()
     c <- lapply(c, function(x) {stringr::str_replace_all(x, "cell", "")}) %>% unlist()
-    c <- lapply(c, function(x) {stringr::str_replace_all(tolower(x), " ", "")}) %>% unlist()
+    c <- lapply(c, function(x) {stringr::str_replace_all(x, " ", "")}) %>% unlist()
     s
     dplyr::tibble(cell_type_pred = c, score = s, cluster = r$cluster)
   }) %>% do.call('bind_rows', .)
@@ -254,12 +254,15 @@ plot_scMayoOutput <- function(scMayoObj) {
 
   ground_truth %>%
     dplyr::left_join(pred_res, by="cluster") %>%
+    dplyr::arrange(cluster) %>%
     dplyr::mutate(ground_truth = as.factor(paste0(true_cell_type, ' (', cluster, ')'))) %>%
-    ggplot(mapping = aes(x=cell_type_pred, y=ground_truth, fill=score)) +
+    #ggplot(mapping = aes(x=cell_type_pred, y=ground_truth, fill=score)) +
+    ggplot(mapping = aes(y=cell_type_pred, x=ground_truth, fill=score)) +
     geom_tile() +
     scale_fill_continuous(type = "viridis") +
     theme_bw() +
-    labs(y = "Annotated cell type", x = "Assigned cell type", fill="Score")
+    #labs(y = "Annotated cell type", x = "Assigned cell type", fill="Score") +
+    labs(y = "Prediction", x = "Ground truth", fill="Score")
 }
 
 computeGroundTruth <- function(seurat_obj) {
@@ -272,5 +275,70 @@ computeGroundTruth <- function(seurat_obj) {
     max_idx <- which.max(table_c)
     dplyr::tibble(cluster = c, true_cell_type = names(table_c)[max_idx], pct = table_c[max_idx])
   }) %>% do.call('bind_rows', .)
+}
+
+
+cell_type_names_to_scMayo_names <- function(ct, tissue) {
+  # scMayo_names <- colnames(scMayoMap::scMayoMapDatabase)[grepl(tissue, colnames(scMayoMap::scMayoMapDatabase))]
+  # scMayo_names <- str_replace_all(scMayo_names, tissue, "")
+  # scMayo_names <- str_replace_all(scMayo_names, ":", "")
+  # scMayo_names <- str_replace_all(scMayo_names, " cell", "")
+
+  if (tissue == "pancreas") {
+    conversion <- list(
+      "acinar" = "Acinar",
+      'beta' = 'Beta',
+      'delta'='Delta',
+      'activated_stellate'="Stellate",
+      'ductal'="Ductal",
+      'alpha'="Alpha",
+      "epsilon"="Epsilon",
+      "gamma"="Gamma",
+      "endothelial"="Endothelial",
+      'quiescent_stellate'="Stellate",
+      "macrophage"="Macrophage",
+      "schwann"="Schwann",
+      "mast"="Mast",
+      "t_cell"="T"
+    )
+  } else if (tissue == "blood") {
+    conversion = list(
+      'CD14 Mono'="CD14 Monocyte",
+      'CD4 TCM'='CD4 Central Memory T cell',
+      'CD8 Naive'='CD8 Naive T',
+      'NK'='Natural killer',
+      'CD8 TEM'='CD8 Effector Memory T',
+      'CD16 Mono'="CD16 Monoctye",
+      'B intermediate'="Intermediate B cell",
+      'CD4 Naive'="CD4 Naive T",
+      'CD4 CTL'="CD4 Cytotoxic T",
+      'B naive'="Naive B",
+      'MAIT'="Mucosal-associated invariant T",
+      'gdT'='Gamma delta T',
+      'CD8 TCM'="CD8 Central Memory T",
+      'dnT'="Double-negative T",
+      'B memory'="Memory B",
+      'Doublet'="",
+      'pDC'='Plasmacytoid dendritic',
+      'CD8 Proliferating'='CD8 Proliferating T',
+      'Treg'="Regulatory T",
+      'Plasmablast'="Plasmablast",
+      'CD4 TEM'="CD4 Effector Memory T",
+      'cDC2'="Dendritic",
+      'NK Proliferating'='Natural killer',
+      'ASDC'="Dendritic",
+      'HSPC'='Hematopoietic stem',
+      'Platelet'='Platelet',
+      'NK_CD56bright'='CD56-bright natural killer',
+      'CD4 Proliferating'='CD4 Proliferating T',
+      'Eryth'="Erythroid",
+      'cDC1'='Dendritic',
+      'ILC'='Innate lymphoid'
+    )
+  }
+
+  lapply(ct, function(c) {
+    conversion[[c]]
+  }) %>% unlist()
 }
 

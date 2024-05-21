@@ -14,6 +14,11 @@ args = commandArgs(trailingOnly=TRUE)
 data_path <- args[2]
 dataset_name <- args[1]
 
+data_path <- NULL
+dataset_name <- DATASET_NAMES[1]
+
+input_data <- read_data(dataset_name, data_path)
+
 seurat_obj <- readRDS(paste0('results/', dataset_name, '_seurat.RDS'))
 
 umap_plot_seurat <- Seurat::DimPlot(
@@ -83,7 +88,7 @@ for (m in c("devil", "nebula", "glmGamPoi")) {
     labs(x = "Fold Change (log2)", y = '-Log10 P', col="Marker") #+
     #theme(legend.position = 'bottom')
 
-  obj <- scMayoMap(data = input_scMayo, tissue = "liver", pct.cutoff = 0)
+  obj <- scMayoMap(data = input_scMayo, pct.cutoff = 0)
   mayoMatrix <- plot_scMayoOutput(obj) +
     theme_minimal()
 
@@ -106,8 +111,9 @@ for (pval_cut in c(.05, .01, 1e-3, 1e-5,  1e-10,1e-20, 1e-40, 1e-50)) {
       input_scMayo <- prepScMayoInput(de_res_total, as.matrix(seurat_obj@assays$RNA$counts), seurat_obj$seurat_clusters,
                                       n_markers = n_markers, lfc_cut = 1, pval_cut = pval_cut, distinct_marker = FALSE)
 
-      scMayoObj <- scMayoMap(data = input_scMayo, tissue = "pancreas", pct.cutoff = 0)
+      scMayoObj <- scMayoMap(data = input_scMayo, tissue = input_data$tissue, pct.cutoff = 0)
 
+      seurat_obj$cell_type <- cell_type_names_to_scMayo_names(seurat_obj$cell_type, input_data$tissue)
       ground_truth <- computeGroundTruth(seurat_obj)
 
       pred_res <- lapply(1:nrow(scMayoObj$res), function(i) {
@@ -115,8 +121,7 @@ for (pval_cut in c(.05, .01, 1e-3, 1e-5,  1e-10,1e-20, 1e-40, 1e-50)) {
         s <- strsplit(r$ES.norm, split = ";") %>% unlist() %>% as.numeric()
         c <- strsplit(r$celltype, split = ";") %>% unlist()
         c <- lapply(c, function(x) {stringr::str_replace_all(x, "cell", "")}) %>% unlist()
-        c <- lapply(c, function(x) {stringr::str_replace_all(tolower(x), " ", "")}) %>% unlist()
-        s
+        c <- lapply(c, function(x) {stringr::str_replace_all(x, " ", "")}) %>% unlist()
         dplyr::tibble(cell_type_pred = c, score = s, cluster = r$cluster)
       }) %>% do.call('bind_rows', .)
 
@@ -128,6 +133,8 @@ for (pval_cut in c(.05, .01, 1e-3, 1e-5,  1e-10,1e-20, 1e-40, 1e-50)) {
         dplyr::mutate(score = ifelse(n == 1, score, 0)) %>%
         dplyr::distinct(cell_type_pred, score, cluster) %>%
         dplyr::left_join(ground_truth, by='cluster')
+
+      pred_res
 
       pred_res$final_score <- lapply(1:nrow(pred_res), function(i) {
         r <- pred_res[i,]
@@ -141,6 +148,8 @@ for (pval_cut in c(.05, .01, 1e-3, 1e-5,  1e-10,1e-20, 1e-40, 1e-50)) {
       pred_res <- pred_res %>%
         dplyr::select(cell_type_pred, cluster, true_cell_type, final_score) %>%
         dplyr::mutate(model = m, pval_cut=pval_cut, n_markers=n_markers)
+
+
 
       whole_results <- dplyr::bind_rows(whole_results, pred_res)
     }
