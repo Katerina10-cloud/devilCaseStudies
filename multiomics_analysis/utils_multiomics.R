@@ -21,10 +21,9 @@ read_data <- function(dataset_name) {
   return(list(counts=counts, metadata=metadata, grange=granges, tissue=tissue))
 }
 
-
 grange_annot <- function(input_data) {
   counts <- input_data$counts
-  matadata <- input_data$metadata
+  metadata <- input_data$metadata
   grange <- input_data$grange
   txdb <- TxDb.Hsapiens.UCSC.hg38.knownGene
   grange_annot <- ChIPseeker::annotatePeak(
@@ -45,8 +44,64 @@ grange_annot <- function(input_data) {
     overlap = "TSS",
     verbose = TRUE,
     columns = c("ENTREZID", "ENSEMBL", "SYMBOL", "GENENAME")
-  )
+  ) %>% as.data.frame()
   tissue = "muscle"
   return(list(counts=counts, metadata=metadata, grange=grange_annot, tissue=tissue))
 }
+
+prepare_atac_input <- function(input_data) {
+  metadata <- input_data$metadata
+  grange <- input_data$grange_annot
+  metadata <- metadata[ (metadata$group %in% c("young", "old") & metadata$cell_type %in% c("Type I", "Type II")),]
+  metadata <- metadata %>% 
+    mutate(age_cluster = case_when(
+      group == "old"  ~ '1',
+      group == "young" ~ '0'
+    ))  
+  #peak_counts <- as.matrix(input_data$counts)
+  peak_counts <- peak_counts[ ,colnames(peak_counts) %in% rownames(metadata) ]
+  grange_annot <- grange_annot[ (grange_annot$annotation %in% c("Promoter (<=1kb)", "Promoter (1-2kb)", "Promoter (2-3kb)")), ]
+  grange_annot <- grange_annot %>% mutate(ranges = paste(grange_annot$seqnames, grange_annot$start, grange_annot$end))
+  peak_counts <- peak_counts[ rownames(peak_counts) %in% grange_annot$ranges , ]
+  tissue = "muscle"
+  return(list(counts=counts, metadata=metadata, grange=grange_annot, tissue=tissue))
+}
+  
+
+perform_analysis_atac <- function(input_data, method = "devil") {
+  if (!(method %in% c('devil', "glmGamPoi", 'nebula'))) {stop('method not recognized')}
+  
+  if (method == 'devil') {
+    metadata <- input_data$metadata
+    peak_counts <- as.matrix(input_data$counts)
+    design_matrix <- model.matrix(~age_cluster, metadata)
+    fit <- devil::fit_devil(peak_counts, design_matrix, verbose = T, size_factors = T)
+    clusters <- as.numeric(as.factor(metadata$patient))
+    res <- devil::test_de(fit, contrast = c(0,1), clusters = clusters, max_lfc = Inf)
+    
+  } else if (method == "glmGamPoi") {
+    metadata <- input_data$metadata
+    peak_counts <- as.matrix(input_data$counts)
+    design_matrix <- model.matrix(~age_cluster, metadata)
+    fit <- glmGamPoi::glm_gp(peak_counts, design_matrix, size_factors = T, verbose = T)
+    res <- glmGamPoi::test_de(fit, contrast = c(0,1))
+    res <- res %>% select(name, pval, adj_pval, lfc)
+    
+  } else if (method == 'nebula') {
+    metadata <- input_data$metadata
+    peak_counts <- as.matrix(input_data$counts)
+    design_matrix <- model.matrix(~age_cluster, metadata)
+    clusters <- as.numeric(as.factor(metadata$patient))
+    data_g = group_cell(count=peak_counts,id=clusters,pred=design_matrix)
+    fit <- nebula::nebula(data_g$count,id = data_g$id, pred = data_g$pred, ncore = 1)
+    res <- dplyr::tibble(
+      name = fit$summary$gene,
+      pval = fit$summary$p_groupTRUE,
+      adj_pval = p.adjust(fit$summary$p_groupTRUE, "BH"),
+      lfc=fit$summary$logFC_groupTRUE)
+  }
+  res
+}
+
+
 
