@@ -166,7 +166,7 @@ perform_analysis <- function(seurat_obj, method = "devil") {
       clusters <- as.numeric(as.factor(metadata$donor))
       data_g = group_cell(count=counts,id=clusters,pred=design_matrix)
       
-      fit <- nebula::nebula(data_g$counts, id = data_g$clusters, pred = data_g$design_matrix, ncore = 1)
+      fit <- nebula::nebula(data_g$count, id = data_g$id, pred = data_g$pred, ncore = 1)
       
       res <- dplyr::tibble(
         name = fit$summary$gene,
