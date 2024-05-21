@@ -206,7 +206,6 @@ prepScMayoInput <- function(de_res, count_matrix, seurat_clusters, n_markers=50,
 
     gene_percentage <- dplyr::tibble()
     for (gene_name in top_res$name) {
-      print(gene_name)
       if (length(which(gene_name == symbol_names)) > 0) {
         f <- gene_name == symbol_names
         f[is.na(f)] <- F

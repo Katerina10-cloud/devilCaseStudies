@@ -15,7 +15,8 @@ data_path <- args[2]
 dataset_name <- args[1]
 tissue <- args[3]
 
-dataset_name <- "BaronPancreasData"
+# dataset_name <- "BaronPancreasData"
+# tissue <- 'pancreas'
 
 if (!(file.exists(paste0("results/", dataset_name)))) {
   dir.create(paste0("results/", dataset_name))
@@ -25,7 +26,8 @@ if (!(file.exists(paste0("plot/", dataset_name)))) {
   dir.create(paste0("plot/", dataset_name))
 }
 
-seurat_obj <- readRDS(paste0('results/', dataset_name, '_seurat.RDS'))
+seurat_obj <- readRDS(paste0('results/', dataset_name, '/seurat.RDS'))
+seurat_obj$cell_type <- cell_type_names_to_scMayo_names(seurat_obj$cell_type, tissue)
 
 umap_plot_seurat <- Seurat::DimPlot(
   seurat_obj,
@@ -59,7 +61,7 @@ ggsave(filename = paste0("plot/", dataset_name, "/umap_cell_types.pdf"), dpi=400
 
 m <- 'devil'
 for (m in c("devil", "nebula", "glmGamPoi")) {
-  de_res_total <- readRDS(paste0('results/', dataset_name, '_', m, '.RDS'))
+  de_res_total <- readRDS(paste0('results/', dataset_name, '/', m, '.RDS'))
 
   input_scMayo <- prepScMayoInput(
     de_res_total,
@@ -83,7 +85,7 @@ for (m in c("devil", "nebula", "glmGamPoi")) {
     #geom_hline(yintercept = -log10(.05), linetype = "dashed") +
     theme_minimal() +
     labs(x = "Fold Change (log2)", y = '-Log10 P', col="Marker") #+
-    #theme(legend.position = 'bottom')
+  #theme(legend.position = 'bottom')
 
   obj <- scMayoMap(data = input_scMayo, tissue = tissue, pct.cutoff = 0)
   saveRDS(obj, paste0("results/", dataset_name, "/", m, "_scMayo.rds"))
@@ -97,18 +99,20 @@ for (m in c("devil", "nebula", "glmGamPoi")) {
 # Extract average results ####
 whole_results <- dplyr::tibble()
 for (pval_cut in c(.05, .01, 1e-3, 1e-5,  1e-10,1e-20, 1e-40, 1e-50)) {
+#for (pval_cut in c(.05, 1e-40, 1e-50)) {
   print(pval_cut)
   for (n_markers in c(5, 10, 50, 100)) {
+  #for (n_markers in c(5, 100)) {
     print(n_markers)
     for (m in c("devil", "nebula", "glmGamPoi")) {
-      de_res_total <- readRDS(paste0('results/', dataset_name, '_', m, '.RDS'))
+      de_res_total <- readRDS(paste0('results/', dataset_name, '/', m, '.RDS'))
 
       input_scMayo <- prepScMayoInput(de_res_total, as.matrix(seurat_obj@assays$RNA$counts), seurat_obj$seurat_clusters,
                                       n_markers = n_markers, lfc_cut = 1, pval_cut = pval_cut, distinct_marker = FALSE)
 
       scMayoObj <- scMayoMap(data = input_scMayo, tissue = tissue, pct.cutoff = 0)
 
-      seurat_obj$cell_type <- cell_type_names_to_scMayo_names(seurat_obj$cell_type, tissue)
+      #seurat_obj$cell_type <- cell_type_names_to_scMayo_names(seurat_obj$cell_type, tissue)
       ground_truth <- computeGroundTruth(seurat_obj)
 
       pred_res <- lapply(1:nrow(scMayoObj$res), function(i) {
@@ -129,8 +133,6 @@ for (pval_cut in c(.05, .01, 1e-3, 1e-5,  1e-10,1e-20, 1e-40, 1e-50)) {
         dplyr::distinct(cell_type_pred, score, cluster) %>%
         dplyr::left_join(ground_truth, by='cluster')
 
-      pred_res
-
       pred_res$final_score <- lapply(1:nrow(pred_res), function(i) {
         r <- pred_res[i,]
         if (grepl(r$cell_type_pred, r$true_cell_type)) {
@@ -143,8 +145,6 @@ for (pval_cut in c(.05, .01, 1e-3, 1e-5,  1e-10,1e-20, 1e-40, 1e-50)) {
       pred_res <- pred_res %>%
         dplyr::select(cell_type_pred, cluster, true_cell_type, final_score) %>%
         dplyr::mutate(model = m, pval_cut=pval_cut, n_markers=n_markers)
-
-
 
       whole_results <- dplyr::bind_rows(whole_results, pred_res)
     }
