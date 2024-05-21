@@ -13,11 +13,17 @@ args = commandArgs(trailingOnly=TRUE)
 ## Input data
 data_path <- args[2]
 dataset_name <- args[1]
+tissue <- args[3]
 
-data_path <- NULL
-dataset_name <- DATASET_NAMES[1]
+dataset_name <- "BaronPancreasData"
 
-input_data <- read_data(dataset_name, data_path)
+if (!(file.exists(paste0("results/", dataset_name)))) {
+  dir.create(paste0("results/", dataset_name))
+}
+
+if (!(file.exists(paste0("plot/", dataset_name)))) {
+  dir.create(paste0("plot/", dataset_name))
+}
 
 seurat_obj <- readRDS(paste0('results/', dataset_name, '_seurat.RDS'))
 
@@ -39,26 +45,17 @@ umap_plot_labels <- Seurat::DimPlot(
   theme_minimal() +
   theme(legend.position = 'none')
 
-# Plot one example ####
-# m <- 'devil'
-#
-# de_res_devil <- readRDS(paste0('results/', dataset_name, '_', 'devil', '.RDS'))
-# de_res_nebula <- readRDS(paste0('results/', dataset_name, '_', 'nebula', '.RDS'))
-#
-# c <- 5
-# de_res_joint <- de_res_devil %>% dplyr::filter(cluster == c) %>%
-#   dplyr::left_join(de_res_nebula %>% dplyr::filter(cluster == c), by="name")
-#
-# plot(de_res_joint$lfc.x, de_res_joint$lfc.y)
-# plot(de_res_joint$adj_pval.x, de_res_joint$adj_pval.y)
-#
-# de_res_joint %>%
-#   dplyr::filter(lfc.x > 1, adj_pval.x <= .05, adj_pval.x > 0) %>%
-#   dplyr::arrange(-lfc.x) %>%
-#   dplyr::slice(1:50) %>%
-#   ggplot(mapping = aes(x = -log10(adj_pval.x), y = -log10(adj_pval.y))) +
-#   geom_point() +
-#   geom_abline(slope = 1, intercept = 0)
+d_umap <- dplyr::tibble(
+  x = seurat_obj@reductions$pca@cell.embeddings[,1],
+  y = seurat_obj@reductions$pca@cell.embeddings[,2],
+  donor_id = seurat_obj$donor,
+  cell_type = seurat_obj$cell_type,
+  cluster = seurat_obj$seurat_clusters,
+)
+
+saveRDS(d_umap, paste0("results/", dataset_name, "/umap_tibble.rds"))
+ggsave(filename = paste0("plot/", dataset_name, "/umap_cluster.pdf"), dpi=400, plot = umap_plot_seurat, width = 8, height = 8)
+ggsave(filename = paste0("plot/", dataset_name, "/umap_cell_types.pdf"), dpi=400, plot = umap_plot_labels, width = 8, height = 8)
 
 m <- 'devil'
 for (m in c("devil", "nebula", "glmGamPoi")) {
@@ -88,15 +85,13 @@ for (m in c("devil", "nebula", "glmGamPoi")) {
     labs(x = "Fold Change (log2)", y = '-Log10 P', col="Marker") #+
     #theme(legend.position = 'bottom')
 
-  obj <- scMayoMap(data = input_scMayo, pct.cutoff = 0)
-  mayoMatrix <- plot_scMayoOutput(obj) +
-    theme_minimal()
+  obj <- scMayoMap(data = input_scMayo, tissue = tissue, pct.cutoff = 0)
+  saveRDS(obj, paste0("results/", dataset_name, "/", m, "_scMayo.rds"))
 
-  upper_row <- (umap_plot_seurat | volc) + patchwork::plot_layout(widths = c(1, 6))
-  lower_row <- (umap_plot_labels | mayoMatrix)
+  mayoMatrix <- plot_scMayoOutput(obj) + theme_minimal()
 
-  final_plt <- upper_row / lower_row + patchwork::plot_layout(heights = c(1, 2))
-  ggsave(paste0("plot/", dataset_name, "_", m, ".pdf"), plot = final_plt, dpi = 400, width = 12, height = 8)
+  ggsave(filename = paste0("plot/", dataset_name, "/mayo_matrix_", m, ".pdf"), dpi=400, plot = mayoMatrix, width = 8, height = 8)
+  ggsave(filename = paste0("plot/", dataset_name, "/volcano_", m, ".pdf"), dpi=400, plot = volc, width = 10, height = 8)
 }
 
 # Extract average results ####
@@ -111,9 +106,9 @@ for (pval_cut in c(.05, .01, 1e-3, 1e-5,  1e-10,1e-20, 1e-40, 1e-50)) {
       input_scMayo <- prepScMayoInput(de_res_total, as.matrix(seurat_obj@assays$RNA$counts), seurat_obj$seurat_clusters,
                                       n_markers = n_markers, lfc_cut = 1, pval_cut = pval_cut, distinct_marker = FALSE)
 
-      scMayoObj <- scMayoMap(data = input_scMayo, tissue = input_data$tissue, pct.cutoff = 0)
+      scMayoObj <- scMayoMap(data = input_scMayo, tissue = tissue, pct.cutoff = 0)
 
-      seurat_obj$cell_type <- cell_type_names_to_scMayo_names(seurat_obj$cell_type, input_data$tissue)
+      seurat_obj$cell_type <- cell_type_names_to_scMayo_names(seurat_obj$cell_type, tissue)
       ground_truth <- computeGroundTruth(seurat_obj)
 
       pred_res <- lapply(1:nrow(scMayoObj$res), function(i) {
@@ -170,7 +165,7 @@ whole_results %>%
   labs(x = "N markers", y="Assignment score") +
   theme(legend.position = 'bottom')
 
-ggsave(paste0("plot/", dataset_name, "_assigment_score.pdf"), dpi=300, width = 8, height = 5)
+ggsave(paste0("plot/", dataset_name, "/assigment_score.pdf"), dpi=300, width = 8, height = 5)
 
 whole_results %>%
   group_by(model, pval_cut, n_markers) %>%
@@ -180,4 +175,4 @@ whole_results %>%
   theme_bw() +
   labs(x = "N markers", y="Non-assignment score") +
   theme(legend.position = 'bottom')
-ggsave(paste0("plot/", dataset_name, "_indecisive_score.pdf"), dpi=300, width = 8, height = 5)
+ggsave(paste0("plot/", dataset_name, "/indecisive_score.pdf"), dpi=300, width = 8, height = 5)

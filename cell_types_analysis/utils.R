@@ -335,6 +335,25 @@ cell_type_names_to_scMayo_names <- function(ct, tissue) {
       'cDC1'='Dendritic',
       'ILC'='Innate lymphoid'
     )
+  } else if (tissue == "liver") {
+    conversion <- list(
+      'monocyte'='Monocyte',
+      'conventional dendritic cell'='Dendritic',
+      'plasmacytoid dendritic cell'='Dendritic',
+      'macrophage'='Macrophage',
+      'plasma cell'='Plasma',
+      'T cell'='T',
+      'B cell'='B',
+      'natural killer cell'='Natural killer',
+      'cholangiocyte'='Cholangiocyte',
+      'basophil'='Basophil',
+      'neutophil'='Neutrophil',
+      'endothelial cell'='Endothelial',
+      'hepatocyte'='Hepatocyte',
+      'fibroblast'='Myofibroblast'
+    )
+  } else {
+    stop("tissue name not recognised")
   }
 
   lapply(ct, function(c) {
