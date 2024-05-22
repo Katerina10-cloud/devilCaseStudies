@@ -8,16 +8,14 @@ library(ggmin)
 
 #saving plot cluster 
 options(bitmapType='cairo')
-png(file="umap_muscl_rna.png", width = 500, height = 500)
+png(file="umap_blood.png", width = 1000, height = 1000)
 
 clustering1 <- DimPlot(seurat_rna, 
                       dims = c(1, 2),
                       reduction = "umap",
-                      group.by = 'cell_cluster',
+                      group.by = 'celltype.l2',
                       repel = TRUE, 
-                      label = TRUE
-        
-)
+                      label = TRUE)
 p1 <- clustering1 + ggmin::theme_powerpoint() +
   labs(title = "Custom clusters(muscle dataset, ~290 000 cells)") +
   theme(plot.title=element_text(hjust=0.5, vjust=0.5))
