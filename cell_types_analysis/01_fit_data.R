@@ -19,8 +19,10 @@ if (!(file.exists(paste0("plot/", dataset_name)))) {
   dir.create(paste0("plot/", dataset_name))
 }
 
+dataset_name <- "BaronPancreasData"
+
 input_data <- read_data(dataset_name, data_path)
-seurat_obj <- prep_seurat_object(input_data, NPC = 50, cluster_res = .2)
+seurat_obj <- prep_seurat_object(input_data, NPC=20, cluster_res = .5)
 
 saveRDS(seurat_obj, paste0('results/', dataset_name, '/seurat.RDS'))
 

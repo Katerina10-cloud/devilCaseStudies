@@ -111,72 +111,54 @@ prep_seurat_object <- function(input_data, NPC=50, cluster_res=1) {
 perform_analysis <- function(seurat_obj, method = "devil") {
   if (!(method %in% c('devil', "glmGamPoi", 'nebula'))) {stop('method not recognized')}
 
-  if (method == 'devil') {
-    c <- 1
-    whole_res <- lapply(unique(seurat_obj$seurat_clusters), function(c) {
-      print(c)
+  counts <- as.matrix(seurat_obj@assays$RNA$counts)
 
-      design_matrix <- model.matrix(~group, dplyr::tibble(group = seurat_obj$seurat_clusters == c))
-      counts <- as.matrix(seurat_obj@assays$RNA$counts)
+  whole_res <- dplyr::tibble()
+  for (c in unique(seurat_obj$seurat_clusters)) {
+    print(c)
 
-      gg <- ((counts[,seurat_obj$seurat_clusters == c] %>% rowSums()) == 0)
-      bad_genes <- gg[gg == T] %>% names()
-      counts <- counts[!(rownames(counts) %in% bad_genes),]
+    idx_cluster <- which(seurat_obj$seurat_clusters == c)
+    idx_others <- which(!(seurat_obj$seurat_clusters == c))
 
-      fit <- devil::fit_devil(counts, design_matrix, verbose = T, size_factors = T, parallel.cores = 1)
+    if (length(idx_others) > length(idx_cluster)) {
+      set.seed(007)
+      idx_others <- sample(idx_others, length(idx_cluster), replace = F)
+    }
 
-      clusters <- as.numeric(as.factor(seurat_obj$donor))
-      res <- devil::test_de(fit, contrast = c(0,1), clusters = clusters, max_lfc = Inf)
-      res %>% dplyr::mutate(cluster = c)
+    idxs <- c(idx_cluster, idx_others)
 
-    }) %>% do.call("bind_rows", .)
+    design_matrix <- model.matrix(~group, dplyr::tibble(group = seurat_obj$seurat_clusters == c))
+    dm <- design_matrix[idxs,]
+    cc <- counts[,idxs]
+    rownames(dm) <- colnames(cc)
 
-  } else if (method == "glmGamPoi") {
-    c <- 1
-    whole_res <- lapply(unique(seurat_obj$seurat_clusters), function(c) {
-      print(c)
+    sf <- devil:::calculate_sf(cc)
 
-      design_matrix <- model.matrix(~group, dplyr::tibble(group = seurat_obj$seurat_clusters == c))
-      counts <- as.matrix(seurat_obj@assays$RNA$counts)
-
-      gg <- ((counts[,seurat_obj$seurat_clusters == c] %>% rowSums()) == 0)
-      bad_genes <- gg[gg == T] %>% names()
-      counts <- counts[!(rownames(counts) %in% bad_genes),]
-
-      fit <- glmGamPoi::glm_gp(counts, design_matrix, size_factors = T, verbose = T)
+    # gg <- ((counts[,seurat_obj$seurat_clusters == c] %>% rowSums()) == 0)
+    # bad_genes <- gg[gg == T] %>% names()
+    # counts <- counts[!(rownames(counts) %in% bad_genes),]
+    clusters <- as.numeric(as.factor(seurat_obj$donor[idxs]))
+    if (method == 'devil') {
+      fit <- devil::fit_devil(cc, dm, verbose = T, size_factors = T, parallel.cores = 1, min_cells = -1, avg_counts = -1)
+      res <- devil::test_de(fit, contrast = c(0,1), clusters = clusters, max_lfc = Inf) %>% dplyr::mutate(cluster = c)
+    } else if (method == "glmGamPoi") {
+      fit <- glmGamPoi::glm_gp(cc, dm, size_factors = "normed_sum", verbose = T)
       res <- glmGamPoi::test_de(fit, contrast = c(0,1))
-      res <- res %>% select(name, pval, adj_pval, lfc)
-
-      res %>% dplyr::mutate(cluster = c)
-
-    }) %>% do.call("bind_rows", .)
-  } else if (method == 'nebula') {
-    c <- 1
-    whole_res <- lapply(unique(seurat_obj$seurat_clusters), function(c) {
-      print(c)
-
-      design_matrix <- model.matrix(~group, dplyr::tibble(group = seurat_obj$seurat_clusters == c))
-      counts <- as.matrix(seurat_obj@assays$RNA$counts)
-
-
-      gg <- ((counts[,seurat_obj$seurat_clusters == c] %>% rowSums()) == 0)
-      bad_genes <- gg[gg == T] %>% names()
-      counts <- counts[!(rownames(counts) %in% bad_genes),]
-
-      clusters <- as.numeric(as.factor(metadata$donor))
-      data_g = group_cell(count=counts,id=clusters,pred=design_matrix)
-
-      fit <- nebula::nebula(data_g$count, id = data_g$id, pred = data_g$pred, ncore = 1)
-
+      res <- res %>% dplyr::as_tibble() %>% dplyr::select(name, pval, adj_pval, lfc) %>% dplyr::mutate(cluster = c)
+    } else if (method == "nebula") {
+      data_g = nebula::group_cell(count=cc,id=clusters,pred=dm)
+      fit <- nebula::nebula(data_g$count, id = data_g$id, pred = data_g$pred, ncore = 1, mincp = 0, cpc = 0, offset = sf)
       res <- dplyr::tibble(
         name = fit$summary$gene,
         pval = fit$summary$p_groupTRUE,
         adj_pval = p.adjust(fit$summary$p_groupTRUE, "BH"),
         lfc=fit$summary$logFC_groupTRUE
-      )
+      ) %>% dplyr::mutate(cluster = c)
+    } else {
+      stop("method not recognized")
+    }
 
-      res %>% dplyr::mutate(cluster = c)
-    }) %>% do.call("bind_rows", .)
+    whole_res <- dplyr::bind_rows(whole_res, res)
   }
   whole_res
 }
@@ -195,36 +177,38 @@ prepScMayoInput <- function(de_res, count_matrix, seurat_clusters, n_markers=50,
       dplyr::arrange(-lfc) %>%
       dplyr::slice(1:n_markers)
 
-    names <- rownames(count_matrix)
-    if (all(grepl("ENSG", names))) {
-      ensembl_names <- names
-      symbol_names <- AnnotationDbi::mapIds(org.Hs.eg.db, keys=ensembl_names,column='SYMBOL', keytype="ENSEMBL", multiVals="first")
-    } else {
-      symbol_names <- names
-      ensembl_names <- AnnotationDbi::mapIds(org.Hs.eg.db, keys=symbol_names,column="ENSEMBL", keytype='SYMBOL', multiVals="first")
-    }
-
-    gene_percentage <- dplyr::tibble()
-    for (gene_name in top_res$name) {
-      if (length(which(gene_name == symbol_names)) > 0) {
-        f <- gene_name == symbol_names
-        f[is.na(f)] <- F
+    if (nrow(top_res) > 0) {
+      names <- rownames(count_matrix)
+      if (all(grepl("ENSG", names))) {
+        ensembl_names <- names
+        symbol_names <- AnnotationDbi::mapIds(org.Hs.eg.db, keys=ensembl_names,column='SYMBOL', keytype="ENSEMBL", multiVals="first")
       } else {
-        f <- gene_name == ensembl_names
-        f[is.na(f)] <- F
+        symbol_names <- names
+        ensembl_names <- AnnotationDbi::mapIds(org.Hs.eg.db, keys=symbol_names,column="ENSEMBL", keytype='SYMBOL', multiVals="first")
       }
 
-      g_counts <- count_matrix[f, seurat_clusters == c]
-      non_g_counts <- count_matrix[f, !(seurat_clusters == c)]
+      gene_percentage <- dplyr::tibble()
+      for (gene_name in top_res$name) {
+        if (length(which(gene_name == symbol_names)) > 0) {
+          f <- gene_name == symbol_names
+          f[is.na(f)] <- F
+        } else {
+          f <- gene_name == ensembl_names
+          f[is.na(f)] <- F
+        }
 
-      pct.1 <- sum(g_counts > 0) / length(g_counts)
-      pct.2 <- sum(non_g_counts > 0) / length(non_g_counts)
+        g_counts <- count_matrix[f, seurat_clusters == c]
+        non_g_counts <- count_matrix[f, !(seurat_clusters == c)]
 
-      gene_percentage <- dplyr::bind_rows(gene_percentage, dplyr::tibble(name = gene_name, pct.1=pct.1, pct.2=pct.2))
+        pct.1 <- sum(g_counts > 0) / length(g_counts)
+        pct.2 <- sum(non_g_counts > 0) / length(non_g_counts)
+
+        gene_percentage <- dplyr::bind_rows(gene_percentage, dplyr::tibble(name = gene_name, pct.1=pct.1, pct.2=pct.2))
+      }
+
+      top_res <- top_res %>% dplyr::left_join(gene_percentage, by="name")
+      scMayoInput <- dplyr::bind_rows(scMayoInput, top_res)
     }
-
-    top_res <- top_res %>% dplyr::left_join(gene_percentage, by="name")
-    scMayoInput <- dplyr::bind_rows(scMayoInput, top_res)
   }
 
   scMayoInput <- scMayoInput %>%
