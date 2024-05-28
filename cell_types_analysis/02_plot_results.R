@@ -1,7 +1,9 @@
 #setwd("~/GitHub/cell_types_analysis")
 rm(list=ls())
-pkgs <- c("ggplot2", "dplyr","tidyr","tibble","reshape2", "AnnotationDbi", "org.Hs.eg.db")
+pkgs <- c("ggplot2", "dplyr","tidyr","tibble","reshape2", "stringr")
 sapply(pkgs, require, character.only = TRUE)
+library("AnnotationDbi")
+library("org.Hs.eg.db")
 library(scMayoMap)
 library(Seurat)
 source("utils.R")
@@ -15,8 +17,8 @@ data_path <- args[2]
 dataset_name <- args[1]
 tissue <- args[3]
 
-dataset_name <- "BaronPancreasData"
-tissue <- 'pancreas'
+dataset_name <- "BigLiverData_new"
+tissue <- "liver"
 
 if (!(file.exists(paste0("results/", dataset_name)))) {
   dir.create(paste0("results/", dataset_name))
@@ -27,7 +29,9 @@ if (!(file.exists(paste0("plot/", dataset_name)))) {
 }
 
 seurat_obj <- readRDS(paste0('results/', dataset_name, '/seurat.RDS'))
+computeGroundTruth(seurat_obj)
 seurat_obj$cell_type <- cell_type_names_to_scMayo_names(seurat_obj$cell_type, tissue)
+computeGroundTruth(seurat_obj)
 
 umap_plot_seurat <- Seurat::DimPlot(
   seurat_obj,
@@ -62,7 +66,7 @@ ggsave(filename = paste0("plot/", dataset_name, "/umap_cell_types.pdf"), dpi=400
 m <- 'devil'
 lfc_cut <- 1
 pval_cut <- .05
-n_markers <- 50
+n_markers <- 10
 
 anno <- scMayoMap::scMayoMapDatabase
 anno <- lapply(colnames(anno[2:ncol(anno)]), function(ct) {
@@ -73,8 +77,17 @@ anno <- anno %>%
   dplyr::mutate(Type = str_replace_all(Type, paste0(tissue, ":"), "")) %>%
   dplyr::mutate(Type = str_replace_all(Type, paste0(" cell"), ""))
 
+anno$Type %>% unique()
+seurat_obj$cell_type %>% unique()
+
+m <- 'devil'
 for (m in c("devil", "nebula", "glmGamPoi")) {
-  de_res <- de_res_total <- readRDS(paste0('results/', dataset_name, '/', m, '.RDS')) %>% na.omit()
+  de_res <- readRDS(paste0('results/', dataset_name, '/', m, '.RDS')) %>% na.omit()
+
+  if (sum(grepl("ENSG", de_res$name)) == nrow(de_res)) {
+    suppressMessages(de_res$name <- mapIds(org.Hs.eg.db, keys=de_res$name,column="SYMBOL", keytype="ENSEMBL", multiVals="first"))
+  }
+
   cluster_values <- de_res$cluster %>% unique()
   remove_genes <- grepl("^ENS", de_res$name)
   de_res <- de_res[!remove_genes, ]
@@ -83,9 +96,12 @@ for (m in c("devil", "nebula", "glmGamPoi")) {
     dplyr::group_by(cluster) %>%
     dplyr::filter(lfc > lfc_cut, adj_pval <= pval_cut) %>%
     dplyr::arrange(-lfc) %>%
+    # dplyr::filter(abs(lfc) > lfc_cut, adj_pval <= pval_cut) %>%
+    # dplyr::arrange(-abs(lfc)) %>%
     dplyr::slice(1:n_markers) %>%
     dplyr::mutate(gene_id = paste(name, cluster, sep=':'))
 
+  c <- unique(top_genes$cluster)[4]
   rez <- lapply(unique(top_genes$cluster), function(c) {
     gg <- top_genes$name[top_genes$cluster == c]
     table_pred <- anno %>%
@@ -100,7 +116,9 @@ for (m in c("devil", "nebula", "glmGamPoi")) {
   }) %>% do.call('bind_rows', .) %>%
     dplyr::left_join(computeGroundTruth(seurat_obj), by='cluster') %>%
     na.omit() %>%
-    dplyr::mutate(ground_truth = paste0(true_cell_type, " (", cluster, ")"))
+    dplyr::mutate(ground_truth = paste0(true_cell_type, " (", cluster, ")")) %>%
+    dplyr::filter(score > .1)
+    #dplyr::mutate(ground_truth = cluster, true_cell_type = cluster)
 
   rez$true_score = lapply(1:nrow(rez), function(i) {
     r <- rez[i,]
@@ -117,13 +135,16 @@ for (m in c("devil", "nebula", "glmGamPoi")) {
     dplyr::mutate(is_correct = true_cell_type == pred)
 
   res_heatmap <- ggplot() +
-    geom_point(rez %>% dplyr::filter(score > .1), mapping = aes(x = ground_truth, y=pred, fill=score, col=score, size=score)) +
-    geom_point(rez_max %>% dplyr::filter(score > .1, is_correct), mapping = aes(x = ground_truth, y=pred, size=score * 1.5), shape=1, col="forestgreen") +
-    geom_point(rez_max %>% dplyr::filter(score > .1, !is_correct), mapping = aes(x = ground_truth, y=pred, size=score * 1.5), shape=1, col="indianred") +
+    geom_point(rez %>% dplyr::filter(score > .1), mapping = aes(x = ground_truth, y=pred, col=score, size=score), shape=20) +
+    geom_point(rez_max %>% dplyr::filter(score > .1, is_correct), mapping = aes(x = ground_truth, y=pred, size=score), shape=21, col="blue") +
+    geom_point(rez_max %>% dplyr::filter(score > .1, !is_correct), mapping = aes(x = ground_truth, y=pred, size=score), shape=21, col="red") +
     theme_bw() +
-    theme(axis.text.x = element_text(angle = 45, vjust = .5), legend.position = 'none')
+    scale_color_gradient(low = "white", high = "#2ca25f") +
+    #scale_color_continuous(type = "viridis") +
+    labs(x = "Ground truth", y = "Prediction") +
+    theme(axis.text.x = element_text(angle = 45, vjust = .5))
 
-  volc <- de_res_total %>%
+  volc <- de_res %>%
     dplyr::mutate(name_id = paste(name, cluster, sep = ":")) %>%
     dplyr::mutate(is_marker = name_id %in% top_genes$gene_id) %>%
     dplyr::mutate(adj_pval = ifelse(adj_pval <= 6.181186e-16, 6.181186e-16, adj_pval)) %>%
@@ -137,6 +158,16 @@ for (m in c("devil", "nebula", "glmGamPoi")) {
     labs(x = "Fold Change (log2)", y = '-Log10 P', col="Marker") #+
   #theme(legend.position = 'bottom')
 
+  # c <- 1
+  # gt_c <- computeGroundTruth(seurat_obj) %>% dplyr::filter(cluster == c) %>% pull(true_cell_type)
+  # gg_c <- anno %>% dplyr::filter(Type == gt_c) %>% pull(Marker)
+  # de_res %>%
+  #   dplyr::filter(cluster == c) %>%
+  #   dplyr::mutate(is_marker = name %in% gg_c) %>%
+  #   ggplot(mapping = aes(x=lfc, y=-log10(adj_pval), col=is_marker)) +
+  #   geom_point() +
+  #   scale_color_manual(values = c(alpha("black", .1), alpha("indianred", 1)))
+
   #obj <- scMayoMap(data = input_scMayo, tissue = tissue, pct.cutoff = 0)
   #saveRDS(obj, paste0("results/", dataset_name, "/", m, "_scMayo.rds"))
 
@@ -149,15 +180,20 @@ for (m in c("devil", "nebula", "glmGamPoi")) {
 # test scMayoMap ####
 comparison_tibble <- dplyr::tibble()
 lfc_cut <- 1
-pval_cut <- .05
-n_markers <- 50
-m <- 'devil'
-for (pval_cut in c(.05, 1e-5, 1e-10, 1e-25, 1e-50)) {
-  print(pval_cut)
+for (m in c("devil", "nebula", "glmGamPoi")) {
+  de_res <- de_res_total <- readRDS(paste0('results/', dataset_name, '/', m, '.RDS')) %>% na.omit()
+  if (sum(grepl("ENSG", de_res$name)) == nrow(de_res)) {
+    suppressMessages(de_res$name <- mapIds(org.Hs.eg.db, keys=de_res$name,column="SYMBOL", keytype="ENSEMBL", multiVals="first"))
+  }
+
   for (n_markers in c(5, 10, 25, 50, 100, 200, 300, 400, 500)) {
     print(n_markers)
-    for (m in c("devil", "nebula", "glmGamPoi")) {
-      de_res <- de_res_total <- readRDS(paste0('results/', dataset_name, '/', m, '.RDS')) %>% na.omit()
+    for (pval_cut in c(.05, 1e-5, 1e-10, 1e-25, 1e-50)) {
+      print(pval_cut)
+    #for (m in c("devil")) {
+
+      # de_res$name <- mapIds(org.Hs.eg.db, keys=de_res$name,column="SYMBOL", keytype="ENSEMBL", multiVals="first")
+
       cluster_values <- de_res$cluster %>% unique()
       remove_genes <- grepl("^ENS", de_res$name)
       de_res <- de_res[!remove_genes, ]
@@ -184,11 +220,13 @@ for (pval_cut in c(.05, 1e-5, 1e-10, 1e-25, 1e-50)) {
         dplyr::left_join(computeGroundTruth(seurat_obj), by='cluster') %>%
         na.omit() %>%
         dplyr::mutate(ground_truth = paste0(true_cell_type, " (", cluster, ")"))
+        #dplyr::mutate(ground_truth = cluster, true_cell_type = cluster)
 
       rez$true_score = lapply(1:nrow(rez), function(i) {
         r <- rez[i,]
         if (r$true_cell_type == r$pred) {
           return(r$score)
+          #return(1)
         } else {
           return(0)
         }
@@ -204,10 +242,13 @@ for (pval_cut in c(.05, 1e-5, 1e-10, 1e-25, 1e-50)) {
 }
 
 comparison_tibble %>%
+  #dplyr::filter(pval_cut > 10) %>%
+  #dplyr::filter(pval_cut <= 1e-25) %>%
   ggplot(mapping = aes(x=n_markers, y=acc, col=model)) +
   geom_point() +
   geom_smooth() +
   theme_bw() +
+  scale_x_continuous(transform = 'log10') +
   labs(x = "N markers", y = "Accuracy", col="Algorithm")
 
 ggsave(paste0("plot/", dataset_name, "/assigment_score.pdf"), dpi=300, width = 8, height = 5)

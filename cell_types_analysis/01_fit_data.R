@@ -20,11 +20,30 @@ if (!(file.exists(paste0("plot/", dataset_name)))) {
 }
 
 input_data <- read_data(dataset_name, data_path)
-seurat_obj <- prep_seurat_object(input_data, NPC=20, cluster_res = .5)
+seurat_obj <- prep_seurat_object(input_data, NPC=20, cluster_res = .2)
+
+umap_plot_seurat <- Seurat::DimPlot(
+  seurat_obj,
+  reduction = "umap",
+  group.by = "seurat_clusters",
+  label = T,
+  repel = T) +
+  theme_minimal() +
+  theme(legend.position = 'none')
+
+umap_plot_labels <- Seurat::DimPlot(
+  seurat_obj,
+  reduction = "umap",
+  group.by = "cell_type",
+  label = T,
+  repel = T) +
+  theme_minimal() +
+  theme(legend.position = 'none')
 
 saveRDS(seurat_obj, paste0('results/', dataset_name, '/seurat.RDS'))
 
 time <- dplyr::tibble()
+m <- 'devil'
 for (m in c("devil", "nebula", "glmGamPoi")) {
   s <- Sys.time()
   de_res_total <- perform_analysis(seurat_obj, method = m)
