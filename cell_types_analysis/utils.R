@@ -362,6 +362,7 @@ cell_type_names_to_scMayo_names <- function(ct, tissue) {
       'B naive'="Naive B",
       'MAIT'="Mucosal-associated invariant T",
       'gdT'='Gamma delta T',
+      'gamma-delta T cell'='Gamma delta T',
       'CD8 TCM'="CD8 Central Memory T",
       'dnT'="Double-negative T",
       'B memory'="Memory B",
@@ -384,13 +385,26 @@ cell_type_names_to_scMayo_names <- function(ct, tissue) {
       "natural killer cell" = "Natural killer",
       'central memory CD4-positive, alpha-beta T cell'="CD4 Central Memory T",
       'effector memory CD8-positive, alpha-beta T cell' = 'CD8 Effector Memory T',
+      'CD4-positive, alpha-beta cytotoxic T cell'="CD4 Central Memory T",
       "classical monocyte"="Monocyte",
       "naive B cell"="Naive B",
       "platelet"="Platelet",
       "non-classical monocyte"='CD16 Monocyte',
       "memory B cell"="Memory B",
       "erythrocyte"="Erythroid precursor",
-      "plasmacytoid dendritic cell, human"="Plasmacytoid dendritic"
+      "plasmacytoid dendritic cell, human"="Plasmacytoid dendritic",
+      "naive thymus-derived CD4-positive, alpha-beta T cell"='CD4 Naive T',
+      "mucosal invariant T cell"='Mucosal-associated invariant T',
+      "lymphocyte"="Lymphoid",
+      "regulatory T cell"="Regulatory T",
+      'transitional stage B cell'="Intermediate B",
+      "naive thymus-derived CD8-positive, alpha-beta T cell"='CD8 Naive T',
+      "CD16-negative, CD56-bright natural killer cell, human"="CD56-bright natural killer",
+      "plasmablast"="Plasmablast",
+      "neutrophil"="Neutrophil",
+      "conventional dendritic cell"="Dendritic",
+      "hematopoietic stem cell"="Hematopoietic stem",
+      "immature neutrophil"="Neutrophil"
     )
   } else if (tissue == "liver") {
     conversion <- list(
@@ -421,11 +435,10 @@ cell_type_names_to_scMayo_names <- function(ct, tissue) {
     stop("tissue name not recognised")
   }
 
-  seurat_obj$cell_type %>% table()
 
   conv <- dplyr::tibble(start = names(conversion), end=conversion %>% unlist() %>% unname())
   new_cell_names <- as.character(ct)
-  c <- "monocyte"
+
   for (c in unique(ct)) {
     new_name <- conv %>% dplyr::filter(start == c) %>% pull(end)
     new_cell_names[which(new_cell_names == c)] <- new_name
@@ -433,3 +446,25 @@ cell_type_names_to_scMayo_names <- function(ct, tissue) {
   new_cell_names
 }
 
+my_large_palette <- c(
+  "steelblue4",
+  "#D98880",
+  "goldenrod",
+  "indianred3",
+  "mediumpurple",
+  "brown",
+  "plum",
+  "tan",
+  "darkseagreen",
+  'cyan3',
+  "lightsteelblue",
+  "peru",
+  "olivedrab",
+  "palevioletred"
+)
+
+method_colors = c(
+  "glmGamPoi" = "#EAB578",
+  "nebula" =  "#E4A6A7",
+  "devil" = "#099668"
+)

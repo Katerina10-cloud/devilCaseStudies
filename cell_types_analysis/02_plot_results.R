@@ -17,8 +17,8 @@ data_path <- args[2]
 dataset_name <- args[1]
 tissue <- args[3]
 
-dataset_name <- "BigLiverData_new"
-tissue <- "liver"
+dataset_name <- "BaronPancreasData"
+tissue <- "pancreas"
 
 if (!(file.exists(paste0("results/", dataset_name)))) {
   dir.create(paste0("results/", dataset_name))
@@ -39,8 +39,14 @@ umap_plot_seurat <- Seurat::DimPlot(
   group.by = "seurat_clusters",
   label = T,
   repel = T) +
-  theme_minimal() +
-  theme(legend.position = 'none')
+  ggtitle("") +
+  scale_color_manual(values = my_large_palette) +
+  theme(axis.line=element_blank(),axis.text.x=element_blank(),
+        axis.text.y=element_blank(),axis.ticks=element_blank(),
+        axis.title.x=element_blank(),
+        axis.title.y=element_blank(),legend.position="none",
+        panel.background=element_blank(),panel.border=element_blank(),panel.grid.major=element_blank(),
+        panel.grid.minor=element_blank(),plot.background=element_blank())
 
 umap_plot_labels <- Seurat::DimPlot(
   seurat_obj,
@@ -48,8 +54,14 @@ umap_plot_labels <- Seurat::DimPlot(
   group.by = "cell_type",
   label = T,
   repel = T) +
-  theme_minimal() +
-  theme(legend.position = 'none')
+  ggtitle("") +
+  scale_color_manual(values = my_large_palette) +
+  theme(axis.line=element_blank(),axis.text.x=element_blank(),
+        axis.text.y=element_blank(),axis.ticks=element_blank(),
+        axis.title.x=element_blank(),
+        axis.title.y=element_blank(),legend.position="none",
+        panel.background=element_blank(),panel.border=element_blank(),panel.grid.major=element_blank(),
+        panel.grid.minor=element_blank(),plot.background=element_blank())
 
 d_umap <- dplyr::tibble(
   x = seurat_obj@reductions$umap@cell.embeddings[,1],
@@ -64,9 +76,9 @@ ggsave(filename = paste0("plot/", dataset_name, "/umap_cluster.pdf"), dpi=400, p
 ggsave(filename = paste0("plot/", dataset_name, "/umap_cell_types.pdf"), dpi=400, plot = umap_plot_labels, width = 8, height = 8)
 
 m <- 'devil'
-lfc_cut <- 1
+lfc_cut <- .5
 pval_cut <- .05
-n_markers <- 10
+n_markers <- 100
 
 anno <- scMayoMap::scMayoMapDatabase
 anno <- lapply(colnames(anno[2:ncol(anno)]), function(ct) {
@@ -78,7 +90,7 @@ anno <- anno %>%
   dplyr::mutate(Type = str_replace_all(Type, paste0(" cell"), ""))
 
 anno$Type %>% unique()
-seurat_obj$cell_type %>% unique()
+computeGroundTruth(seurat_obj)$true_cell_type %>% unique()
 
 m <- 'devil'
 for (m in c("devil", "nebula", "glmGamPoi")) {
@@ -91,6 +103,8 @@ for (m in c("devil", "nebula", "glmGamPoi")) {
   cluster_values <- de_res$cluster %>% unique()
   remove_genes <- grepl("^ENS", de_res$name)
   de_res <- de_res[!remove_genes, ]
+
+  lfc_cut <- .2
 
   top_genes <- de_res %>%
     dplyr::group_by(cluster) %>%
@@ -139,7 +153,7 @@ for (m in c("devil", "nebula", "glmGamPoi")) {
     geom_point(rez_max %>% dplyr::filter(score > .1, is_correct), mapping = aes(x = ground_truth, y=pred, size=score), shape=21, col="blue") +
     geom_point(rez_max %>% dplyr::filter(score > .1, !is_correct), mapping = aes(x = ground_truth, y=pred, size=score), shape=21, col="red") +
     theme_bw() +
-    scale_color_gradient(low = "white", high = "#2ca25f") +
+    scale_color_gradient(low = "lightgreen", high = "darkgreen") +
     #scale_color_continuous(type = "viridis") +
     labs(x = "Ground truth", y = "Prediction") +
     theme(axis.text.x = element_text(angle = 45, vjust = .5))
@@ -186,9 +200,9 @@ for (m in c("devil", "nebula", "glmGamPoi")) {
     suppressMessages(de_res$name <- mapIds(org.Hs.eg.db, keys=de_res$name,column="SYMBOL", keytype="ENSEMBL", multiVals="first"))
   }
 
-  for (n_markers in c(5, 10, 25, 50, 100, 200, 300, 400, 500)) {
+  for (n_markers in c(3,5,10,20,50,100,200,300)) {
     print(n_markers)
-    for (pval_cut in c(.05, 1e-5, 1e-10, 1e-25, 1e-50)) {
+    for (pval_cut in c(.05, 1e-5, 1e-10, 1e-20, 1e-30, 1e-40, 1e-50)) {
       print(pval_cut)
     #for (m in c("devil")) {
 
@@ -242,8 +256,8 @@ for (m in c("devil", "nebula", "glmGamPoi")) {
 }
 
 comparison_tibble %>%
-  #dplyr::filter(pval_cut > 10) %>%
-  #dplyr::filter(pval_cut <= 1e-25) %>%
+  #dplyr::filter(pval_cut > 1e-10) %>%
+  #dplyr::filter(pval_cut <= 1e-10) %>%
   ggplot(mapping = aes(x=n_markers, y=acc, col=model)) +
   geom_point() +
   geom_smooth() +
