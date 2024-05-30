@@ -2,6 +2,8 @@
 DATASET_NAMES <- c("BaronPancreasData", 'ZhaoImmuneLiverDataBlood', 'DarmanisBrainData', 'ZhaoImmuneLiverDataLiver',
                    "BigBloodData", "BigLiverData", "pbmc", "liver")
 
+SEED <- 12345
+
 read_data <- function(dataset_name, data_path=NULL) {
   if (dataset_name == "BaronPancreasData") {
     data <- scRNAseq::BaronPancreasData(which = "human")
@@ -135,7 +137,7 @@ perform_analysis <- function(seurat_obj, method = "devil", by="cluster") {
       idx_others <- which(!(seurat_obj$seurat_clusters == c))
 
       if (length(idx_others) > length(idx_cluster)) {
-        set.seed(007)
+        set.seed(SEED)
         idx_others <- sample(idx_others, length(idx_cluster), replace = F)
       }
 
@@ -153,7 +155,8 @@ perform_analysis <- function(seurat_obj, method = "devil", by="cluster") {
       # counts <- counts[!(rownames(counts) %in% bad_genes),]
       clusters <- as.numeric(as.factor(seurat_obj$donor[idxs]))
       if (method == 'devil') {
-        fit <- devil::fit_devil(cc, dm, verbose = T, size_factors = T, parallel.cores = 1, min_cells = -1, avg_counts = -1)
+        #fit <- devil::fit_devil(cc, dm, verbose = T, size_factors = T, parallel.cores = 1, min_cells = -1, avg_counts = -1)
+        fit <- devil::fit_devil(cc, dm, verbose = T, size_factors = T, parallel.cores = 4, min_cells = -1, avg_counts = -1)
         res <- devil::test_de(fit, contrast = c(0,1), clusters = clusters, max_lfc = Inf) %>% dplyr::mutate(cluster = c)
       } else if (method == "glmGamPoi") {
         fit <- glmGamPoi::glm_gp(cc, dm, size_factors = "normed_sum", verbose = T)
@@ -182,7 +185,7 @@ perform_analysis <- function(seurat_obj, method = "devil", by="cluster") {
       idx_others <- which(!(seurat_obj$cell_type == c))
 
       if (length(idx_others) > length(idx_cluster)) {
-        set.seed(007)
+        set.seed(SEED)
         idx_others <- sample(idx_others, length(idx_cluster), replace = F)
       }
 
@@ -200,7 +203,8 @@ perform_analysis <- function(seurat_obj, method = "devil", by="cluster") {
       # counts <- counts[!(rownames(counts) %in% bad_genes),]
       clusters <- as.numeric(as.factor(seurat_obj$donor[idxs]))
       if (method == 'devil') {
-        fit <- devil::fit_devil(cc, dm, verbose = T, size_factors = T, parallel.cores = 1, min_cells = -1, avg_counts = -1)
+        #fit <- devil::fit_devil(cc, dm, verbose = T, size_factors = T, parallel.cores = 1, min_cells = -1, avg_counts = -1)
+        fit <- devil::fit_devil(cc, dm, verbose = T, size_factors = T, parallel.cores = 4, min_cells = -1, avg_counts = -1)
         res <- devil::test_de(fit, contrast = c(0,1), clusters = clusters, max_lfc = Inf) %>% dplyr::mutate(true_cell_type = c)
       } else if (method == "glmGamPoi") {
         fit <- glmGamPoi::glm_gp(cc, dm, size_factors = "normed_sum", verbose = T)
@@ -408,6 +412,7 @@ cell_type_names_to_scMayo_names <- function(ct, tissue) {
     )
   } else if (tissue == "liver") {
     conversion <- list(
+      'Erythroid'='Erythroid',
       'monocyte'='Monocyte',
       'conventional dendritic cell'='Dendritic',
       'plasmacytoid dendritic cell'='Dendritic',
@@ -435,11 +440,11 @@ cell_type_names_to_scMayo_names <- function(ct, tissue) {
     stop("tissue name not recognised")
   }
 
-
   conv <- dplyr::tibble(start = names(conversion), end=conversion %>% unlist() %>% unname())
   new_cell_names <- as.character(ct)
 
   for (c in unique(ct)) {
+    print(c)
     new_name <- conv %>% dplyr::filter(start == c) %>% pull(end)
     new_cell_names[which(new_cell_names == c)] <- new_name
   }

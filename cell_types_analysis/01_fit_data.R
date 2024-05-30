@@ -1,15 +1,18 @@
 rm(list=ls())
-pkgs <- c("ggplot2", "dplyr","tidyr","tibble","reshape2", "Seurat", "glmGamPoi", "devil", "nebula", 'hrbrthemes')
+pkgs <- c("ggplot2", "dplyr","tidyr","tibble","reshape2", "Seurat", "glmGamPoi", "devil", "nebula")
 sapply(pkgs, require, character.only = TRUE)
 source("utils.R")
 
-set.seed(12345)
+set.seed(SEED)
 
 args = commandArgs(trailingOnly=TRUE)
 
 ## Input data
 data_path <- args[2]
 dataset_name <- args[1]
+
+dataset_name <- 'liver'
+data_path <- "datasets/liver.rds"
 
 if (!(file.exists(paste0("results/", dataset_name)))) {
   dir.create(paste0("results/", dataset_name))
@@ -24,7 +27,7 @@ seurat_obj <- prep_seurat_object(input_data, NPC=20, cluster_res = .2)
 
 umap_plot_seurat <- Seurat::DimPlot(
   seurat_obj,
-  reduction = "umap",
+  reduction = "umap_hm",
   group.by = "seurat_clusters",
   label = T,
   repel = T) +
@@ -33,7 +36,7 @@ umap_plot_seurat <- Seurat::DimPlot(
 
 umap_plot_labels <- Seurat::DimPlot(
   seurat_obj,
-  reduction = "umap",
+  reduction = "umap_hm",
   group.by = "cell_type",
   label = T,
   repel = T) +
