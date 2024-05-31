@@ -204,7 +204,7 @@ perform_analysis <- function(seurat_obj, method = "devil", by="cluster") {
       clusters <- as.numeric(as.factor(seurat_obj$donor[idxs]))
       if (method == 'devil') {
         #fit <- devil::fit_devil(cc, dm, verbose = T, size_factors = T, parallel.cores = 1, min_cells = -1, avg_counts = -1)
-        fit <- devil::fit_devil(cc, dm, verbose = T, size_factors = T, parallel.cores = 4, min_cells = -1, avg_counts = -1)
+        fit <- devil::fit_devil(cc, dm, verbose = T, size_factors = T, parallel.cores = 1, min_cells = -1, avg_counts = -1)
         res <- devil::test_de(fit, contrast = c(0,1), clusters = clusters, max_lfc = Inf) %>% dplyr::mutate(true_cell_type = c)
       } else if (method == "glmGamPoi") {
         fit <- glmGamPoi::glm_gp(cc, dm, size_factors = "normed_sum", verbose = T)

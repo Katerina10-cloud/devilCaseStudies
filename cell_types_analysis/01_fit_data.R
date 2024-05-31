@@ -11,8 +11,8 @@ args = commandArgs(trailingOnly=TRUE)
 data_path <- args[2]
 dataset_name <- args[1]
 
-dataset_name <- 'liver'
-data_path <- "datasets/liver.rds"
+# dataset_name <- 'liver'
+# data_path <- "datasets/liver.rds"
 
 if (!(file.exists(paste0("results/", dataset_name)))) {
   dir.create(paste0("results/", dataset_name))
@@ -27,7 +27,7 @@ seurat_obj <- prep_seurat_object(input_data, NPC=20, cluster_res = .2)
 
 umap_plot_seurat <- Seurat::DimPlot(
   seurat_obj,
-  reduction = "umap_hm",
+  reduction = "umap",
   group.by = "seurat_clusters",
   label = T,
   repel = T) +
@@ -36,7 +36,7 @@ umap_plot_seurat <- Seurat::DimPlot(
 
 umap_plot_labels <- Seurat::DimPlot(
   seurat_obj,
-  reduction = "umap_hm",
+  reduction = "umap",
   group.by = "cell_type",
   label = T,
   repel = T) +
