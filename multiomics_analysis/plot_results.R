@@ -2,7 +2,7 @@
 # Plot results #
 -------------------------------------------------------  
 
-setwd("/Users/katsiarynadavydzenka/Documents/PhD_AI/devilCaseStudies/")
+setwd("/Users/katsiarynadavydzenka/Documents/PhD_AI/devilCaseStudies/multiomics_analysis/results/devil/")
 
 pkgs <- c("ggplot2", "dplyr","tidyr","tibble", "viridis", "smplot2", "Seurat", "VennDiagram", "gridExtra",
           "ggpubr", "ggrepel", "ggvenn", "ggpointdensity")
