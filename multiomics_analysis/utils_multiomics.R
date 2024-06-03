@@ -1,6 +1,6 @@
 DATASET_NAMES <- c("MuscleRNA", "MuscleATAC")
 
-read_data <- function(dataset_name) {
+read_data <- function(dataset_name, data_path = NULL) {
   if (dataset_name == "MuscleRNA") {
     seurat_data <- readRDS(data_path)
     counts <- Seurat::GetAssayData(object = seurat_data, layer = "counts")
@@ -21,7 +21,7 @@ read_data <- function(dataset_name) {
   return(list(counts=counts, metadata=metadata, grange=granges, tissue=tissue))
 }
 
-grange_annot <- function(input_data) {
+grange_annot <- function(input_data, data_path) {
   counts <- input_data$counts
   metadata <- input_data$metadata
   grange <- input_data$grange
@@ -105,7 +105,8 @@ perform_analysis_atac <- function(input_data, method = "devil") {
     metadata <- input_data$metadata
     peak_counts <- as.matrix(input_data$counts)
     design_matrix <- model.matrix(~age_cluster, metadata)
-    clusters <- as.numeric(as.factor(metadata$patient))
+    sf <- devil:::calculate_sf(counts)
+    metadata$patient_id <- as.factor(metadata$patient_id)
     data_g = group_cell(count=peak_counts,id=clusters,pred=design_matrix)
     fit <- nebula::nebula(data_g$count,id = data_g$id, pred = data_g$pred, ncore = 1)
     res <- dplyr::tibble(
@@ -147,8 +148,8 @@ perform_analysis_rna <- function(input_data, method = "devil") {
     counts <- counts[!non_expressed_genes,]
     counts <- as.matrix(input_data$counts)
     design_matrix <- model.matrix(~age_cluster, metadata)
-    clusters <- as.numeric(as.factor(metadata$patient))
-    data_g = group_cell(count=counts,id=clusters,pred=design_matrix)
+    metadata$patient_id <- as.factor(metadata$patient_id)
+    data_g = group_cell(count=counts,id=metadata$patient_id,pred=design_matrix)
     fit <- nebula::nebula(data_g$count,id = data_g$id, pred = data_g$pred, ncore = 1)
     res <- dplyr::tibble(
       name = fit$summary$gene,
