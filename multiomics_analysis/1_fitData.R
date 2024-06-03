@@ -1,59 +1,48 @@
 rm(list=ls())
 pkgs <- c("ggplot2", "dplyr","tidyr","tibble","reshape2", "Seurat", "glmGamPoi", "devil", "nebula")
 sapply(pkgs, require, character.only = TRUE)
-source("utils.R")
 
-set.seed(SEED)
+setwd("/orfeo/LTS/CDSLab/LT_storage/kdavydzenka/sc_devil/")
+source("utils_multiomics.R")
 
-args = commandArgs(trailingOnly=TRUE)
+set.seed(12345)
 
 ## Input data
-data_path <- args[2]
-dataset_name <- args[1]
+data_path <- "/data/seurat_rna_muscl.RDS"
+dataset_name <- "MuscleRNA"
 
-# dataset_name <- 'liver'
-# data_path <- "datasets/liver.rds"
+#data_path <- "data/atac_age.RDS"
+#dataset_name <- "MuscleATAC"
 
 if (!(file.exists(paste0("results/", dataset_name)))) {
   dir.create(paste0("results/", dataset_name))
 }
 
-if (!(file.exists(paste0("plot/", dataset_name)))) {
-  dir.create(paste0("plot/", dataset_name))
-}
-
 input_data <- read_data(dataset_name, data_path)
-seurat_obj <- prep_seurat_object(input_data, NPC=20, cluster_res = .2)
+#input_data <- prepare_atac_input(input_data)
+input_data <- prepare_rna_input(input_data)
 
-umap_plot_seurat <- Seurat::DimPlot(
-  seurat_obj,
-  reduction = "umap",
-  group.by = "seurat_clusters",
-  label = T,
-  repel = T) +
-  theme_minimal() +
-  theme(legend.position = 'none')
-
-umap_plot_labels <- Seurat::DimPlot(
-  seurat_obj,
-  reduction = "umap",
-  group.by = "cell_type",
-  label = T,
-  repel = T) +
-  theme_minimal() +
-  theme(legend.position = 'none')
-
-saveRDS(seurat_obj, paste0('results/', dataset_name, '/seurat.RDS'))
-
+# RNA analysis #
 time <- dplyr::tibble()
 m <- 'devil'
 for (m in c("devil", "nebula", "glmGamPoi")) {
   s <- Sys.time()
-  de_res_total <- perform_analysis(seurat_obj, method = m)
+  de_res_total <- perform_analysis_rna(input_data, method = m)
   e <- Sys.time()
   saveRDS(de_res_total, paste0('results/', dataset_name, '/', m, '.RDS'))
   time <- dplyr::bind_rows(time, dplyr::tibble(method = m, delta_time = e - s))
   print(time)
 }
 
-saveRDS(time, paste0('results/', dataset_name, '/time.RDS'))
+# ATAC analysis #
+time <- dplyr::tibble()
+m <- 'devil'
+for (m in c("devil", "nebula", "glmGamPoi")) {
+  s <- Sys.time()
+  de_res_total <- perform_analysis_atac(input_data, method = m)
+  e <- Sys.time()
+  saveRDS(de_res_total, paste0('results/', dataset_name, '/', m, '.RDS'))
+  time <- dplyr::bind_rows(time, dplyr::tibble(method = m, delta_time = e - s))
+  print(time)
+}
+
