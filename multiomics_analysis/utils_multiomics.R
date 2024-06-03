@@ -149,6 +149,7 @@ perform_analysis_rna <- function(input_data, method = "devil") {
     counts <- as.matrix(input_data$counts)
     design_matrix <- model.matrix(~age_cluster, metadata)
     metadata$patient_id <- as.factor(metadata$patient_id)
+    sf <- devil:::calculate_sf(peak_counts)
     data_g = group_cell(count=counts,id=metadata$patient_id,pred=design_matrix)
     fit <- nebula::nebula(data_g$count,id = data_g$id, pred = data_g$pred, ncore = 1)
     res <- dplyr::tibble(
