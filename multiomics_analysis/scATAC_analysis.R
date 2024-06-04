@@ -11,7 +11,7 @@
 #metadata_rna_muscl.Rdata  
 #seurat_rna_muscl.RDS
 
-setwd("/Users/katsiarynadavydzenka/Documents/PhD_AI/devilCaseStudies/multiomics_analysis/results/devil/")
+setwd("/Users/katsiarynadavydzenka/Documents/PhD_AI/devilCaseStudies/multiomics_analysis/results/")
 
 library(SeuratDisk)
 library(tidyverse)
@@ -188,8 +188,8 @@ atac_down <- subset(res_atac_nodup, res_atac_nodup$adj_pval < 0.05 & res_atac_no
 atac_deg_nodup <- rbind(atac_up, atac_down)
 atac_deg <- atac_deg_nodup
 
-rna_up <- subset(rna_deg, rna_deg$adj_pval < 0.05 & rna_deg$lfc >= 1)
-rna_down <- subset(rna_deg, rna_deg$adj_pval < 0.05 & rna_deg$lfc <= -1.0)
+rna_up <- subset(res_rna_devil, res_rna_devil$adj_pval < 0.05 & res_rna_devil$lfc >= 1)
+rna_down <- subset(res_rna_devil, res_rna_devil$adj_pval < 0.05 & res_rna_devil$lfc <= -1.0)
 rna_deg <- rbind(rna_up, rna_down)
 
 atac_deg <- atac_deg[ atac_deg$geneID %in% rna_deg$geneID,]
@@ -211,32 +211,26 @@ save(res_atac_rna, file = "overlap_atac_rna_nebula.Rdata")
 ###-----------------------------------------------------------------###
 ### Gene set Enrichement analysis ###
 ###-----------------------------------------------------------------###
+
+# Preparing input #
 rm(list=ls())
 pkgs <- c("ggplot2", "dplyr","tidyr","reactome.db", "fgsea", "org.Hs.eg.db", "data.table", "clusterProfiler", "enrichplot", "ggpubr")
 sapply(pkgs, require, character.only = TRUE)
 
 # Convert Gene symbols to EntrezID #
 hs <- org.Hs.eg.db
-my_symbols <- overlap_devil$geneID
+my_symbols <- overlap_glm$geneID
 gene_list <- AnnotationDbi::select(hs,
                                    keys = my_symbols,
                                    columns = c("ENTREZID", "SYMBOL"),
                                    keytype = "SYMBOL")
+
 gene_list <- na.omit(gene_list)
-
-
-# GSEA using fsea #
-
-# Preparing input #
 gene_list <- gene_list[!duplicated(gene_list$SYMBOL),]
-gene_list <- gene_list[gene_list$SYMBOL %in% overlap_devil$geneID,]
-gene_list_rank <- as.vector(overlap_devil$lfc_snRNA)
+gene_list <- gene_list[gene_list$SYMBOL %in% overlap_glm$geneID,]
+gene_list_rank <- as.vector(overlap_glm$lfc_snRNA)
 names(gene_list_rank) <- gene_list$ENTREZID
 gene_list_rank <- sort(gene_list_rank, decreasing = TRUE)
-
------------------------------------------------------------
-### GO Enrichment clusterProfiler###
------------------------------------------------------------  
 
 res_gseGO <- clusterProfiler::gseGO(geneList = gene_list_rank, ont = "BP", OrgDb = org.Hs.eg.db,
                    keyType = "ENTREZID", minGSSize = 10, maxGSSize = 350)
@@ -244,18 +238,18 @@ res_gseGO <- clusterProfiler::gseGO(geneList = gene_list_rank, ont = "BP", OrgDb
 # Select enriched pathways #
 res_gse <- res_gseGO@result
 res_gse <- res_gse %>%
-  filter(Description %in% c("cellular response to salt", "negative regulation of metabolic process", "apoptotic process",
-                            "actin filament-based process", "muscle contraction", "muscle system process", "regulation of supramolecular fiber organization", 
-                            "muscle cell proliferation")) %>% 
+  filter(Description %in% c("positive regulation of cellular component biogenesis","MAPK cascade", "regulation of apoptotic process",
+                            "actin filament-based movement", "actin-mediated cell contraction", "muscle contraction", "muscle system process", 
+                            "negative regulation of metabolic process")) %>% 
   mutate(gene_clusters = case_when(
     NES > 0  ~ 'up-regulated',
     NES < 0  ~ 'down-regulated'))
 
 ### Visualize fgsea enrichment results ###
 
-#res_gse$log_padjust <- -log10(res_gse$p.adjust)
+res_gse_devil$log_padjust <- -log10(res_gse_devil$p.adjust)
 
-plot1 <- ggdotchart(res_gse, x = "Description", y = "log_padjust",
+plot1 <- ggdotchart(res_gse_devil, x = "Description", y = "log_padjust",
                     color = "gene_clusters",
                     palette = c("blue", "#FC4E07"),
                     sorting = "descending",
@@ -263,8 +257,8 @@ plot1 <- ggdotchart(res_gse, x = "Description", y = "log_padjust",
                     group = "gene_clusters",
                     dot.size = "setSize",
                     add = "segments",
-                    title = "Enriched BP pathways in myonuclei cells (old cohort)",
-                    xlab = "Biologic Pathways",
+                    title = "GO enrichment Myonuclei old cohort",
+                    xlab = "GO Pathways",
                     ylab = "-log10(padjust)",
                     ggtheme = theme_pubr()
 )
@@ -272,4 +266,24 @@ plot1 + theme(legend.position = "right")+
   theme_bw()
 
 
+res_gse_devil <- res_gse_devil %>% mutate(method = "Devil")
+res_gse_glm <- res_gse_glm %>% mutate(method = "glmGamPoi")
+res_gse <- rbind(res_gse_devil, res_gse_glm)
+res_gse$method <- as.factor(res_gse$method)
 
+# Barplot #
+#cbPalette <- c("#0072B2", "#999999","#E69F00", "#D55E00","#CC79A7")
+p1 <- ggplot(res_gse, aes(x = log_padjust, y = Description, fill=method)) + 
+  geom_bar(stat="identity", position="dodge", width = 0.50)+
+  labs(x = "-10Log(pvalue)",
+       y = "GO Pathways",
+       title = "GO analysis myonuclei old cohort")+
+  theme(strip.text.x = element_text(size=12, color="black", face="bold.italic"))+
+  theme_bw()
+p1 <- p1 + scale_fill_manual(values=c("#0072B2", "#CC79A7"))
+
+p1 <- p1 + font("xy.text", size = 12, color = "black", face = "plain")+
+  font("title", size = 10, color = "black", face = "bold")+
+  font("xlab", size = 10)+
+  font("ylab", size = 10)
+p1
