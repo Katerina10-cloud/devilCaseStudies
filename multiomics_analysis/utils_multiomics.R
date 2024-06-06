@@ -77,6 +77,25 @@ prepare_rna_input <- function(input_data) {
     ))
   metadata$age_cluster <- as.factor(metadata$age_cluster)
   counts <- counts[,colnames(counts) %in% rownames(metadata)]
+  
+  total_counts <- colSums(counts)
+  total_features <- colSums(counts > 0)
+  
+  mad5_filter <- total_counts > median(total_counts) + 5 * mad(total_counts)
+  feat100_filter <- total_features < 100
+  feat_mad_filter <- total_features > 5 * mad(total_features)
+  
+  mitocondrial_genes <- grepl("^MT-", rownames(counts))
+  mitocondiral_prop <- colSums(counts[mitocondrial_genes, ]) / colSums(counts)
+  mit_prop_filter <- mitocondiral_prop > .1
+  cell_outliers_filter <- mad5_filter | feat100_filter | feat_mad_filter |  mit_prop_filter
+  
+  counts <- counts[, !cell_outliers_filter]
+  metadata <- metadata[!cell_outliers_filter, ]
+  
+  non_expressed_genes <- rowMeans(counts) <= 0.01
+  counts <- counts[!non_expressed_genes, ]
+  counts <- counts[,colnames(counts) %in% rownames(metadata)]
   tissue = "muscle"
   return(list(counts=counts, metadata=metadata, tissue=tissue))
 }
@@ -124,13 +143,11 @@ perform_analysis_rna <- function(input_data, method = "devil") {
   
   if (method == 'devil') {
     metadata <- input_data$metadata
-    non_expressed_genes <- rowMeans(counts) <= 0.01
-    counts <- counts[!non_expressed_genes,]
     counts <- as.matrix(input_data$counts)
     design_matrix <- model.matrix(~age_cluster, metadata)
     fit <- devil::fit_devil(counts, design_matrix, verbose = T, size_factors = T)
-    clusters <- as.numeric(as.factor(metadata$patient))
-    res <- devil::test_de(fit, contrast = c(0,1), clusters = clusters, max_lfc = Inf)
+    clusters <- as.numeric(as.factor(metadata$patient_id)) 
+    res <- devil::test_de(fit, contrast = c(0,1), clusters = clusters, max_lfc = Inf) %>% dplyr::mutate(cluster = clusters)
     
   } else if (method == "glmGamPoi") {
     metadata <- input_data$metadata

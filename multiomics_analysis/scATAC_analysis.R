@@ -61,16 +61,15 @@ atac_seurat <- CreateSeuratObject(
   meta.data = metadata_atac)
 
 # Create Seurat object with selected cell types #
-metadata <- metadata_rna[ (metadata_rna$tech_id %in% c("1") & metadata_rna$cell_cluster %in% c("13", "14")) , ]
-metadata <- metadata_rna[ (metadata_rna$tech_id %in% c("1")), ]
-
+metadata <- metadata[ (metadata$tech %in% c("snRNA") & metadata$Annotation %in% c("Type I", "Type II")) , ]
+metadata <- metadata[ (metadata$tech %in% c("snRNA")) ,]
 metadata <- metadata %>% 
   mutate(age_cluster = case_when(
-    age_group == "0"  ~ '1',
-    age_group == "1" ~ '0'
+    age_pop == "old_pop"  ~ '1',
+    age_group == "young_pop" ~ '0'
     ))  
 metadata$age_cluster <- as.factor(metadata$age_cluster)
-metadata$patient_id <- as.factor(metadata$patient_id)
+metadata$sample <- as.factor(metadata$sample)
 
 metadata_atac <- metadata_atac[ (metadata_atac$group %in% c("young", "old") & metadata_atac$cell_type %in% c("Type I", "Type II")) , ]
 
@@ -240,14 +239,14 @@ res_gse <- res_gseGO@result
 res_gse <- res_gse %>%
   filter(Description %in% c("positive regulation of cellular component biogenesis","MAPK cascade", "regulation of apoptotic process",
                             "actin filament-based movement", "actin-mediated cell contraction", "muscle contraction", "muscle system process", 
-                            "negative regulation of metabolic process")) %>% 
+                            "response to oxygen-containing compound")) %>% 
   mutate(gene_clusters = case_when(
     NES > 0  ~ 'up-regulated',
     NES < 0  ~ 'down-regulated'))
 
 ### Visualize fgsea enrichment results ###
 
-res_gse_devil$log_padjust <- -log10(res_gse_devil$p.adjust)
+res_gse_glm$log_padjust <- -log10(res_gse_glm$p.adjust)
 
 plot1 <- ggdotchart(res_gse_devil, x = "Description", y = "log_padjust",
                     color = "gene_clusters",
@@ -257,13 +256,18 @@ plot1 <- ggdotchart(res_gse_devil, x = "Description", y = "log_padjust",
                     group = "gene_clusters",
                     dot.size = "setSize",
                     add = "segments",
-                    title = "GO enrichment Myonuclei old cohort",
+                    title = "GO enrichment Myonuclei old cohort - Devil",
                     xlab = "GO Pathways",
                     ylab = "-log10(padjust)",
                     ggtheme = theme_pubr()
 )
 plot1 + theme(legend.position = "right")+
-  theme_bw()
+  theme_bw()+
+  font("xy.text", size = 12, color = "black", face = "plain")+
+  font("title", size = 10, color = "black", face = "bold")+
+  font("xlab", size = 10)+
+  font("ylab", size = 10)
+  
 
 
 res_gse_devil <- res_gse_devil %>% mutate(method = "Devil")
@@ -275,7 +279,7 @@ res_gse$method <- as.factor(res_gse$method)
 #cbPalette <- c("#0072B2", "#999999","#E69F00", "#D55E00","#CC79A7")
 p1 <- ggplot(res_gse, aes(x = log_padjust, y = Description, fill=method)) + 
   geom_bar(stat="identity", position="dodge", width = 0.50)+
-  labs(x = "-10Log(pvalue)",
+  labs(x = "-Log10(pvalue)",
        y = "GO Pathways",
        title = "GO analysis myonuclei old cohort")+
   theme(strip.text.x = element_text(size=12, color="black", face="bold.italic"))+
