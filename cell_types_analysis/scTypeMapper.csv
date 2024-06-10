@@ -1,0 +1,80 @@
+from,to,tissue
+natural killer cell,NK cell,blood
+"central memory CD4-positive, alpha-beta T cell",T cell,blood
+"effector memory CD8-positive, alpha-beta T cell",T cell,blood
+classical monocyte,Monocyte,blood
+"CD4-positive, alpha-beta cytotoxic T cell",T cell,blood
+naive B cell,B cell,blood
+gamma-delta T cell,T cell,blood
+"naive thymus-derived CD4-positive, alpha-beta T cell",T cell,blood
+platelet,Mega-kayocyte,blood
+mucosal invariant T cell,T cell,blood
+lymphocyte,Lymphocyte,blood
+non-classical monocyte,Monocyte,blood
+memory B cell,B cell,blood
+regulatory T cell,T cell,blood
+transitional stage B cell,B cell,blood
+erythrocyte,Erythrocyte,blood
+"naive thymus-derived CD8-positive, alpha-beta T cell",T cell,blood
+"CD16-negative, CD56-bright natural killer cell, human",NK cell,blood
+plasmablast,B cell,blood
+neutrophil,Neutrophil,blood
+conventional dendritic cell,Dendritic cell,blood
+hematopoietic stem cell,Stem,blood
+"plasmacytoid dendritic cell, human",Dendritic cell,blood
+immature neutrophil,Neutrophil,blood
+B,B cell,blood
+Basophil,Basophil,blood
+CD14 Monocyte,Monocyte,blood
+CD16 Monocyte,Monocyte,blood
+CD4 Central Memory T,T cell,blood
+CD4 Cytotoxic T,T cell,blood
+CD4 Effector Memory T,T cell,blood
+CD4 Naive T,T cell,blood
+CD4 Proliferating T,T cell,blood
+CD4 T,T cell,blood
+CD8 Proliferating T,T cell,blood
+CD8 T,T cell,blood
+Dendritic,Dendritic cell,blood
+Double-negative T,T cell,blood
+Embryonic stem,Stem,blood
+Endothelial,Endothelial,blood
+Endothelial progenitor,Endothelial,blood
+Endothelial stem,Endothelial,blood
+Eosinophil,Eosinophil,blood
+Epithelial,Epithelial,blood
+Erythroblast,Erythrocyte,blood
+Granulocyte,Granulocyte,blood
+Erythroid,Erythrocyte,blood
+Erythroid precursor,Erythrocyte,blood
+Gamma delta T,T cell,blood
+Hematopoietic stem,Stem,blood
+Immature myeloid,Myeloid,blood
+Innate lymphoid,Lymphoid,blood
+Intermediate B,B cell,blood
+Leukocyte,Leukocyte,blood
+Lymphoid,Lymphoid,blood
+Megakaryocyte,Mega-kayocyte,blood
+Memory B,B cell,blood
+Mesenchymal stem,Stem,blood
+Monocyte,Monocyte,blood
+Mucosal-associated invariant T,T cell,blood
+Myeloid,Myeloid,blood
+Myeloid dendritic,Dendritic cell,blood
+Myeloid-derived suppressor,Myeloid,blood
+Naive B,B cell,blood
+Natural killer,NK cell,blood
+Neutrophil,Neutrophil,blood
+Plasma,B cell,blood
+Plasmablast,B cell,blood
+Plasmacytoid dendritic,Dendritic cell,blood
+Platelet,Mega-kayocyte,blood
+Regulatory T,T cell,blood
+Reticulocyte,Reticulocyte,blood
+T,T cell,blood
+Thymic emigrant,T cell,blood
+CD56-bright natural killer,NK cell,blood
+CD56-dim natural killer,NK cell,blood
+CD8 Central Memory T,T cell,blood
+CD8 Effector Memory T,T cell,blood
+CD8 Naive T,T cell,blood

@@ -28,10 +28,15 @@ if (!(file.exists(paste0("plot/", dataset_name)))) {
   dir.create(paste0("plot/", dataset_name))
 }
 
+scTypeMapper <- read.delim("scTypeMapper.csv", sep = ",")
+
 seurat_obj <- readRDS(paste0('results/', dataset_name, '/seurat.RDS'))
+seurat_obj$cell_type <- lapply(seurat_obj$cell_type, function(ct) {
+  scTypeMapper %>% dplyr::filter(from == ct) %>% pull(to)
+}) %>% unlist()
 computeGroundTruth(seurat_obj) %>% dplyr::arrange(cluster)
-seurat_obj$cell_type <- cell_type_names_to_scMayo_names(seurat_obj$cell_type, tissue)
-computeGroundTruth(seurat_obj) %>% dplyr::arrange(cluster)
+# seurat_obj$cell_type <- cell_type_names_to_scMayo_names(seurat_obj$cell_type, tissue)
+# computeGroundTruth(seurat_obj) %>% dplyr::arrange(cluster)
 
 umap_plot_seurat <- Seurat::DimPlot(
   seurat_obj,
@@ -66,14 +71,15 @@ umap_plot_labels <- Seurat::DimPlot(
 ggsave(filename = paste0("plot_figure/umap_cluster.svg"), dpi=400, plot = umap_plot_seurat, width = 8, height = 8)
 ggsave(filename = paste0("plot_figure/umap_labels.svg"), dpi=400, plot = umap_plot_labels, width = 8, height = 8)
 
-# anno <- scMayoMap::scMayoMapDatabase
-# anno <- lapply(colnames(anno[2:ncol(anno)]), function(ct) {
-#   dplyr::tibble(Type=ct, Marker = anno$gene[anno[,ct] == 1])
-# }) %>% do.call('bind_rows', .)
-# anno <- anno %>%
-#   dplyr::filter(grepl(tissue, Type)) %>%
-#   dplyr::mutate(Type = str_replace_all(Type, paste0(tissue, ":"), "")) %>%
-#   dplyr::mutate(Type = str_replace_all(Type, paste0(" cell"), ""))
+anno <- scMayoMap::scMayoMapDatabase
+anno <- lapply(colnames(anno[2:ncol(anno)]), function(ct) {
+  dplyr::tibble(Type=ct, Marker = anno$gene[anno[,ct] == 1])
+}) %>% do.call('bind_rows', .)
+anno <- anno %>%
+  dplyr::filter(grepl(tissue, Type)) %>%
+  dplyr::mutate(Type = str_replace_all(Type, paste0(tissue, ":"), "")) %>%
+  dplyr::mutate(Type = str_replace_all(Type, paste0(" cell"), ""))
+anno$Type %>% unique()
 counts <- as.matrix(seurat_obj@assays$RNA$counts)
 percentage_tibble <- lapply(unique(seurat_obj$seurat_clusters), function(c) {
   print(c)
@@ -104,6 +110,9 @@ rm(counts)
 
 lfc_cut <- 1
 comparison_tibble <- dplyr::tibble()
+m <- 'devil'
+n_markers <- 25
+pval_cut <- .01
 for (m in c("devil", "nebula", "glmGamPoi")) {
   de_res <- de_res_total <- readRDS(paste0('results/', dataset_name, '/', m, '.RDS')) %>% na.omit()
   if (sum(grepl("ENSG", de_res$name)) == nrow(de_res)) {
@@ -147,16 +156,24 @@ for (m in c("devil", "nebula", "glmGamPoi")) {
         dplyr::left_join(computeGroundTruth(seurat_obj), by='cluster') %>%
         dplyr::mutate(pred = str_replace_all(celltype, " cell", "")) %>%
         dplyr::mutate(score = as.numeric(score))
-
-      res_neb <- scMayoRes$res
+      rez$pred <- lapply(rez$pred, function(ct) {
+        scTypeMapper %>% dplyr::filter(from == ct) %>% pull(to)
+      }) %>% unlist()
 
       rez <- rez %>%
+        dplyr::select(cluster, score, true_cell_type, pred) %>%
+        dplyr::group_by(cluster, pred) %>%
+        dplyr::mutate(score = sum(score)) %>%
+        dplyr::ungroup() %>%
+        dplyr::distinct() %>%
         dplyr::group_by(cluster) %>%
         dplyr::filter(score == max(score)) %>%
         dplyr::mutate(true_score = ifelse(true_cell_type == pred, score, 0))
 
-      acc = sum(rez$true_score) / length(unique(seurat_obj$seurat_clusters))
-      acc_1 = sum(rez$true_score > 0) / length(unique(seurat_obj$seurat_clusters))
+      n_max <- length(unique(seurat_obj$seurat_clusters))
+
+      acc = sum(rez$true_score) / n_max
+      acc_1 = sum(rez$true_score > 0) / n_max
 
       comparison_tibble <- dplyr::bind_rows(
         comparison_tibble,
@@ -168,7 +185,7 @@ for (m in c("devil", "nebula", "glmGamPoi")) {
 
 comparison_tibble %>%
   #dplyr::filter(n_markers <= 100) %>%
-  #dplyr::filter(pval_cut > 1e-3) %>%
+  dplyr::filter(pval_cut <= 1e-10) %>%
   dplyr::group_by(model, n_markers) %>%
   dplyr::summarise(mean_acc = mean(acc), sd_acc = sd(acc)) %>%
   #dplyr::summarise(mean_acc = mean(acc_1), sd_acc = sd(acc_1)) %>%
@@ -323,7 +340,7 @@ ggsave(filename = "plot_figure/volcano_11.svg", dpi=300, width = 8, height = 7)
 
 # Heatmap ####
 lfc_cut <- 1
-n_markers <- 1000
+n_markers <- 20
 pval_cut <- .05
 m <- 'devil'
 
@@ -355,13 +372,16 @@ scMayoInput <- lapply(unique(top_genes$cluster), function(c) {
     dplyr::rename(p_val_adj = adj_pval, gene=name, avg_log2FC=lfc)
 }) %>% do.call('bind_rows', .)
 
-scMayoRes <- scMayoMap::scMayoMap(scMayoInput, pct.cutoff = 0, tissue = tissue)
+
 rez <- scMayoRes$markers %>%
   dplyr::left_join(computeGroundTruth(seurat_obj), by='cluster') %>%
   dplyr::mutate(pred = str_replace_all(celltype, " cell", "")) %>%
   dplyr::mutate(score = as.numeric(score)) %>%
   dplyr::mutate(ground_truth = paste0(true_cell_type, " (", cluster, ")")) %>%
   dplyr::filter(score > .1)
+rez$pred <- lapply(rez$pred, function(ct) {
+  scTypeMapper %>% dplyr::filter(from == ct) %>% pull(to)
+}) %>% unlist()
 
 rez_max <- rez %>%
   dplyr::group_by(cluster) %>%

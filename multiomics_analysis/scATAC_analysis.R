@@ -11,7 +11,7 @@
 #metadata_rna_muscl.Rdata  
 #seurat_rna_muscl.RDS
 
-setwd("/Users/katsiarynadavydzenka/Documents/PhD_AI/devilCaseStudies/multiomics_analysis/results/")
+setwd("/Users/katsiarynadavydzenka/Documents/PhD_AI/devilCaseStudies/multiomics_analysis/results/new_results/")
 
 library(SeuratDisk)
 library(tidyverse)
@@ -160,21 +160,21 @@ rna_deg <- rbind(rna_up, rna_down)
 
 granAnn <- annot %>% select(SYMBOL, ranges)
 colnames(granAnn)[2] <- "name"
-res_atac <- merge(atac_deg, granAnn, by = "name")
-colnames(res_atac)[5] <- "geneID"
+res_atac <- merge(res_atac, granAnn, by = "name")
+colnames(atac_deg)[5] <- "geneID"
 colnames(rna_deg)[1] <- "geneID"
 
 res_atac_dup <- res_atac
 atac_up <- subset(res_atac_dup, res_atac_dup$lfc > 0)
 atac_up <- atac_up %>% group_by(geneID) %>% arrange(lfc)
 atac_up <- atac_up[order(atac_up$lfc, decreasing = TRUE), ] 
-atac_up_nodup <- atac_up[!duplicated(atac_up$geneID), ]
+atac_up_nodup <- atac_up[!duplicated(atac_up$SYMBOL), ]
 #atac_up_nodup <- atac_up_nodup[!atac_up_nodup$geneID %in% c("PPARA", "PER2"),]
 
 atac_down <- subset(res_atac_dup, res_atac_dup$lfc < 0)
-atac_down <- atac_down %>% group_by(geneID) %>% arrange(lfc)
+atac_down <- atac_down %>% group_by(SYMBOL) %>% arrange(lfc)
 atac_down <- atac_down[order(atac_down$lfc), ] 
-atac_down_nodup <- atac_down[!duplicated(atac_down$geneID), ]
+atac_down_nodup <- atac_down[!duplicated(atac_down$SYMBOL), ]
 
 res_atac_nodup <- rbind(atac_up_nodup, atac_down_nodup)
 res_atac_nodup <- res_atac_nodup[!duplicated(res_atac_nodup$geneID), ]
@@ -182,13 +182,13 @@ res_atac_nodup <- res_atac_nodup[!duplicated(res_atac_nodup$geneID), ]
 atac_deg_nodup <- atac_deg_nodup[ atac_deg_nodup$geneID %in% rna_deg$geneID,]
 rna_deg <- rna_deg[ rna_deg$geneID %in% atac_deg_nodup$geneID,]
 
-atac_up <- subset(res_atac_nodup, res_atac_nodup$adj_pval < 0.05 & res_atac_nodup$lfc >= 1)
+atac_up <- subset(res_atac_nodup, res_atac_nodup$adj_pval < 0.05 & res_atac_nodup$lfc >= 1.0)
 atac_down <- subset(res_atac_nodup, res_atac_nodup$adj_pval < 0.05 & res_atac_nodup$lfc <= -1.0)
 atac_deg_nodup <- rbind(atac_up, atac_down)
 atac_deg <- atac_deg_nodup
 
-rna_up <- subset(res_rna_devil, res_rna_devil$adj_pval < 0.05 & res_rna_devil$lfc >= 1)
-rna_down <- subset(res_rna_devil, res_rna_devil$adj_pval < 0.05 & res_rna_devil$lfc <= -1.0)
+rna_up <- subset(res_rna_devil, res_rna_devil$adj_pval < 0.05 & res_rna_devil$lfc > 1.0)
+rna_down <- subset(res_rna_devil, res_rna_devil$adj_pval < 0.05 & res_rna_devil$lfc < -1.0)
 rna_deg <- rbind(rna_up, rna_down)
 
 atac_deg <- atac_deg[ atac_deg$geneID %in% rna_deg$geneID,]
@@ -203,7 +203,7 @@ colnames(rna_deg) <- c("geneID", "adj_pval_snRNA", "lfc_snRNA")
 res_atac_rna <- merge(atac_deg, rna_deg, by = "geneID")
 
 
-save(res_atac_rna, file = "overlap_atac_rna_nebula.Rdata")
+save(res_atac_rna, file = "overlap_devil.Rdata")
 
 
 

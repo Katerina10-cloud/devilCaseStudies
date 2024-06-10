@@ -63,6 +63,21 @@ prepare_atac_input <- function(input_data) {
   grange_annot <- grange_annot[ (grange_annot$annotation %in% c("Promoter (<=1kb)", "Promoter (1-2kb)", "Promoter (2-3kb)")), ]
   grange_annot <- grange_annot %>% mutate(ranges = paste(grange_annot$seqnames, grange_annot$start, grange_annot$end))
   peak_counts <- peak_counts[ rownames(peak_counts) %in% grange_annot$ranges , ]
+  total_counts <- colSums(peak_counts)
+  total_features <- colSums(peak_counts > 0)
+  
+  mad5_filter <- total_counts > median(total_counts) + 5 * mad(total_counts)
+  feat1000_filter <- total_features < 1000
+  feat_mad_filter <- total_features > 5 * mad(total_features)
+  
+  cell_outliers_filter <- mad5_filter | feat1000_filter | feat_mad_filter 
+  
+  peak_counts <- peak_counts[, !cell_outliers_filter]
+  metadata <- metadata[!cell_outliers_filter, ]
+  
+  non_expressed_genes <- rowMeans(peak_counts) <= 0.01
+  peak_counts <- peak_counts[!non_expressed_genes, ]
+  peak_counts <- peak_counts[,colnames(peak_counts) %in% rownames(metadata)]
   tissue = "muscle"
   return(list(counts=counts, metadata=metadata, grange=grange_annot, tissue=tissue))
 }
