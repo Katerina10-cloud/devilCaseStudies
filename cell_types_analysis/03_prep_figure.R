@@ -17,8 +17,8 @@ data_path <- args[2]
 dataset_name <- args[1]
 tissue <- args[3]
 
-dataset_name <- "pbmc"
-tissue <- "blood"
+dataset_name <- "liver"
+tissue <- "liver"
 
 if (!(file.exists(paste0("results/", dataset_name)))) {
   dir.create(paste0("results/", dataset_name))
@@ -28,9 +28,11 @@ if (!(file.exists(paste0("plot/", dataset_name)))) {
   dir.create(paste0("plot/", dataset_name))
 }
 
-scTypeMapper <- read.delim("scTypeMapper.csv", sep = ",")
+scTypeMapper <- read.delim("scTypeMapper.csv", sep = ",") %>% dplyr::rename(Tissue = tissue) %>% dplyr::filter(Tissue == tissue)
 
 seurat_obj <- readRDS(paste0('results/', dataset_name, '/seurat.RDS'))
+computeGroundTruth(seurat_obj) %>% dplyr::arrange(cluster)
+seurat_obj$cell_type %>% unique()
 seurat_obj$cell_type <- lapply(seurat_obj$cell_type, function(ct) {
   scTypeMapper %>% dplyr::filter(from == ct) %>% pull(to)
 }) %>% unlist()
@@ -71,15 +73,15 @@ umap_plot_labels <- Seurat::DimPlot(
 ggsave(filename = paste0("plot_figure/umap_cluster.svg"), dpi=400, plot = umap_plot_seurat, width = 8, height = 8)
 ggsave(filename = paste0("plot_figure/umap_labels.svg"), dpi=400, plot = umap_plot_labels, width = 8, height = 8)
 
-anno <- scMayoMap::scMayoMapDatabase
-anno <- lapply(colnames(anno[2:ncol(anno)]), function(ct) {
-  dplyr::tibble(Type=ct, Marker = anno$gene[anno[,ct] == 1])
-}) %>% do.call('bind_rows', .)
-anno <- anno %>%
-  dplyr::filter(grepl(tissue, Type)) %>%
-  dplyr::mutate(Type = str_replace_all(Type, paste0(tissue, ":"), "")) %>%
-  dplyr::mutate(Type = str_replace_all(Type, paste0(" cell"), ""))
-anno$Type %>% unique()
+# anno <- scMayoMap::scMayoMapDatabase
+# anno <- lapply(colnames(anno[2:ncol(anno)]), function(ct) {
+#   dplyr::tibble(Type=ct, Marker = anno$gene[anno[,ct] == 1])
+# }) %>% do.call('bind_rows', .)
+# anno <- anno %>%
+#   dplyr::filter(grepl(tissue, Type)) %>%
+#   dplyr::mutate(Type = str_replace_all(Type, paste0(tissue, ":"), "")) %>%
+#   dplyr::mutate(Type = str_replace_all(Type, paste0(" cell"), ""))
+# anno$Type %>% unique()
 counts <- as.matrix(seurat_obj@assays$RNA$counts)
 percentage_tibble <- lapply(unique(seurat_obj$seurat_clusters), function(c) {
   print(c)
@@ -157,7 +159,8 @@ for (m in c("devil", "nebula", "glmGamPoi")) {
         dplyr::mutate(pred = str_replace_all(celltype, " cell", "")) %>%
         dplyr::mutate(score = as.numeric(score))
       rez$pred <- lapply(rez$pred, function(ct) {
-        scTypeMapper %>% dplyr::filter(from == ct) %>% pull(to)
+        v <- scTypeMapper %>% dplyr::filter(from == ct) %>% pull(to)
+        unique(v)
       }) %>% unlist()
 
       rez <- rez %>%
@@ -185,7 +188,7 @@ for (m in c("devil", "nebula", "glmGamPoi")) {
 
 comparison_tibble %>%
   #dplyr::filter(n_markers <= 100) %>%
-  dplyr::filter(pval_cut <= 1e-10) %>%
+  #dplyr::filter(pval_cut <= 1e-10) %>%
   dplyr::group_by(model, n_markers) %>%
   dplyr::summarise(mean_acc = mean(acc), sd_acc = sd(acc)) %>%
   #dplyr::summarise(mean_acc = mean(acc_1), sd_acc = sd(acc_1)) %>%
