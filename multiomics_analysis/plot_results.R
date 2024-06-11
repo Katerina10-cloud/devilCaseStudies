@@ -2,7 +2,7 @@
 # Plot results #
 -------------------------------------------------------  
 
-setwd("/Users/katsiarynadavydzenka/Documents/PhD_AI/devilCaseStudies/multiomics_analysis/results/devil/")
+setwd("/Users/katsiarynadavydzenka/Documents/PhD_AI/devilCaseStudies/multiomics_analysis/")
 
 pkgs <- c("ggplot2", "dplyr","tidyr","tibble", "viridis", "smplot2", "Seurat", "VennDiagram", "gridExtra",
           "ggpubr", "ggrepel", "ggvenn", "ggpointdensity")
@@ -58,7 +58,8 @@ p_umap_rna + p_umap_atac
 # Vienn diagram #
 --------------------------------------------------------  
 
-devil <- list(snATAC=atac_devil$geneID, snRNA=rna_devil$geneID)
+devil <- list(snATAC=atac_deg$geneID, snRNA=rna_deg$geneID)
+
 glm <- list(snATAC=atac_glm$geneID, snRNA=rna_glm$geneID)
 
 p1 <- ggvenn(devil, c("snATAC", "snRNA"), show_percentage = FALSE,
@@ -98,9 +99,11 @@ corr_plot1+corr_plot2
 # top genes #
 top_genes <- filter(res, name %in% c("PPARA","PER2","MYH1","MYH2","MYH4","PDE7B", 
                      "TNNT2","ID1","SAA2-SAA4","JUN","JUND","FOS","EGR1")) 
+#res_rna_age_devil <- res_rna_age_devil[!(res_rna_age_devil$name %in% c("PREPL")),] #remove outliers
 
-p1 <- EnhancedVolcano::EnhancedVolcano(res_rna_neb,
-                                       lab = res_rna_neb$name,
+
+p3 <- EnhancedVolcano::EnhancedVolcano(res_rna,
+                                       lab = res_rna$name,
                                        x = 'lfc',
                                        y = 'adj_pval',
                                        selectLab = c("PPARA","PER2","MYH1","MYH2","MYH4","PDE7B", 
@@ -126,7 +129,7 @@ p1 <- EnhancedVolcano::EnhancedVolcano(res_rna_neb,
                                        widthConnectors = 1.0,
                                        colConnectors = 'black')
 
-plot1 <- p1 + ggplot2::labs(title="Nebula: snRNA") +
+plot1 <- p1 + ggplot2::labs(title="Devil: snRNA") +
   theme(plot.title=element_text(hjust=0.5, vjust=0.5))
 plot1
 
@@ -142,7 +145,7 @@ plot4 <- p4 + ggplot2::labs(title="glmGamPoi: snATAC") +
   theme(plot.title=element_text(hjust=0.5, vjust=0.5))
 plot4
 
-grid.arrange(plot3, plot4, nrow = 1)
+grid.arrange(plot1, plot2, nrow = 1)
 
 
 ------------------------------------------------------------
