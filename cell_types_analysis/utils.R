@@ -465,7 +465,8 @@ my_large_palette <- c(
   "lightsteelblue",
   "peru",
   "olivedrab",
-  "palevioletred"
+  "palevioletred",
+  "firebrick"
 )
 
 method_colors = c(
