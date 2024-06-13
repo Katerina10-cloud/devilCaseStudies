@@ -16,9 +16,15 @@ args = commandArgs(trailingOnly=TRUE)
 data_path <- args[2]
 dataset_name <- args[1]
 tissue <- args[3]
+save_svg <- as.logical(args[4])
 
-dataset_name <- "pbmc"
-tissue <- "blood"
+# dataset_name <- "pbmc"
+# tissue <- "blood"
+
+img_folder <- paste0("plot_figure/", dataset_name, "/")
+if (!dir.exists(img_folder)) {
+  dir.create(img_folder)
+}
 
 if (!(file.exists(paste0("results/", dataset_name)))) {
   dir.create(paste0("results/", dataset_name))
@@ -60,24 +66,24 @@ umap_plot_seurat <- Seurat::DimPlot(
         panel.background=element_blank(),panel.border=element_blank(),panel.grid.major=element_blank(),
         panel.grid.minor=element_blank(),plot.background=element_blank())
 
-umap_plot_labels <- Seurat::DimPlot(
-  seurat_obj,
-  reduction = "umap",
-  group.by = "cell_type",
-  label = T,
-  repel = T) +
-  ggtitle("") +
-  scale_color_manual(values = my_large_palette) +
-  theme(axis.line=element_blank(),axis.text.x=element_blank(),
-        axis.text.y=element_blank(),axis.ticks=element_blank(),
-        axis.title.x=element_blank(),
-        axis.title.y=element_blank(),legend.position="none",
-        panel.background=element_blank(),panel.border=element_blank(),panel.grid.major=element_blank(),
-        panel.grid.minor=element_blank(),plot.background=element_blank())
+# umap_plot_labels <- Seurat::DimPlot(
+#   seurat_obj,
+#   reduction = "umap",
+#   group.by = "cell_type",
+#   label = T,
+#   repel = T) +
+#   ggtitle("") +
+#   scale_color_manual(values = my_large_palette) +
+#   theme(axis.line=element_blank(),axis.text.x=element_blank(),
+#         axis.text.y=element_blank(),axis.ticks=element_blank(),
+#         axis.title.x=element_blank(),
+#         axis.title.y=element_blank(),legend.position="none",
+#         panel.background=element_blank(),panel.border=element_blank(),panel.grid.major=element_blank(),
+#         panel.grid.minor=element_blank(),plot.background=element_blank())
 
-#ggsave(filename = paste0("plot_figure/umap_cluster.pdf"), dpi=400, plot = umap_plot_seurat, width = 8, height = 8)
-ggsave(filename = paste0("plot_figure/umap_cluster.svg"), dpi=400, plot = umap_plot_seurat, width = 8, height = 8)
-ggsave(filename = paste0("plot_figure/umap_labels.svg"), dpi=400, plot = umap_plot_labels, width = 8, height = 8)
+ggsave(filename = paste0(img_folder, "umap_cluster.pdf"), dpi=400, plot = umap_plot_seurat, width = 8, height = 8)
+if (save_svg) { ggsave(filename = paste0(img_folder, "umap_cluster.svg"), dpi=400, plot = umap_plot_seurat, width = 8, height = 8) }
+#ggsave(filename = paste0("plot_figure/umap_labels.svg"), dpi=400, plot = umap_plot_labels, width = 8, height = 8)
 
 # anno <- scMayoMap::scMayoMapDatabase
 # anno <- lapply(colnames(anno[2:ncol(anno)]), function(ct) {
@@ -210,8 +216,9 @@ comparison_tibble %>%
     legend.position = 'right'
 )
 
-ggsave(paste0("plot_figure/assigment_score.svg"), dpi=300, width = 150, height = 60, units = "mm")
 
+ggsave(filename = paste0(img_folder, "assigment_score.pdf"), plot = last_plot(), dpi=300, width = 150, height = 60, units = "mm")
+if (save_svg) { ggsave(filename = paste0(img_folder, "assigment_score.svg"), plot = last_plot(), dpi=300, width = 150, height = 60, units = "mm") }
 
 # # Comparison tibble our score ####
 # anno <- scMayoMap::scMayoMapDatabase
@@ -356,7 +363,8 @@ de_res %>%
   )
 #theme(legend.position = 'bottom')
 
-ggsave(filename = "plot_figure/volcano_11.svg", dpi=300, width = 82, height = 85, units = 'mm')
+ggsave(filename = paste0(img_folder, "volcano_",c,".pdf"), dpi=300, width = 82, height = 85, units = 'mm')
+if (save_svg) { ggsave(filename = paste0(img_folder, "volcano_",c,".svg"), dpi=300, width = 82, height = 85, units = 'mm') }
 
 # Heatmap ####
 lfc_cut <- 1
@@ -408,21 +416,21 @@ rez_max <- rez %>%
   dplyr::filter(score == max(score)) %>%
   dplyr::mutate(is_correct = true_cell_type == pred)
 
-res_heatmap <- ggplot() +
-  # geom_point(rez_max %>% dplyr::filter(score > .1, is_correct), mapping = aes(x = ground_truth, y=pred, size=score * 3), shape=20, col="yellowgreen") +
-  # geom_point(rez_max %>% dplyr::filter(score > .1, !is_correct), mapping = aes(x = ground_truth, y=pred, size=score * 3), shape=20, col="indianred") +
-  geom_tile(rez %>% dplyr::filter(score > .1), mapping = aes(x=ground_truth, y=pred, fill=score), col='darkslategray') +
-  geom_point(rez_max %>% dplyr::filter(score > .1, is_correct), mapping = aes(x = ground_truth, y=pred), size =3, shape=20, col="yellowgreen") +
-  geom_point(rez_max %>% dplyr::filter(score > .1, !is_correct), mapping = aes(x = ground_truth, y=pred), shape=20, size=3, col="indianred") +
-  theme_bw() +
-  scale_fill_gradient(low = "#deebf7", high = "#08519c") +
-  labs(x = "True cell types", y = "Predicted cell types", fill="Score") +
-  #scale_color_continuous(type = "viridis") +
-  theme(
-    axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
-    text=element_text(size=10),
-    legend.position = 'none'
-    )
+# res_heatmap <- ggplot() +
+#   # geom_point(rez_max %>% dplyr::filter(score > .1, is_correct), mapping = aes(x = ground_truth, y=pred, size=score * 3), shape=20, col="yellowgreen") +
+#   # geom_point(rez_max %>% dplyr::filter(score > .1, !is_correct), mapping = aes(x = ground_truth, y=pred, size=score * 3), shape=20, col="indianred") +
+#   geom_tile(rez %>% dplyr::filter(score > .1), mapping = aes(x=ground_truth, y=pred, fill=score), col='darkslategray') +
+#   geom_point(rez_max %>% dplyr::filter(score > .1, is_correct), mapping = aes(x = ground_truth, y=pred), size =3, shape=20, col="yellowgreen") +
+#   geom_point(rez_max %>% dplyr::filter(score > .1, !is_correct), mapping = aes(x = ground_truth, y=pred), shape=20, size=3, col="indianred") +
+#   theme_bw() +
+#   scale_fill_gradient(low = "#deebf7", high = "#08519c") +
+#   labs(x = "True cell types", y = "Predicted cell types", fill="Score") +
+#   #scale_color_continuous(type = "viridis") +
+#   theme(
+#     axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
+#     text=element_text(size=10),
+#     legend.position = 'none'
+#     )
 
 res_heatmap <- ggplot() +
   # geom_point(rez_max %>% dplyr::filter(score > .1, is_correct), mapping = aes(x = ground_truth, y=pred, size=score * 3), shape=20, col="yellowgreen") +
@@ -442,7 +450,9 @@ res_heatmap <- ggplot() +
   )
 
 res_heatmap
-ggsave(filename = "plot_figure/heatmap.svg", dpi=300, width = 140, height = 105, units = "mm")
+
+ggsave(filename = paste0(img_folder, "heatmap.pdf"), dpi=300, width = 140, height = 105, units = 'mm')
+if (save_svg) { ggsave(filename = paste0(img_folder, "heatmap.svg"), dpi=300, width = 140, height = 105, units = 'mm') }
 
 # Upset Plot ####
 mutations <- read.csv( system.file("extdata", "mutations.csv", package = "UpSetR"), header=T, sep = ",")
@@ -500,7 +510,7 @@ for (m in names(method_order)) {
 
 upset_plot <- UpSetR::upset(data.frame(mm_tibble), sets.bar.color = method_colors_arranged,
                             order.by = "freq", text.scale = 1.8)
-svg(filename = "plot_figure/upset_plot.svg", width = 9, height = 5)
+svg(filename = paste0(img_folder, 'upset_plot.svg'), width = 9, height = 5)
 upset_plot %>% print()
 dev.off()
 
@@ -521,4 +531,7 @@ timing %>%
     legend.position = 'none'
   )
 
-ggsave(filename = "plot_figure/timing.svg", dpi=300, width = 40, height = 60, units = 'mm')
+ggsave(filename = paste0(img_folder, "timing.pdf"), dpi=300, width = 40, height = 60, units = 'mm')
+if (save_svg) {ggsave(filename = paste0(img_folder, "timing.svg"), dpi=300, width = 40, height = 60, units = 'mm')}
+
+unlink("Rplots.pdf")
