@@ -468,6 +468,7 @@ my_large_palette <- c(
   "palevioletred",
   "firebrick"
 )
+my_large_palette <- c(my_large_palette, my_large_palette, my_large_palette)
 
 method_colors = c(
   "glmGamPoi" = "#EAB578",

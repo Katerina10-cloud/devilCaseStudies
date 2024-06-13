@@ -38,7 +38,20 @@ scTypeMapper <- read.delim("scTypeMapper.csv", sep = ",") %>% dplyr::rename(Tiss
 
 seurat_obj <- readRDS(paste0('results/', dataset_name, '/seurat.RDS'))
 computeGroundTruth(seurat_obj) %>% dplyr::arrange(cluster)
-seurat_obj$cell_type %>% unique()
+print("Seurat obj cell types")
+print(seurat_obj$cell_type %>% unique())
+
+
+anno <- scMayoMap::scMayoMapDatabase
+anno <- lapply(colnames(anno[2:ncol(anno)]), function(ct) {
+  dplyr::tibble(Type=ct, Marker = anno$gene[anno[,ct] == 1])
+}) %>% do.call('bind_rows', .)
+anno <- anno %>%
+  dplyr::filter(grepl(tissue, Type)) %>%
+  dplyr::mutate(Type = str_replace_all(Type, paste0(tissue, ":"), "")) %>%
+  dplyr::mutate(Type = str_replace_all(Type, paste0(" cell"), ""))
+print("ScMayo cell types")
+print(anno$Type %>% unique())
 
 new_cell_type <- rep(NA, length(seurat_obj$cell_type))
 for (ct in unique(seurat_obj$cell_type)) {
