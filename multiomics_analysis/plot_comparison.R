@@ -1,17 +1,9 @@
 rm(list = ls())
 
 # Devil ####
-res_devil_rna <- readRDS("results/devil/res_muscl_rna_age_devil.RDS")
-res_devil_atac <- load("results/devil/res_atac_age_devil.Rdata")
-res_devil_atac <- res_atac
-rm(res_atac)
-
-res_devil_rna$gene = res_devil_rna$name
-res_devil_atac$gene = res_devil_atac$name
-
-gg <- unique(c(res_devil_atac$gene, res_devil_rna$gene))
-
-plot(res_devil_atac$lfc, res_devil_rna$lfc)
+load("results/devil/res_rna_age_devil.Rdata")
+res_devil <- res
+res_devil$gene = res_devil$name
 res_edgeR <- readRDS("results/edgeR_res.rds")
 res_edgeR$adj_pval <- p.adjust(res_edgeR$`Pr(>|t|)`, "BH")
 annot <- readRDS("results/grange_annot")

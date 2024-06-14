@@ -58,7 +58,7 @@ prepare_atac_input <- function(input_data) {
       group == "old"  ~ '1',
       group == "young" ~ '0'
     ))  
-  #peak_counts <- as.matrix(input_data$counts)
+  peak_counts <- input_data$counts
   peak_counts <- peak_counts[ ,colnames(peak_counts) %in% rownames(metadata) ]
   grange_annot <- grange_annot[ (grange_annot$annotation %in% c("Promoter (<=1kb)", "Promoter (1-2kb)", "Promoter (2-3kb)")), ]
   grange_annot <- grange_annot %>% mutate(ranges = paste(grange_annot$seqnames, grange_annot$start, grange_annot$end))
