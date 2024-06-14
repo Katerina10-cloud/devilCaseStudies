@@ -122,116 +122,55 @@ prep_seurat_object <- function(input_data, NPC=50, cluster_res=1) {
   seurat_obj
 }
 
-perform_analysis <- function(seurat_obj, method = "devil", by="cluster") {
+perform_analysis <- function(seurat_obj, method = "devil") {
   if (!(method %in% c('devil', "glmGamPoi", 'nebula'))) {stop('method not recognized')}
 
   counts <- as.matrix(seurat_obj@assays$RNA$counts)
 
   whole_res <- dplyr::tibble()
+  for (c in unique(seurat_obj$seurat_clusters)) {
+    print(c)
 
-  if (by == 'cluster') {
-    for (c in unique(seurat_obj$seurat_clusters)) {
-      print(c)
+    idx_cluster <- which(seurat_obj$seurat_clusters == c)
+    idx_others <- which(!(seurat_obj$seurat_clusters == c))
 
-      idx_cluster <- which(seurat_obj$seurat_clusters == c)
-      idx_others <- which(!(seurat_obj$seurat_clusters == c))
-
-      if (length(idx_others) > length(idx_cluster)) {
-        set.seed(SEED)
-        idx_others <- sample(idx_others, length(idx_cluster), replace = F)
-      }
-
-      idxs <- c(idx_cluster, idx_others)
-
-      design_matrix <- model.matrix(~group, dplyr::tibble(group = seurat_obj$seurat_clusters == c))
-      dm <- design_matrix[idxs,]
-      cc <- counts[,idxs]
-      rownames(dm) <- colnames(cc)
-
-      sf <- devil:::calculate_sf(cc)
-
-      # gg <- ((counts[,seurat_obj$seurat_clusters == c] %>% rowSums()) == 0)
-      # bad_genes <- gg[gg == T] %>% names()
-      # counts <- counts[!(rownames(counts) %in% bad_genes),]
-      clusters <- as.numeric(as.factor(seurat_obj$donor[idxs]))
-      if (method == 'devil') {
-        #fit <- devil::fit_devil(cc, dm, verbose = T, size_factors = T, parallel.cores = 1, min_cells = -1, avg_counts = -1)
-        fit <- devil::fit_devil(cc, dm, verbose = T, size_factors = T, parallel.cores = 4, min_cells = -1, avg_counts = -1)
-        res <- devil::test_de(fit, contrast = c(0,1), clusters = clusters, max_lfc = Inf) %>% dplyr::mutate(cluster = c)
-      } else if (method == "glmGamPoi") {
-        fit <- glmGamPoi::glm_gp(cc, dm, size_factors = "normed_sum", verbose = T)
-        res <- glmGamPoi::test_de(fit, contrast = c(0,1))
-        res <- res %>% dplyr::as_tibble() %>% dplyr::select(name, pval, adj_pval, lfc) %>% dplyr::mutate(cluster = c)
-      } else if (method == "nebula") {
-        data_g = nebula::group_cell(count=cc,id=clusters,pred=dm)
-        fit <- nebula::nebula(data_g$count, id = data_g$id, pred = data_g$pred, ncore = 1, mincp = 0, cpc = 0, offset = sf)
-        res <- dplyr::tibble(
-          name = fit$summary$gene,
-          pval = fit$summary$p_groupTRUE,
-          adj_pval = p.adjust(fit$summary$p_groupTRUE, "BH"),
-          lfc=fit$summary$logFC_groupTRUE
-        ) %>% dplyr::mutate(cluster = c)
-      } else {
-        stop("method not recognized")
-      }
-
-      whole_res <- dplyr::bind_rows(whole_res, res)
-    }
-  } else if (by == "cell_type") {
-    for (c in unique(seurat_obj$cell_type)) {
-      print(c)
-
-      idx_cluster <- which(seurat_obj$cell_type == c)
-      idx_others <- which(!(seurat_obj$cell_type == c))
-
-      if (length(idx_others) > length(idx_cluster)) {
-        set.seed(SEED)
-        idx_others <- sample(idx_others, length(idx_cluster), replace = F)
-      }
-
-      idxs <- c(idx_cluster, idx_others)
-
-      design_matrix <- model.matrix(~group, dplyr::tibble(group = seurat_obj$cell_type == c))
-      dm <- design_matrix[idxs,]
-      cc <- counts[,idxs]
-      rownames(dm) <- colnames(cc)
-
-      sf <- devil:::calculate_sf(cc)
-
-      # gg <- ((counts[,seurat_obj$seurat_clusters == c] %>% rowSums()) == 0)
-      # bad_genes <- gg[gg == T] %>% names()
-      # counts <- counts[!(rownames(counts) %in% bad_genes),]
-      clusters <- as.numeric(as.factor(seurat_obj$donor[idxs]))
-      if (method == 'devil') {
-        #fit <- devil::fit_devil(cc, dm, verbose = T, size_factors = T, parallel.cores = 1, min_cells = -1, avg_counts = -1)
-        fit <- devil::fit_devil(cc, dm, verbose = T, size_factors = T, parallel.cores = 1, min_cells = -1, avg_counts = -1)
-        res <- devil::test_de(fit, contrast = c(0,1), clusters = clusters, max_lfc = Inf) %>% dplyr::mutate(true_cell_type = c)
-      } else if (method == "glmGamPoi") {
-        fit <- glmGamPoi::glm_gp(cc, dm, size_factors = "normed_sum", verbose = T)
-        res <- glmGamPoi::test_de(fit, contrast = c(0,1))
-        res <- res %>% dplyr::as_tibble() %>% dplyr::select(name, pval, adj_pval, lfc) %>% dplyr::mutate(true_cell_type = c)
-      } else if (method == "nebula") {
-        data_g = nebula::group_cell(count=cc,id=clusters,pred=dm)
-        fit <- nebula::nebula(data_g$count, id = data_g$id, pred = data_g$pred, ncore = 1, mincp = 0, cpc = 0, offset = sf)
-        res <- dplyr::tibble(
-          name = fit$summary$gene,
-          pval = fit$summary$p_groupTRUE,
-          adj_pval = p.adjust(fit$summary$p_groupTRUE, "BH"),
-          lfc=fit$summary$logFC_groupTRUE
-        ) %>% dplyr::mutate(true_cell_type = c)
-      } else {
-        stop("method not recognized")
-      }
-
-      whole_res <- dplyr::bind_rows(whole_res, res)
+    if (length(idx_others) > length(idx_cluster)) {
+      set.seed(SEED)
+      idx_others <- sample(idx_others, length(idx_cluster), replace = F)
     }
 
-  } else {
-    stop('by parameter not recognized')
+    idxs <- c(idx_cluster, idx_others)
+
+    design_matrix <- model.matrix(~group, dplyr::tibble(group = seurat_obj$seurat_clusters == c))
+    dm <- design_matrix[idxs,]
+    cc <- counts[,idxs]
+    rownames(dm) <- colnames(cc)
+
+    sf <- devil:::calculate_sf(cc)
+
+    clusters <- as.numeric(as.factor(seurat_obj$donor[idxs]))
+    if (method == 'devil') {
+      fit <- devil::fit_devil(cc, dm, verbose = T, size_factors = T, parallel.cores = 1, min_cells = -1, avg_counts = -1)
+      res <- devil::test_de(fit, contrast = c(0,1), clusters = clusters, max_lfc = Inf) %>% dplyr::mutate(cluster = c)
+    } else if (method == "glmGamPoi") {
+      fit <- glmGamPoi::glm_gp(cc, dm, size_factors = "normed_sum", verbose = T)
+      res <- glmGamPoi::test_de(fit, contrast = c(0,1))
+      res <- res %>% dplyr::as_tibble() %>% dplyr::select(name, pval, adj_pval, lfc) %>% dplyr::mutate(cluster = c)
+    } else if (method == "nebula") {
+      data_g = nebula::group_cell(count=cc,id=clusters,pred=dm)
+      fit <- nebula::nebula(data_g$count, id = data_g$id, pred = data_g$pred, ncore = 1, mincp = 0, cpc = 0, offset = sf)
+      res <- dplyr::tibble(
+        name = fit$summary$gene,
+        pval = fit$summary$p_groupTRUE,
+        adj_pval = p.adjust(fit$summary$p_groupTRUE, "BH"),
+        lfc=fit$summary$logFC_groupTRUE
+      ) %>% dplyr::mutate(cluster = c)
+    } else {
+      stop("method not recognized")
+    }
+
+    whole_res <- dplyr::bind_rows(whole_res, res)
   }
-
-
-
   whole_res
 }
 
@@ -329,127 +268,127 @@ computeGroundTruth <- function(seurat_obj) {
 }
 
 
-cell_type_names_to_scMayo_names <- function(ct, tissue) {
-  # scMayo_names <- colnames(scMayoMap::scMayoMapDatabase)[grepl(tissue, colnames(scMayoMap::scMayoMapDatabase))]
-  # scMayo_names <- str_replace_all(scMayo_names, tissue, "")
-  # scMayo_names <- str_replace_all(scMayo_names, ":", "")
-  # scMayo_names <- str_replace_all(scMayo_names, " cell", "")
-
-  if (tissue == "pancreas") {
-    conversion <- list(
-      "acinar" = "Acinar",
-      'beta' = 'Beta',
-      'delta'='Delta',
-      'activated_stellate'="Stellate",
-      'ductal'="Ductal",
-      'alpha'="Alpha",
-      "epsilon"="Epsilon",
-      "gamma"="Gamma",
-      "endothelial"="Endothelial",
-      'quiescent_stellate'="Stellate",
-      "macrophage"="Macrophage",
-      "schwann"="Schwann",
-      "mast"="Mast",
-      "t_cell"="T"
-    )
-  } else if (tissue == "blood") {
-    conversion = list(
-      'CD14 Mono'="CD14 Monocyte",
-      'CD4 TCM'='CD4 Central Memory T',
-      'CD8 Naive'='CD8 Naive T',
-      'NK'='Natural killer',
-      'CD8 TEM'='CD8 Effector Memory T',
-      'CD16 Mono'="CD16 Monoctye",
-      'B intermediate'="Intermediate B",
-      'CD4 Naive'="CD4 Naive T",
-      'CD4 CTL'="CD4 Cytotoxic T",
-      'B naive'="Naive B",
-      'MAIT'="Mucosal-associated invariant T",
-      'gdT'='Gamma delta T',
-      'gamma-delta T cell'='Gamma delta T',
-      'CD8 TCM'="CD8 Central Memory T",
-      'dnT'="Double-negative T",
-      'B memory'="Memory B",
-      'Doublet'="",
-      'pDC'='Plasmacytoid dendritic',
-      'CD8 Proliferating'='CD8 Proliferating T',
-      'Treg'="Regulatory T",
-      'Plasmablast'="Plasmablast",
-      'CD4 TEM'="CD4 Effector Memory T",
-      'cDC2'="Dendritic",
-      'NK Proliferating'='Natural killer',
-      'ASDC'="Dendritic",
-      'HSPC'='Hematopoietic stem',
-      'Platelet'='Platelet',
-      'NK_CD56bright'='CD56-bright natural killer',
-      'CD4 Proliferating'='CD4 Proliferating T',
-      'Eryth'="Erythroid",
-      'cDC1'='Dendritic',
-      'ILC'='Innate lymphoid',
-      "natural killer cell" = "Natural killer",
-      'central memory CD4-positive, alpha-beta T cell'="CD4 Central Memory T",
-      'effector memory CD8-positive, alpha-beta T cell' = 'CD8 Effector Memory T',
-      'CD4-positive, alpha-beta cytotoxic T cell'="CD4 Central Memory T",
-      "classical monocyte"="Monocyte",
-      "naive B cell"="Naive B",
-      "platelet"="Platelet",
-      "non-classical monocyte"='CD16 Monocyte',
-      "memory B cell"="Memory B",
-      "erythrocyte"="Erythroid precursor",
-      "plasmacytoid dendritic cell, human"="Plasmacytoid dendritic",
-      "naive thymus-derived CD4-positive, alpha-beta T cell"='CD4 Naive T',
-      "mucosal invariant T cell"='Mucosal-associated invariant T',
-      "lymphocyte"="Lymphoid",
-      "regulatory T cell"="Regulatory T",
-      'transitional stage B cell'="Intermediate B",
-      "naive thymus-derived CD8-positive, alpha-beta T cell"='CD8 Naive T',
-      "CD16-negative, CD56-bright natural killer cell, human"="CD56-bright natural killer",
-      "plasmablast"="Plasmablast",
-      "neutrophil"="Neutrophil",
-      "conventional dendritic cell"="Dendritic",
-      "hematopoietic stem cell"="Hematopoietic stem",
-      "immature neutrophil"="Neutrophil"
-    )
-  } else if (tissue == "liver") {
-    conversion <- list(
-      'Erythroid'='Erythroid',
-      'monocyte'='Monocyte',
-      'conventional dendritic cell'='Dendritic',
-      'plasmacytoid dendritic cell'='Dendritic',
-      'macrophage'='Macrophage',
-      'plasma cell'='Plasma',
-      'T cell'='T',
-      'B-cell'='B',
-      'B cell'='B',
-      'Kupffer' = "Kupffer",
-      'natural killer cell'='Natural killer',
-      'cholangiocyte'='Cholangiocyte',
-      'Cholangiocyte'='Cholangiocyte',
-      'T/NK-cell' = "T",
-      'Hepatocyte'='Hepatocyte',
-      'hepatocyte'='Hepatocyte',
-      'basophil'='Basophil',
-      'neutrophil'='Neutrophil',
-      'endothelial cell'='Endothelial',
-      'Endothelial'='Endothelial',
-      'b-cell' = "B",
-      'Stellate' = "Stellate",
-      'fibroblast'='Myofibroblast'
-    )
-  } else {
-    stop("tissue name not recognised")
-  }
-
-  conv <- dplyr::tibble(start = names(conversion), end=conversion %>% unlist() %>% unname())
-  new_cell_names <- as.character(ct)
-
-  for (c in unique(ct)) {
-    print(c)
-    new_name <- conv %>% dplyr::filter(start == c) %>% pull(end)
-    new_cell_names[which(new_cell_names == c)] <- new_name
-  }
-  new_cell_names
-}
+# cell_type_names_to_scMayo_names <- function(ct, tissue) {
+#   # scMayo_names <- colnames(scMayoMap::scMayoMapDatabase)[grepl(tissue, colnames(scMayoMap::scMayoMapDatabase))]
+#   # scMayo_names <- str_replace_all(scMayo_names, tissue, "")
+#   # scMayo_names <- str_replace_all(scMayo_names, ":", "")
+#   # scMayo_names <- str_replace_all(scMayo_names, " cell", "")
+#
+#   if (tissue == "pancreas") {
+#     conversion <- list(
+#       "acinar" = "Acinar",
+#       'beta' = 'Beta',
+#       'delta'='Delta',
+#       'activated_stellate'="Stellate",
+#       'ductal'="Ductal",
+#       'alpha'="Alpha",
+#       "epsilon"="Epsilon",
+#       "gamma"="Gamma",
+#       "endothelial"="Endothelial",
+#       'quiescent_stellate'="Stellate",
+#       "macrophage"="Macrophage",
+#       "schwann"="Schwann",
+#       "mast"="Mast",
+#       "t_cell"="T"
+#     )
+#   } else if (tissue == "blood") {
+#     conversion = list(
+#       'CD14 Mono'="CD14 Monocyte",
+#       'CD4 TCM'='CD4 Central Memory T',
+#       'CD8 Naive'='CD8 Naive T',
+#       'NK'='Natural killer',
+#       'CD8 TEM'='CD8 Effector Memory T',
+#       'CD16 Mono'="CD16 Monoctye",
+#       'B intermediate'="Intermediate B",
+#       'CD4 Naive'="CD4 Naive T",
+#       'CD4 CTL'="CD4 Cytotoxic T",
+#       'B naive'="Naive B",
+#       'MAIT'="Mucosal-associated invariant T",
+#       'gdT'='Gamma delta T',
+#       'gamma-delta T cell'='Gamma delta T',
+#       'CD8 TCM'="CD8 Central Memory T",
+#       'dnT'="Double-negative T",
+#       'B memory'="Memory B",
+#       'Doublet'="",
+#       'pDC'='Plasmacytoid dendritic',
+#       'CD8 Proliferating'='CD8 Proliferating T',
+#       'Treg'="Regulatory T",
+#       'Plasmablast'="Plasmablast",
+#       'CD4 TEM'="CD4 Effector Memory T",
+#       'cDC2'="Dendritic",
+#       'NK Proliferating'='Natural killer',
+#       'ASDC'="Dendritic",
+#       'HSPC'='Hematopoietic stem',
+#       'Platelet'='Platelet',
+#       'NK_CD56bright'='CD56-bright natural killer',
+#       'CD4 Proliferating'='CD4 Proliferating T',
+#       'Eryth'="Erythroid",
+#       'cDC1'='Dendritic',
+#       'ILC'='Innate lymphoid',
+#       "natural killer cell" = "Natural killer",
+#       'central memory CD4-positive, alpha-beta T cell'="CD4 Central Memory T",
+#       'effector memory CD8-positive, alpha-beta T cell' = 'CD8 Effector Memory T',
+#       'CD4-positive, alpha-beta cytotoxic T cell'="CD4 Central Memory T",
+#       "classical monocyte"="Monocyte",
+#       "naive B cell"="Naive B",
+#       "platelet"="Platelet",
+#       "non-classical monocyte"='CD16 Monocyte',
+#       "memory B cell"="Memory B",
+#       "erythrocyte"="Erythroid precursor",
+#       "plasmacytoid dendritic cell, human"="Plasmacytoid dendritic",
+#       "naive thymus-derived CD4-positive, alpha-beta T cell"='CD4 Naive T',
+#       "mucosal invariant T cell"='Mucosal-associated invariant T',
+#       "lymphocyte"="Lymphoid",
+#       "regulatory T cell"="Regulatory T",
+#       'transitional stage B cell'="Intermediate B",
+#       "naive thymus-derived CD8-positive, alpha-beta T cell"='CD8 Naive T',
+#       "CD16-negative, CD56-bright natural killer cell, human"="CD56-bright natural killer",
+#       "plasmablast"="Plasmablast",
+#       "neutrophil"="Neutrophil",
+#       "conventional dendritic cell"="Dendritic",
+#       "hematopoietic stem cell"="Hematopoietic stem",
+#       "immature neutrophil"="Neutrophil"
+#     )
+#   } else if (tissue == "liver") {
+#     conversion <- list(
+#       'Erythroid'='Erythroid',
+#       'monocyte'='Monocyte',
+#       'conventional dendritic cell'='Dendritic',
+#       'plasmacytoid dendritic cell'='Dendritic',
+#       'macrophage'='Macrophage',
+#       'plasma cell'='Plasma',
+#       'T cell'='T',
+#       'B-cell'='B',
+#       'B cell'='B',
+#       'Kupffer' = "Kupffer",
+#       'natural killer cell'='Natural killer',
+#       'cholangiocyte'='Cholangiocyte',
+#       'Cholangiocyte'='Cholangiocyte',
+#       'T/NK-cell' = "T",
+#       'Hepatocyte'='Hepatocyte',
+#       'hepatocyte'='Hepatocyte',
+#       'basophil'='Basophil',
+#       'neutrophil'='Neutrophil',
+#       'endothelial cell'='Endothelial',
+#       'Endothelial'='Endothelial',
+#       'b-cell' = "B",
+#       'Stellate' = "Stellate",
+#       'fibroblast'='Myofibroblast'
+#     )
+#   } else {
+#     stop("tissue name not recognised")
+#   }
+#
+#   conv <- dplyr::tibble(start = names(conversion), end=conversion %>% unlist() %>% unname())
+#   new_cell_names <- as.character(ct)
+#
+#   for (c in unique(ct)) {
+#     print(c)
+#     new_name <- conv %>% dplyr::filter(start == c) %>% pull(end)
+#     new_cell_names[which(new_cell_names == c)] <- new_name
+#   }
+#   new_cell_names
+# }
 
 my_large_palette <- c(
   "steelblue4",

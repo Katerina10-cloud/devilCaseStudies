@@ -156,3 +156,39 @@ neutrophil,Neutrophil,liver
 endothelial cell,Endothelial,liver
 hepatocyte,Hepatocyte,liver
 fibroblast,Myofibroblast,liver
+acinar,Acinar,pancreas
+delta,Delta,pancreas
+beta,Beta,pancreas
+alpha,Alpha,pancreas
+activated_stellate,Stellate,pancreas
+ductal,Ductal,pancreas
+epsilon,Epsilon,pancreas
+gamma,Gamma,pancreas
+endothelial,Endothelial,pancreas
+quiescent_stellate,Stellate,pancreas
+macrophage,Macrophage,pancreas
+schwann,Schwann,pancreas
+mast,Mast,pancreas
+t_cell,T cell,pancreas
+Acinar,Acinar,pancreas
+Alpha,Alpha,pancreas
+B,B cell,pancreas
+Beta,Beta,pancreas
+Delta,Delta,pancreas
+Dendritic,Dendritic,pancreas
+Ductal,Ductal,pancreas
+Ductal stem,Ductal,pancreas
+Endocrine,Endocrine,pancreas
+Endothelial,Endothelial,pancreas
+Epithelial,Epithelial,pancreas
+Epsilon,Epsilon,pancreas
+Gamma,Gamma,pancreas
+Glial,Glial,pancreas
+Granulocyte,Granulocyte,pancreas
+Macrophage,Macrophage,pancreas
+Mast,Mast,pancreas
+Pancreatic progenitor,Pancreatic progenitor,pancreas
+Polypeptide,Polypeptide,pancreas
+Schwann,Schwann,pancreas
+Stellate,Stellate,pancreas
+T,T cell,pancreas
