@@ -58,4 +58,4 @@ scaDA.obj <- optParams(scaDA.obj)
 res = scaDA.obj@result
 
 saveRDS(res, "results/scADA_res.RDS")
-saveRDS(grange_annot, "results/grange_annot")
+saveRDS(grange_annot, "results/grange_annot_scADA.RDS")
