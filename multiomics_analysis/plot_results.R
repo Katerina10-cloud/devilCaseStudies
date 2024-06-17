@@ -53,20 +53,29 @@ p_umap_rna + p_umap_atac
 ### Volcano plot ###
   
 # Top cell type & muscle aging specific genes #
-top_genes <- filter(res, name %in% c("PPARA","PER2","MYH1","MYH2","MYH4","PDE7B", 
+data_rna_devil <- "multiomics_analysis/results/MuscleRNA/devil_rna.RDS"
+data_rna_glm <- "multiomics_analysis/results/MuscleRNA/glmGamPoi_rna.RDS"
+data_atac_scaDA <- "multiomics_analysis/results/atac_nodup_scaDA.RDS"
+
+rna_devil <- readRDS(data_rna_devil)
+rna_glm <- readRDS(data_rna_glm)
+atac <- readRDS(data_atac_scaDA)
+
+atac <- atac[!duplicated(atac$geneID), ]
+
+top_genes <- res %>% 
+  dplyr::filter(name %in% c("PPARA","PER2","MYH1","MYH2","MYH4","PDE7B", 
                      "TNNT2","ID1","SAA2-SAA4","JUN","JUND","FOS","EGR1")) 
 
-data_path <- "MuscleRNA/devil_rna.RDS"
-rna_devil <- readRDS(data_path)
-p <- EnhancedVolcano::EnhancedVolcano(rna_devil,
-                                       lab = rna_devil$name,
+p <- EnhancedVolcano::EnhancedVolcano(rna_glm,
+                                       lab = rna_glm$name,
                                        x = 'lfc',
                                        y = 'adj_pval',
                                        selectLab = c("PPARA","PER2","MYH1","MYH2","MYH4","PDE7B", 
                                                      "TNNT2","ID1","SAA2-SAA4","JUN","JUND","FOS","EGR1"),
                                        xlab = bquote(~Log[2]~ 'fold change'),
                                        pCutoff = 0.05,
-                                       FCcutoff = 1.0,
+                                       FCcutoff = 0.5,
                                        pointSize = 1.0,
                                        labSize = 2.0,
                                        labCol = 'black',
@@ -85,12 +94,19 @@ p <- EnhancedVolcano::EnhancedVolcano(rna_devil,
                                        widthConnectors = 1.0,
                                        colConnectors = 'black')
 
-plot1 <- p + ggplot2::labs(title="Devil: snRNA") +
+plot1 <- p1 + ggplot2::labs(title="Devil: snRNA") +
   theme(plot.title=element_text(hjust=0.5, vjust=0.5))
 plot1
 
+plot2 <- p2 + ggplot2::labs(title="glmGamPoi: snRNA") +
+  theme(plot.title=element_text(hjust=0.5, vjust=0.5))
+plot2
 
+plot3 <- p3 + ggplot2::labs(title="scaDA: snATAC") +
+  theme(plot.title=element_text(hjust=0.5, vjust=0.5))
+plot3
 
+gridExtra::grid.arrange(plot1, plot2, plot3, nrow = 1)
 
 
 
