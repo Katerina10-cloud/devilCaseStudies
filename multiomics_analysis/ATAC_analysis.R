@@ -35,7 +35,7 @@ cell_filter <- (metadata$group %in% c("young", "old") & metadata$Annotation %in%
 genes_of_interest <- c()
 load("results/glm/res_rna_age_glm.Rdata")
 genes_of_interest <- c(genes_of_interest, res_rna_glm$name)
-load("results/devil/res_rna_age_devil.Rdata")
+res <- readRDS("results/devil/res_muscl_rna_age_devil.RDS")
 genes_of_interest <- c(genes_of_interest, res$name)
 load("results/nebula/res_rna_age_nebula.Rdata")
 genes_of_interest <- c(genes_of_interest, res_rna_neb$name)
@@ -57,5 +57,5 @@ scaDA.obj <- shrinkDisp(scaDA.obj)
 scaDA.obj <- optParams(scaDA.obj)
 res = scaDA.obj@result
 
-saveRDS(res, "results/scADA_res.glm")
+saveRDS(res, "results/scADA_res.RDS")
 saveRDS(grange_annot, "results/grange_annot")

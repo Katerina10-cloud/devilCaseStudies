@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --partition=cpuq
 #SBATCH --mem=200GB
-#SBATCH --time=48:00:00
+#SBATCH --time=200:00:00
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=1
 #SBATCH --output=out.log
