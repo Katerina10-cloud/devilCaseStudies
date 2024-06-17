@@ -58,22 +58,37 @@ prepare_atac_input <- function(input_data) {
       group == "old"  ~ '1',
       group == "young" ~ '0'
     ))  
-  #peak_counts <- as.matrix(input_data$counts)
+  peak_counts <- input_data$counts
   peak_counts <- peak_counts[ ,colnames(peak_counts) %in% rownames(metadata) ]
   grange_annot <- grange_annot[ (grange_annot$annotation %in% c("Promoter (<=1kb)", "Promoter (1-2kb)", "Promoter (2-3kb)")), ]
   grange_annot <- grange_annot %>% mutate(ranges = paste(grange_annot$seqnames, grange_annot$start, grange_annot$end))
   peak_counts <- peak_counts[ rownames(peak_counts) %in% grange_annot$ranges , ]
+  total_counts <- colSums(peak_counts)
+  total_features <- colSums(peak_counts > 0)
+  
+  mad5_filter <- total_counts > median(total_counts) + 5 * mad(total_counts)
+  feat1000_filter <- total_features < 1000
+  feat_mad_filter <- total_features > 5 * mad(total_features)
+  
+  cell_outliers_filter <- mad5_filter | feat1000_filter | feat_mad_filter 
+  
+  peak_counts <- peak_counts[, !cell_outliers_filter]
+  metadata <- metadata[!cell_outliers_filter, ]
+  
+  non_expressed_genes <- rowMeans(peak_counts) <= 0.01
+  peak_counts <- peak_counts[!non_expressed_genes, ]
+  peak_counts <- peak_counts[,colnames(peak_counts) %in% rownames(metadata)]
   tissue = "muscle"
   return(list(counts=counts, metadata=metadata, grange=grange_annot, tissue=tissue))
 }
 
 prepare_rna_input <- function(input_data) {
   metadata <- input_data$metadata
-  metadata <- metadata[ (metadata$tech_id %in% c("1") & metadata$cell_cluster %in% c("13", "14")),]
+  metadata <- metadata[ (metadata$tech %in% c("snRNA") & metadata$Annotation %in% c("Type I", "Type II")) , ]
   metadata <- metadata %>%
     mutate(age_cluster = case_when(
-      age_group == "0"  ~ '1',
-      age_group == "1" ~ '0'
+      age_pop == "old_pop"  ~ '1',
+      age_pop == "young_pop" ~ '0'
     ))
   metadata$age_cluster <- as.factor(metadata$age_cluster)
   counts <- counts[,colnames(counts) %in% rownames(metadata)]
@@ -82,7 +97,7 @@ prepare_rna_input <- function(input_data) {
   total_features <- colSums(counts > 0)
   
   mad5_filter <- total_counts > median(total_counts) + 5 * mad(total_counts)
-  feat100_filter <- total_features < 100
+  feat100_filter <- total_features < 1000
   feat_mad_filter <- total_features > 5 * mad(total_features)
   
   mitocondrial_genes <- grepl("^MT-", rownames(counts))
@@ -146,13 +161,11 @@ perform_analysis_rna <- function(input_data, method = "devil") {
     counts <- as.matrix(input_data$counts)
     design_matrix <- model.matrix(~age_cluster, metadata)
     fit <- devil::fit_devil(counts, design_matrix, verbose = T, size_factors = T)
-    clusters <- as.numeric(as.factor(metadata$patient_id)) 
-    res <- devil::test_de(fit, contrast = c(0,1), clusters = clusters, max_lfc = Inf) %>% dplyr::mutate(cluster = clusters)
+    clusters <- as.numeric(as.factor(metadata$sample)) 
+    res <- devil::test_de(fit, contrast = c(0,1), clusters = clusters, max_lfc = Inf)
     
   } else if (method == "glmGamPoi") {
     metadata <- input_data$metadata
-    non_expressed_genes <- rowMeans(counts) <= 0.01
-    counts <- counts[!non_expressed_genes,]
     counts <- as.matrix(input_data$counts)
     design_matrix <- model.matrix(~age_cluster, metadata)
     fit <- glmGamPoi::glm_gp(counts, design_matrix, size_factors = T, verbose = T)
@@ -161,11 +174,9 @@ perform_analysis_rna <- function(input_data, method = "devil") {
     
   } else if (method == 'nebula') {
     metadata <- input_data$metadata
-    non_expressed_genes <- rowMeans(counts) <= 0.01
-    counts <- counts[!non_expressed_genes,]
     counts <- as.matrix(input_data$counts)
     design_matrix <- model.matrix(~age_cluster, metadata)
-    metadata$patient_id <- as.factor(metadata$patient_id)
+    metadata$sample <- as.factor(metadata$sample)
     sf <- devil:::calculate_sf(peak_counts)
     data_g = group_cell(count=counts,id=metadata$patient_id,pred=design_matrix)
     fit <- nebula::nebula(data_g$count,id = data_g$id, pred = data_g$pred, ncore = 1)

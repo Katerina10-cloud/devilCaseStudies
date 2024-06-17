@@ -78,3 +78,117 @@ CD56-dim natural killer,NK cell,blood
 CD8 Central Memory T,T cell,blood
 CD8 Effector Memory T,T cell,blood
 CD8 Naive T,T cell,blood
+Endothelial,Endothelial,liver
+Cholangiocyte,Cholangiocyte,liver
+Kupffer,Kupffer,liver
+T/NK-cell,T/NK cell,liver
+Hepatocyte,Hepatocyte,liver
+B-cell,B cell,liver
+Erythroid,Erythrocyte,liver
+Stellate,Stellate,liver
+B,B cell,liver
+Cholangiocyte,Cholangiocyte,liver
+Dendritic,Dendritic cell,liver
+Endothelial,Endothelial,liver
+Epithelial,Epithelial,liver
+Hematopoietic,Stem,liver
+Hepatoblast,Hepatocyte,liver
+Hepatocyte,Hepatocyte,liver
+Kupffer,Kupffer,liver
+Liver bud hepatic,Liver bud hepatic,liver
+Mesenchymal,Mesenchymal,liver
+Mesenchymal stem,Mesenchymal,liver
+Monocyte,Monocyte,liver
+Myofibroblast,Myofibroblast,liver
+Natural killer,NK cell,liver
+Neutrophil,Neutrophil,liver
+Progenitor,Progenitor,liver
+Stellate,Stellate,liver
+Stem,Stem,liver
+T,T cell,liver
+acinar,Acinar,liver
+delta,Delta,liver
+beta,Beta,liver
+alpha,Alpha,liver
+activated_stellate,Stellate,liver
+ductal,Ductal,liver
+epsilon,Epsilon,liver
+gamma,Gamma,liver
+endothelial,Endothelial,liver
+quiescent_stellate,Stellate,liver
+macrophage,Macrophage,liver
+schwann,Schwann,liver
+mast,Mast,liver
+t_cell,T cell,liver
+Acinar,Acinar,liver
+Alpha,Alpha,liver
+B,B cell,liver
+Beta,Beta,liver
+Delta,Delta,liver
+Dendritic,Dendritic,liver
+Ductal,Ductal,liver
+Ductal stem,Ductal,liver
+Endocrine,Endocrine,liver
+Endothelial,Endothelial,liver
+Epithelial,Epithelial,liver
+Epsilon,Epsilon,liver
+Gamma,Gamma,liver
+Glial,Glial,liver
+Granulocyte,Granulocyte,liver
+Macrophage,Macrophage,liver
+Mast,Mast,liver
+Pancreatic progenitor,Pancreatic progenitor,liver
+Polypeptide,Polypeptide,liver
+Schwann,Schwann,liver
+Stellate,Stellate,liver
+T,T cell,liver
+monocyte,Monocyte,liver
+conventional dendritic cell,Dendritic cell,liver
+plasmacytoid dendritic cell,Dendritic cell,liver
+macrophage,Macrophage,liver
+plasma cell,B cell,liver
+T cell,T cell,liver
+B cell,B cell,liver
+natural killer cell,NK cell,liver
+cholangiocyte,Cholangiocyte,liver
+basophil,Basophil,liver
+neutrophil,Neutrophil,liver
+endothelial cell,Endothelial,liver
+hepatocyte,Hepatocyte,liver
+fibroblast,Myofibroblast,liver
+acinar,Acinar,pancreas
+delta,Delta,pancreas
+beta,Beta,pancreas
+alpha,Alpha,pancreas
+activated_stellate,Stellate,pancreas
+ductal,Ductal,pancreas
+epsilon,Epsilon,pancreas
+gamma,Gamma,pancreas
+endothelial,Endothelial,pancreas
+quiescent_stellate,Stellate,pancreas
+macrophage,Macrophage,pancreas
+schwann,Schwann,pancreas
+mast,Mast,pancreas
+t_cell,T cell,pancreas
+Acinar,Acinar,pancreas
+Alpha,Alpha,pancreas
+B,B cell,pancreas
+Beta,Beta,pancreas
+Delta,Delta,pancreas
+Dendritic,Dendritic,pancreas
+Ductal,Ductal,pancreas
+Ductal stem,Ductal,pancreas
+Endocrine,Endocrine,pancreas
+Endothelial,Endothelial,pancreas
+Epithelial,Epithelial,pancreas
+Epsilon,Epsilon,pancreas
+Gamma,Gamma,pancreas
+Glial,Glial,pancreas
+Granulocyte,Granulocyte,pancreas
+Macrophage,Macrophage,pancreas
+Mast,Mast,pancreas
+Pancreatic progenitor,Pancreatic progenitor,pancreas
+Polypeptide,Polypeptide,pancreas
+Schwann,Schwann,pancreas
+Stellate,Stellate,pancreas
+T,T cell,pancreas
