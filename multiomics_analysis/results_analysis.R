@@ -81,6 +81,8 @@ atac_down_nodup <- atac_down[!duplicated(atac_down$geneID), ]
 atac_nodup <- rbind(atac_up_nodup, atac_down_nodup)
 #atac_nodup <- atac_nodup[!duplicated(atac_nodup$geneID), ]
 
+saveRDS(atac_nodup, file = "multiomics_analysis/results/atac_nodup_scaDA.RDS")
+
 atac_deg <- atac_nodup %>% 
   dplyr::filter(FDR < 0.05 & abs(log2fc) > .5)
 
