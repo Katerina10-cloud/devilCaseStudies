@@ -29,8 +29,8 @@ atac_up <- atac_up[order(atac_up$lfc, decreasing = TRUE), ]
 atac_up_nodup <- atac_up[!duplicated(atac_up$geneID), ]
 
 atac_down <- atac_res %>% filter(lfc < 0) %>% 
-  group_by(geneID) %>% 
-  arrange(lfc)
+  dplyr::group_by(geneID) %>% 
+  dplyr::arrange(lfc)
 
 atac_down <- atac_down[order(atac_down$lfc), ] 
 atac_down_nodup <- atac_down[!duplicated(atac_down$geneID), ]
@@ -79,7 +79,7 @@ atac_down <- atac_down[order(atac_down$log2fc), ]
 atac_down_nodup <- atac_down[!duplicated(atac_down$geneID), ]
 
 atac_nodup <- rbind(atac_up_nodup, atac_down_nodup)
-#atac_nodup <- atac_nodup[!duplicated(atac_nodup$geneID), ]
+atac_nodup <- atac_nodup[!duplicated(atac_nodup$geneID), ]
 
 saveRDS(atac_nodup, file = "multiomics_analysis/results/atac_nodup_scaDA.RDS")
 
@@ -111,23 +111,32 @@ p2
 
 gridExtra::grid.arrange(p1, p2, nrow = 2)
 
-#atac_deg <- atac_deg[ atac_deg$geneID %in% rna_deg$geneID,]
-#rna_deg <- rna_deg[ rna_deg$geneID %in% atac_deg$geneID,]
+### Filter overlapped genes ###
+atac_deg_devil <- atac_deg[ atac_deg$geneID %in% rna_deg_devil$geneID,]
+rna_deg_devil <- rna_deg_devil[ rna_deg_devil$geneID %in% atac_deg$geneID,]
+atac_deg_devil <- atac_deg_devil %>% dplyr::select(geneID, FDR, log2fc)
+colnames(atac_deg_devil) <- c("geneID", "adj_pval_snATAC", "lfc_snATAC")
+rna_deg_devil <- rna_deg_devil %>% dplyr::select(geneID, adj_pval, lfc)
+colnames(rna_deg_devil) <- c("geneID", "adj_pval_snRNA", "lfc_snRNA")
+overlap_devil <- dplyr::full_join(atac_deg_devil, rna_deg_devil, by = "geneID")
 
-#atac_deg <- atac_deg %>% dplyr::select(geneID, adj_pval, lfc)
-#colnames(atac_deg) <- c("geneID", "adj_pval_snATAC", "lfc_snATAC")
+saveRDS(overlap_devil, file = "multiomics_analysis/results/overlap_devil.RDS")
 
-#rna_deg <- rna_deg %>% dplyr::select(geneID, adj_pval, lfc)
-#colnames(rna_deg) <- c("geneID", "adj_pval_snRNA", "lfc_snRNA")
+atac_deg_glm <- atac_deg[ atac_deg$geneID %in% rna_deg_glm$geneID,]
+rna_deg_glm <- rna_deg_glm[ rna_deg_glm$geneID %in% atac_deg_glm$geneID,]
+atac_deg_glm<- atac_deg_glm %>% dplyr::select(geneID, FDR, log2fc)
+colnames(atac_deg_glm) <- c("geneID", "adj_pval_snATAC", "lfc_snATAC")
+rna_deg_glm <- rna_deg_glm %>% dplyr::select(geneID, adj_pval, lfc)
+colnames(rna_deg_glm) <- c("geneID", "adj_pval_snRNA", "lfc_snRNA")
+overlap_glm <- dplyr::full_join(atac_deg_glm, rna_deg_glm, by = "geneID")
 
-#overlap_devil <- dplyr::full_join(atac_deg, rna_deg, by = "geneID")
-#saveRDS(overlap_devil, file = "multiomics_analysis/results/overlap_devil.RDS")
+saveRDS(overlap_glm, file = "multiomics_analysis/results/overlap_glm.RDS")
 
   
 
 ### Correlation plot ###
 
-corr_plot <- ggplot2::ggplot(mapping = aes(x = overlap_devil$lfc_snRNA, y = overl_devil$lfc_snATAC)) +
+corr_plot <- ggplot2::ggplot(mapping = aes(x = overlap_devil$lfc_snRNA, y = overlap_devil$lfc_snATAC)) +
   geom_point(shape = 21, fill = 'black', size = 2) +
   labs(title = "devil")+
   xlab("snRNA log2FC") +
