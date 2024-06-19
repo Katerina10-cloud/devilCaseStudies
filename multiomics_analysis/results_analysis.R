@@ -63,6 +63,7 @@ grange_scaDA <- grange_scaDA %>% dplyr::select(SYMBOL) %>%
   dplyr::rename(geneID=SYMBOL)
 
 atac_scaDA <- cbind(grange_scaDA, atac_scaDA)
+atac_scaDA$log2fc <- -1 * atac_scaDA$log2fc
 
 atac_up <- atac_scaDA %>% dplyr::filter(log2fc > 0) %>% 
   dplyr::group_by(geneID) %>% 
@@ -84,13 +85,13 @@ atac_nodup <- atac_nodup[!duplicated(atac_nodup$geneID), ]
 saveRDS(atac_nodup, file = "multiomics_analysis/results/atac_nodup_scaDA.RDS")
 
 atac_deg <- atac_nodup %>% 
-  dplyr::filter(FDR < 0.05 & abs(log2fc) > .5)
+  dplyr::filter(FDR < 0.05 & abs(log2fc) >= 1.0)
 
 rna_deg_devil <- rna_devil %>% 
-  dplyr::filter(adj_pval < 0.05 & abs(lfc) > .5)
+  dplyr::filter(adj_pval < 0.05 & abs(lfc) >= 1.0)
 
 rna_deg_glm <- rna_glm %>% 
-  dplyr::filter(adj_pval < 0.05 & abs(lfc) > .5)
+  dplyr::filter(adj_pval < 0.05 & abs(lfc) >= 1.0)
 
 
 # Vienn diagram #
@@ -132,13 +133,12 @@ overlap_glm <- dplyr::full_join(atac_deg_glm, rna_deg_glm, by = "geneID")
 
 saveRDS(overlap_glm, file = "multiomics_analysis/results/overlap_glm.RDS")
 
-  
 
 ### Correlation plot ###
 
-corr_plot <- ggplot2::ggplot(mapping = aes(x = overlap_devil$lfc_snRNA, y = overlap_devil$lfc_snATAC)) +
+corr1 <- ggplot2::ggplot(mapping = aes(x = overlap_devil$lfc_snRNA, y = overlap_devil$lfc_snATAC)) +
   geom_point(shape = 21, fill = 'black', size = 2) +
-  labs(title = "devil")+
+  labs(title = "Devil")+
   xlab("snRNA log2FC") +
   ylab ("snATAC log2FC") +
   geom_smooth(method='lm',formula=y~x, color="red", fill="black", se=TRUE)+
@@ -146,7 +146,20 @@ corr_plot <- ggplot2::ggplot(mapping = aes(x = overlap_devil$lfc_snRNA, y = over
   geom_vline(xintercept = c(0.0), col = "gray", linetype = 'dashed') +
   geom_hline(yintercept = c(0.0), col = "gray", linetype = 'dashed') +
   theme_classic()
-corr_plot
+
+corr2 <- ggplot2::ggplot(mapping = aes(x = overlap_glm$lfc_snRNA, y = overlap_glm$lfc_snATAC)) +
+  geom_point(shape = 21, fill = 'black', size = 2) +
+  labs(title = "glmGamPoi")+
+  xlab("snRNA log2FC") +
+  ylab ("snATAC log2FC") +
+  geom_smooth(method='lm',formula=y~x, color="red", fill="black", se=TRUE)+
+  sm_statCorr()+
+  geom_vline(xintercept = c(0.0), col = "gray", linetype = 'dashed') +
+  geom_hline(yintercept = c(0.0), col = "gray", linetype = 'dashed') +
+  theme_classic()
+
+corr1+corr2
+
 
 
 ### Gene set Enrichement analysis ###
@@ -157,7 +170,7 @@ sapply(pkgs, require, character.only = TRUE)
 
 # Convert Gene symbols to EntrezID #
 hs <- org.Hs.eg.db
-my_symbols <- overlap_devil$geneID
+my_symbols <- overlap_glm$geneID
 gene_list <- AnnotationDbi::select(hs,
                                    keys = my_symbols,
                                    columns = c("ENTREZID", "SYMBOL"),
@@ -165,13 +178,13 @@ gene_list <- AnnotationDbi::select(hs,
 
 gene_list <- na.omit(gene_list)
 gene_list <- gene_list[!duplicated(gene_list$SYMBOL),]
-gene_list <- gene_list[gene_list$SYMBOL %in% overlap_devil$geneID,]
-gene_list_rank <- as.vector(overlap_devil$lfc_snRNA)
+gene_list <- gene_list[gene_list$SYMBOL %in% overlap_glm$geneID,]
+gene_list_rank <- as.vector(overlap_glm$lfc_snRNA)
 names(gene_list_rank) <- gene_list$ENTREZID
 gene_list_rank <- sort(gene_list_rank, decreasing = TRUE)
 
-gseGO <- clusterProfiler::gseGO(geneList = gene_list_rank, ont = "BP", OrgDb = org.Hs.eg.db,
-                                    keyType = "ENTREZID", minGSSize = 10, maxGSSize = 350)
+gseGO <- clusterProfiler::gseGO(gene_list_rank, ont = "All", OrgDb = org.Hs.eg.db,
+                                    keyType = "ENTREZID", minGSSize = 10, maxGSSize = 350, pvalueCutoff = 0.05)
 
 # Select enriched pathways #
 res_gse <- gseGO@result
