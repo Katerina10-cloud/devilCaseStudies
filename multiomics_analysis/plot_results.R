@@ -61,16 +61,16 @@ rna_devil <- readRDS(data_rna_devil)
 rna_glm <- readRDS(data_rna_glm)
 atac <- readRDS(data_atac_scaDA)
 
-atac <- atac[!duplicated(atac$geneID), ]
+#atac <- atac[!duplicated(atac$geneID), ]
 
-top_genes <- res %>% 
+top_genes <- rna_glm %>% 
   dplyr::filter(name %in% c("PPARA","PER2","MYH1","MYH2","MYH4","PDE7B", 
                      "TNNT2","ID1","SAA2-SAA4","JUN","JUND","FOS","EGR1")) 
 
-p <- EnhancedVolcano::EnhancedVolcano(rna_glm,
-                                       lab = rna_glm$name,
-                                       x = 'lfc',
-                                       y = 'adj_pval',
+p3 <- EnhancedVolcano::EnhancedVolcano(atac_nodup,
+                                       lab = atac_nodup$geneID,
+                                       x = 'log2fc',
+                                       y = 'FDR',
                                        selectLab = c("PPARA","PER2","MYH1","MYH2","MYH4","PDE7B", 
                                                      "TNNT2","ID1","SAA2-SAA4","JUN","JUND","FOS","EGR1"),
                                        xlab = bquote(~Log[2]~ 'fold change'),
@@ -94,7 +94,7 @@ p <- EnhancedVolcano::EnhancedVolcano(rna_glm,
                                        widthConnectors = 1.0,
                                        colConnectors = 'black')
 
-plot1 <- p1 + ggplot2::labs(title="Devil: snRNA") +
+plot1 <- p1 + ggplot2::labs(title="glmGamPoi: snRNA") +
   theme(plot.title=element_text(hjust=0.5, vjust=0.5))
 plot1
 
@@ -109,4 +109,43 @@ plot3
 gridExtra::grid.arrange(plot1, plot2, plot3, nrow = 1)
 
 
+### P-values and lfc comparison ###
 
+rna_devil <- rna_devil[rna_devil$name %in% rna_glm$name,]
+rna_glm <- rna_glm[rna_glm$name %in% rna_devil$name,]
+
+p_devil <- rna_devil %>% dplyr::select(name,adj_pval) %>% 
+  dplyr::rename(geneID=name,pval_devil=adj_pval)
+
+p_glm <- rna_glm %>% dplyr::select(name,adj_pval) %>% 
+  dplyr::rename(geneID=name,pval_glm=adj_pval)
+p_pval <- dplyr::full_join(p_devil, p_glm, by = "geneID")
+
+pval_rna <- ggplot(p_pval, aes(x=pval_glm, y=pval_devil)) + 
+  geom_pointdensity(shape=20) +
+  geom_smooth(method=lm, se=FALSE, linetype="dashed",
+              color="darkred")+
+  labs(title = "p-value snRNA")+
+  xlab("adjpval snRNA from glmGamPoi") +
+  ylab ("adjpval snRNA from Devil") +
+  theme_classic()+
+  theme(legend.position="none")
+
+lfc_devil <- rna_devil %>% dplyr::select(name,lfc) %>% 
+  dplyr::rename(geneID=name,lfc_devil=lfc)
+
+lfc_glm <- rna_glm %>% dplyr::select(name,lfc) %>% 
+  dplyr::rename(geneID=name,lfc_glm=lfc)
+p_lfc <- dplyr::full_join(lfc_devil, lfc_glm, by = "geneID")
+
+lfc_rna <- ggplot(p_lfc, aes(x=lfc_glm, y=lfc_devil)) + 
+  geom_pointdensity(shape=20) +
+  geom_smooth(method=lm, se=FALSE, linetype="dashed",
+              color="darkred")+
+  labs(title = "log2FC snRNA")+
+  xlab("log2FC snRNA from glmGamPoi") +
+  ylab ("log2FC snRNA from Devil") +
+  theme_classic()+
+  theme(legend.position="none")
+
+pval_rna+lfc_rna
