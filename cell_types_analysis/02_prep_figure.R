@@ -12,9 +12,9 @@ dataset_name <- args[1]
 tissue <- args[2]
 save_svg <- as.logical(args[3])
 
-dataset_name <- "BaronPancreasData"
-tissue <- "pancreas"
-save_svg <- F
+#dataset_name <- "BaronPancreasData"
+#tissue <- "pancreas"
+#save_svg <- F
 
 img_folder <- paste0("plot_figure/", dataset_name, "/")
 if (!dir.exists(img_folder)) {
@@ -52,7 +52,7 @@ for (ct in unique(seurat_obj$cell_type)) {
   new_cell_type[idx] <- n.ct
 }
 seurat_obj$cell_type <- new_cell_type
-computeGroundTruth(seurat_obj) %>% dplyr::arrange(cluster)
+ground_truth <- computeGroundTruth(seurat_obj) %>% dplyr::arrange(cluster)
 # seurat_obj$cell_type <- cell_type_names_to_scMayo_names(seurat_obj$cell_type, tissue)
 # computeGroundTruth(seurat_obj) %>% dplyr::arrange(cluster)
 
@@ -158,11 +158,13 @@ for (m in c("devil", "nebula", "glmGamPoi")) {
         dplyr::arrange(-lfc) %>%
         dplyr::slice(1:n_markers)
 
-      scMayoInput <- lapply(unique(top_genes$cluster), function(c) {
-        top_genes %>%
-          dplyr::filter(cluster == c) %>% pull(name) %>% table() %>% max()
+      if (nrow(top_genes) > 0) {
 
-        top_genes %>%
+      	scMayoInput <- lapply(unique(top_genes$cluster), function(c) {
+        	top_genes %>%
+          	dplyr::filter(cluster == c) %>% pull(name) %>% table() %>% max()
+
+        	top_genes %>%
           dplyr::filter(cluster == c) %>%
           dplyr::left_join(percentage_tibble %>% dplyr::filter(cluster == c) %>% dplyr::select(!cluster), by='name') %>%
           dplyr::ungroup() %>%
@@ -174,9 +176,10 @@ for (m in c("devil", "nebula", "glmGamPoi")) {
       rez <- scMayoRes$markers %>%
         dplyr::left_join(computeGroundTruth(seurat_obj), by='cluster') %>%
         dplyr::mutate(pred = str_replace_all(celltype, " cell", "")) %>%
-        dplyr::mutate(score = as.numeric(score))
+        dplyr::mutate(score = as.numeric(score)) %>%
+        dplyr::filter(score > 0)
       rez$pred <- lapply(rez$pred, function(ct) {
-        v <- scTypeMapper %>% dplyr::filter(from == ct) %>% pull(to)
+        v <- scTypeMapper %>% dplyr::filter(from == ct) %>% dplyr::distinct() %>%pull(to)
         unique(v)
       }) %>% unlist()
 
@@ -199,6 +202,7 @@ for (m in c("devil", "nebula", "glmGamPoi")) {
         comparison_tibble,
         dplyr::tibble(model=m, acc=acc, acc_1 =acc_1, n_markers=n_markers, pval_cut=pval_cut)
       )
+      }
     }
   }
 }
@@ -214,7 +218,7 @@ comparison_tibble %>%
   geom_line(position=position_dodge(width=0.1)) +
   theme_bw() +
   scale_color_manual(values=method_colors) +
-  scale_x_continuous(transform = 'log10') +
+  scale_x_continuous(trans = 'log10') +
   labs(x = "N markers", y = "Classification score", col="Algorithm", fill="Algorithm") +
   theme(
     text=element_text(size=10),
@@ -407,15 +411,15 @@ scMayoInput <- lapply(unique(top_genes$cluster), function(c) {
 }) %>% do.call('bind_rows', .)
 
 scMayoRes <- scMayoMap::scMayoMap(scMayoInput, scMayoMap::scMayoMapDatabase, pct.cutoff = 0, tissue = tissue)
-rez <- scMayoRes$markers %>%
-  dplyr::left_join(computeGroundTruth(seurat_obj), by='cluster') %>%
-  dplyr::mutate(pred = str_replace_all(celltype, " cell", "")) %>%
-  dplyr::mutate(score = as.numeric(score)) %>%
-  dplyr::mutate(ground_truth = paste0(true_cell_type, " (", cluster, ")")) %>%
-  dplyr::filter(score > .1)
-rez$pred <- lapply(rez$pred, function(ct) {
-  scTypeMapper %>% dplyr::filter(from == ct) %>% dplyr::distinct() %>% pull(to)
-}) %>% unlist()
+      rez <- scMayoRes$markers %>%
+        dplyr::left_join(computeGroundTruth(seurat_obj), by='cluster') %>%
+        dplyr::mutate(pred = str_replace_all(celltype, " cell", "")) %>%
+        dplyr::mutate(score = as.numeric(score)) %>%
+        dplyr::filter(score > 0)
+      rez$pred <- lapply(rez$pred, function(ct) {
+        v <- scTypeMapper %>% dplyr::filter(from == ct) %>% dplyr::distinct() %>%pull(to)
+        unique(v)
+      }) %>% unlist()
 
 rez_max <- rez %>%
   dplyr::group_by(cluster) %>%
