@@ -1,6 +1,6 @@
 # Plot results #
 
-setwd("/Users/katsiarynadavydzenka/Documents/PhD_AI/devilCaseStudies/multiomics_analysis/results/")
+setwd("/Users/katsiarynadavydzenka/Documents/PhD_AI/devilCaseStudies/")
 
 pkgs <- c("ggplot2", "dplyr","tidyr","tibble", "viridis", "smplot2", "Seurat", "VennDiagram", "gridExtra",
           "ggpubr", "ggrepel", "ggvenn", "ggpointdensity")
@@ -55,22 +55,25 @@ p_umap_rna + p_umap_atac
 # Top cell type & muscle aging specific genes #
 data_rna_devil <- "multiomics_analysis/results/MuscleRNA/devil_rna.RDS"
 data_rna_glm <- "multiomics_analysis/results/MuscleRNA/glmGamPoi_rna.RDS"
+data_rna_nebula <- "multiomics_analysis/results/MuscleRNA/nebula_rna.RDS"
 data_atac_scaDA <- "multiomics_analysis/results/atac_nodup_scaDA.RDS"
+
 
 rna_devil <- readRDS(data_rna_devil)
 rna_glm <- readRDS(data_rna_glm)
+rna_nebula <- readRDS(data_rna_nebula)
 atac <- readRDS(data_atac_scaDA)
 
 #atac <- atac[!duplicated(atac$geneID), ]
 
-top_genes <- rna_glm %>% 
+top_genes <- nebula_rna %>% 
   dplyr::filter(name %in% c("PPARA","PER2","MYH1","MYH2","MYH4","PDE7B", 
                      "TNNT2","ID1","SAA2-SAA4","JUN","JUND","FOS","EGR1")) 
 
-p3 <- EnhancedVolcano::EnhancedVolcano(atac_nodup,
-                                       lab = atac_nodup$geneID,
-                                       x = 'log2fc',
-                                       y = 'FDR',
+p <- EnhancedVolcano::EnhancedVolcano(nebula_rna,
+                                       lab = nebula_rna$name,
+                                       x = 'lfc',
+                                       y = 'adj_pval',
                                        selectLab = c("PPARA","PER2","MYH1","MYH2","MYH4","PDE7B", 
                                                      "TNNT2","ID1","SAA2-SAA4","JUN","JUND","FOS","EGR1"),
                                        xlab = bquote(~Log[2]~ 'fold change'),
@@ -102,10 +105,13 @@ plot2 <- p2 + ggplot2::labs(title="glmGamPoi: snRNA") +
   theme(plot.title=element_text(hjust=0.5, vjust=0.5))
 plot2
 
-plot3 <- p3 + ggplot2::labs(title="scaDA: snATAC") +
+plot3 <- p3 + ggplot2::labs(title="nebula: snRNA") +
   theme(plot.title=element_text(hjust=0.5, vjust=0.5))
 plot3
 
+plot4 <- p4 + ggplot2::labs(title="scaDA: snATAC") +
+  theme(plot.title=element_text(hjust=0.5, vjust=0.5))
+plot3
 gridExtra::grid.arrange(plot1, plot2, plot3, nrow = 1)
 
 

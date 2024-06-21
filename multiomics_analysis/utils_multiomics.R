@@ -97,7 +97,7 @@ prepare_rna_input <- function(input_data) {
   total_features <- colSums(counts > 0)
   
   mad5_filter <- total_counts > median(total_counts) + 5 * mad(total_counts)
-  feat100_filter <- total_features < 1000
+  feat100_filter <- total_features < 100
   feat_mad_filter <- total_features > 5 * mad(total_features)
   
   mitocondrial_genes <- grepl("^MT-", rownames(counts))
@@ -176,15 +176,15 @@ perform_analysis_rna <- function(input_data, method = "devil") {
     metadata <- input_data$metadata
     counts <- as.matrix(input_data$counts)
     design_matrix <- model.matrix(~age_cluster, metadata)
-    metadata$sample <- as.factor(metadata$sample)
+    metadata$orig.ident <- as.numeric(as.factor(metadata$sample))
     sf <- devil:::calculate_sf(peak_counts)
-    data_g = group_cell(count=counts,id=metadata$patient_id,pred=design_matrix)
-    fit <- nebula::nebula(data_g$count,id = data_g$id, pred = data_g$pred, ncore = 1)
+    data_g = group_cell(count=counts,id=metadata$orig.ident,pred=design_matrix)
+    fit <- nebula::nebula(data_g$count,id = data_g$id, pred = data_g$pred, offset = sf, ncore = 1)
     res <- dplyr::tibble(
       name = fit$summary$gene,
-      pval = fit$summary$p_groupTRUE,
-      adj_pval = p.adjust(fit$summary$p_groupTRUE, "BH"),
-      lfc=fit$summary$logFC_groupTRUE)
+      pval = fit$summary$p_age_cluster1,
+      adj_pval = p.adjust(fit$summary$p_age_cluster1, "BH"),
+      lfc=fit$summary$logFC_p_age_cluster1)
   }
   res
 }
