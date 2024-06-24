@@ -55,25 +55,28 @@ p_umap_rna + p_umap_atac
 # Top cell type & muscle aging specific genes #
 data_rna_devil <- "multiomics_analysis/results/MuscleRNA/devil_rna.RDS"
 data_rna_glm <- "multiomics_analysis/results/MuscleRNA/glmGamPoi_rna.RDS"
-data_rna_nebula <- "multiomics_analysis/results/MuscleRNA/nebula_rna.RDS"
+#data_rna_nebula <- "multiomics_analysis/results/MuscleRNA/nebula_rna.RDS"
+data_rna_edge <- "multiomics_analysis/results/MuscleRNA/edge_rna.RDS"
 data_atac_scaDA <- "multiomics_analysis/results/atac_nodup_scaDA.RDS"
 
 
 rna_devil <- readRDS(data_rna_devil)
 rna_glm <- readRDS(data_rna_glm)
-rna_nebula <- readRDS(data_rna_nebula)
+rna_edge <- readRDS(data_rna_edge)
+#rna_nebula <- readRDS(data_rna_nebula)
 atac <- readRDS(data_atac_scaDA)
 
-#atac <- atac[!duplicated(atac$geneID), ]
+atac <- atac[!duplicated(atac$geneID), ]
+rna_edge$name <- rownames(rna_edge)
 
-top_genes <- nebula_rna %>% 
+top_genes <- rna_devil %>% 
   dplyr::filter(name %in% c("PPARA","PER2","MYH1","MYH2","MYH4","PDE7B", 
                      "TNNT2","ID1","SAA2-SAA4","JUN","JUND","FOS","EGR1")) 
 
-p <- EnhancedVolcano::EnhancedVolcano(nebula_rna,
-                                       lab = nebula_rna$name,
-                                       x = 'lfc',
-                                       y = 'adj_pval',
+p4 <- EnhancedVolcano::EnhancedVolcano(atac,
+                                       lab = atac$geneID,
+                                       x = 'log2fc',
+                                       y = 'FDR',
                                        selectLab = c("PPARA","PER2","MYH1","MYH2","MYH4","PDE7B", 
                                                      "TNNT2","ID1","SAA2-SAA4","JUN","JUND","FOS","EGR1"),
                                        xlab = bquote(~Log[2]~ 'fold change'),
@@ -97,7 +100,7 @@ p <- EnhancedVolcano::EnhancedVolcano(nebula_rna,
                                        widthConnectors = 1.0,
                                        colConnectors = 'black')
 
-plot1 <- p1 + ggplot2::labs(title="glmGamPoi: snRNA") +
+plot1 <- p1 + ggplot2::labs(title="Devil: snRNA") +
   theme(plot.title=element_text(hjust=0.5, vjust=0.5))
 plot1
 
@@ -105,13 +108,13 @@ plot2 <- p2 + ggplot2::labs(title="glmGamPoi: snRNA") +
   theme(plot.title=element_text(hjust=0.5, vjust=0.5))
 plot2
 
-plot3 <- p3 + ggplot2::labs(title="nebula: snRNA") +
+plot3 <- p3 + ggplot2::labs(title="edgeR: snRNA") +
   theme(plot.title=element_text(hjust=0.5, vjust=0.5))
 plot3
 
 plot4 <- p4 + ggplot2::labs(title="scaDA: snATAC") +
   theme(plot.title=element_text(hjust=0.5, vjust=0.5))
-plot3
+plot4
 gridExtra::grid.arrange(plot1, plot2, plot3, nrow = 1)
 
 

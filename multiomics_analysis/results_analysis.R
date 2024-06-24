@@ -17,9 +17,10 @@ rna_res <- readRDS("multiomics_analysis/results/MuscleRNA/devil_rna.RDS") %>% re
 
 ### Select non duplicated atac genes ###
 
-grange <- grange %>% dplyr::select(SYMBOL, ranges) 
+grange <- grange %>% dplyr::select(SYMBOL, ranges, annotation) 
+grange <- grange[ (grange$annotation %in% c("Promoter (<=1kb)")) , ]
 atac_res <- dplyr::full_join(atac_res, grange, by = "ranges") %>% 
-  dplyr::rename(geneID=SYMBOL)
+  dplyr::rename(geneID=SYMBOL) %>% na.omit()
 
 atac_up <- atac_res %>% dplyr::filter(lfc > 0) %>% 
   dplyr::group_by(geneID) %>% 
@@ -36,7 +37,7 @@ atac_down <- atac_down[order(atac_down$lfc), ]
 atac_down_nodup <- atac_down[!duplicated(atac_down$geneID), ]
 
 atac_nodup <- rbind(atac_up_nodup, atac_down_nodup)
-#atac_nodup <- atac_nodup[!duplicated(atac_nodup$geneID), ]
+atac_nodup <- atac_nodup[!duplicated(atac_nodup$geneID), ]
 
 atac_deg <- atac_nodup %>% 
   dplyr::filter(adj_pval < 0.05 & abs(lfc) > 0.5)
@@ -50,6 +51,9 @@ rna_deg <- rna_res %>%
 grange_scaDA_path <- "multiomics_analysis/results/grange_annot_scADA.RDS"
 grange_scaDA <- readRDS(grange_scaDA_path)
 
+grange <- "multiomics_analysis/results/grange_annot.RDS"
+grange <- readRDS(grange)
+
 atac_scaDA_path <- "multiomics_analysis/results/scADA_res.RDS"
 atac_scaDA <- readRDS(atac_scaDA_path) 
 
@@ -59,11 +63,19 @@ rna_devil <- readRDS(rna_devil) %>% rename(geneID=name)
 rna_glm <- "multiomics_analysis/results/MuscleRNA/glmGamPoi_rna.RDS"
 rna_glm <- readRDS(rna_glm) %>% rename(geneID=name)
 
+rna_edge <- "multiomics_analysis/results/MuscleRNA/edge_rna.RDS"
+rna_edge <- readRDS(rna_edge)
+rna_edge$geneID <- rownames(rna_edge)
+colnames(rna_edge) <- c("lfc", "stError", "tval", "adj_pval", "geneID")
+
 grange_scaDA <- grange_scaDA %>% dplyr::select(SYMBOL) %>% 
   dplyr::rename(geneID=SYMBOL)
 
 atac_scaDA <- cbind(grange_scaDA, atac_scaDA)
 atac_scaDA$log2fc <- -1 * atac_scaDA$log2fc
+
+grange <- grange[ (grange$annotation %in% c("Promoter (<=1kb)")) , ]
+atac_scaDA <- atac_scaDA[ (atac_scaDA$geneID %in% grange$SYMBOL) , ]
 
 atac_up <- atac_scaDA %>% dplyr::filter(log2fc > 0) %>% 
   dplyr::group_by(geneID) %>% 
@@ -80,7 +92,7 @@ atac_down <- atac_down[order(atac_down$log2fc), ]
 atac_down_nodup <- atac_down[!duplicated(atac_down$geneID), ]
 
 atac_nodup <- rbind(atac_up_nodup, atac_down_nodup)
-atac_nodup <- atac_nodup[!duplicated(atac_nodup$geneID), ]
+#atac_nodup <- atac_nodup[!duplicated(atac_nodup$geneID), ]
 
 saveRDS(atac_nodup, file = "multiomics_analysis/results/atac_nodup_scaDA.RDS")
 
@@ -93,10 +105,14 @@ rna_deg_devil <- rna_devil %>%
 rna_deg_glm <- rna_glm %>% 
   dplyr::filter(adj_pval < 0.05 & abs(lfc) >= 1.0)
 
+rna_deg_edge <- rna_edge %>% 
+  dplyr::filter(adj_pval < 0.05 & abs(lfc) >= 1.0)
+
 
 # Vienn diagram #
 devil <- list(snATAC=atac_deg$geneID, snRNA=rna_deg_devil$geneID)
 glm <- list(snATAC=atac_deg$geneID, snRNA=rna_deg_glm$geneID)
+edge <- list(snATAC=atac_deg$geneID, snRNA=rna_deg_edge$geneID)
 
 p1 <- ggvenn::ggvenn(devil, c("snATAC", "snRNA"), show_percentage = FALSE,
              set_name_size = 4)
@@ -110,7 +126,14 @@ p2 <- p2 + ggplot2::labs(title="glmGamPoi") +
   theme(plot.title=element_text(hjust=0.5, vjust=0.5))
 p2
 
-gridExtra::grid.arrange(p1, p2, nrow = 2)
+p3 <- ggvenn::ggvenn(edge, c("snATAC", "snRNA"), show_percentage = FALSE,
+                     set_name_size = 4)
+p3 <- p3 + ggplot2::labs(title="edgeR") +
+  theme(plot.title=element_text(hjust=0.5, vjust=0.5))
+p3
+
+gridExtra::grid.arrange(p1, p2, p3, nrow = 1)
+
 
 ### Filter overlapped genes ###
 atac_deg_devil <- atac_deg[ atac_deg$geneID %in% rna_deg_devil$geneID,]
@@ -132,6 +155,14 @@ colnames(rna_deg_glm) <- c("geneID", "adj_pval_snRNA", "lfc_snRNA")
 overlap_glm <- dplyr::full_join(atac_deg_glm, rna_deg_glm, by = "geneID")
 
 saveRDS(overlap_glm, file = "multiomics_analysis/results/overlap_glm.RDS")
+
+atac_deg_edge <- atac_deg[ atac_deg$geneID %in% rna_deg_edge$geneID,]
+rna_deg_edge <- rna_deg_edge[ rna_deg_edge$geneID %in% atac_deg_edge$geneID,]
+atac_deg_edge<- atac_deg_edge %>% dplyr::select(geneID, FDR, log2fc)
+colnames(atac_deg_edge) <- c("geneID", "adj_pval_snATAC", "lfc_snATAC")
+rna_deg_edge <- rna_deg_edge %>% dplyr::select(geneID, adj_pval, lfc)
+colnames(rna_deg_edge) <- c("geneID", "adj_pval_snRNA", "lfc_snRNA")
+overlap_edge <- dplyr::full_join(atac_deg_edge, rna_deg_edge, by = "geneID")
 
 
 ### Correlation plot ###
@@ -158,7 +189,18 @@ corr2 <- ggplot2::ggplot(mapping = aes(x = overlap_glm$lfc_snRNA, y = overlap_gl
   geom_hline(yintercept = c(0.0), col = "gray", linetype = 'dashed') +
   theme_classic()
 
-corr1+corr2
+corr3 <- ggplot2::ggplot(mapping = aes(x = overlap_edge$lfc_snRNA, y = overlap_edge$lfc_snATAC)) +
+  geom_point(shape = 21, fill = 'black', size = 2) +
+  labs(title = "edgeR")+
+  xlab("snRNA log2FC") +
+  ylab ("snATAC log2FC") +
+  geom_smooth(method='lm',formula=y~x, color="red", fill="black", se=TRUE)+
+  sm_statCorr()+
+  geom_vline(xintercept = c(0.0), col = "gray", linetype = 'dashed') +
+  geom_hline(yintercept = c(0.0), col = "gray", linetype = 'dashed') +
+  theme_classic()
+
+corr1+corr2+corr3
 
 
 
