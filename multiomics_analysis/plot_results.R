@@ -67,16 +67,17 @@ rna_edge <- readRDS(data_rna_edge)
 atac <- readRDS(data_atac_scaDA)
 
 atac <- atac[!duplicated(atac$geneID), ]
+
 rna_edge$name <- rownames(rna_edge)
 
-top_genes <- rna_devil %>% 
+top_genes <- rna_edge %>% 
   dplyr::filter(name %in% c("PPARA","PER2","MYH1","MYH2","MYH4","PDE7B", 
                      "TNNT2","ID1","SAA2-SAA4","JUN","JUND","FOS","EGR1")) 
 
-p4 <- EnhancedVolcano::EnhancedVolcano(atac,
-                                       lab = atac$geneID,
-                                       x = 'log2fc',
-                                       y = 'FDR',
+p3 <- EnhancedVolcano::EnhancedVolcano(rna_edge,
+                                       lab = rna_edge$name,
+                                       x = 'logFC',
+                                       y = 'PValue',
                                        selectLab = c("PPARA","PER2","MYH1","MYH2","MYH4","PDE7B", 
                                                      "TNNT2","ID1","SAA2-SAA4","JUN","JUND","FOS","EGR1"),
                                        xlab = bquote(~Log[2]~ 'fold change'),

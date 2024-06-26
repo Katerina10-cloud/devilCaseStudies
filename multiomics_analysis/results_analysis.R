@@ -2,7 +2,7 @@
 
 setwd("/Users/katsiarynadavydzenka/Documents/PhD_AI/devilCaseStudies/")
 pkgs <- c("ggplot2", "dplyr","tidyr","tibble", "viridis", "smplot2", "Seurat", "VennDiagram", "gridExtra",
-          "ggpubr", "ggrepel", "ggvenn", "ggpointdensity")
+          "ggpubr", "ggrepel", "ggvenn", "ggpointdensity", "edgeR")
 sapply(pkgs, require, character.only = TRUE)
 
 grange_path <- "multiomics_analysis/results/grange_annot.RDS"
@@ -65,6 +65,7 @@ rna_glm <- readRDS(rna_glm) %>% rename(geneID=name)
 
 rna_edge <- "multiomics_analysis/results/MuscleRNA/edge_rna.RDS"
 rna_edge <- readRDS(rna_edge)
+#rna_edge <- topTags(rna_edge, n=15563)$table
 rna_edge$geneID <- rownames(rna_edge)
 colnames(rna_edge) <- c("lfc", "stError", "tval", "adj_pval", "geneID")
 
@@ -97,16 +98,16 @@ atac_nodup <- rbind(atac_up_nodup, atac_down_nodup)
 saveRDS(atac_nodup, file = "multiomics_analysis/results/atac_nodup_scaDA.RDS")
 
 atac_deg <- atac_nodup %>% 
-  dplyr::filter(FDR < 0.05 & abs(log2fc) >= 1.0)
+  dplyr::filter(FDR < 0.05 & abs(log2fc) > 0.5)
 
 rna_deg_devil <- rna_devil %>% 
-  dplyr::filter(adj_pval < 0.05 & abs(lfc) >= 1.0)
+  dplyr::filter(adj_pval < 0.05 & abs(lfc) > 0.5)
 
 rna_deg_glm <- rna_glm %>% 
-  dplyr::filter(adj_pval < 0.05 & abs(lfc) >= 1.0)
+  dplyr::filter(adj_pval < 0.05 & abs(lfc) > 0.5)
 
 rna_deg_edge <- rna_edge %>% 
-  dplyr::filter(adj_pval < 0.05 & abs(lfc) >= 1.0)
+  dplyr::filter(adj_pval < 0.05 & abs(lfc) > 0.5)
 
 
 # Vienn diagram #
@@ -160,7 +161,7 @@ atac_deg_edge <- atac_deg[ atac_deg$geneID %in% rna_deg_edge$geneID,]
 rna_deg_edge <- rna_deg_edge[ rna_deg_edge$geneID %in% atac_deg_edge$geneID,]
 atac_deg_edge<- atac_deg_edge %>% dplyr::select(geneID, FDR, log2fc)
 colnames(atac_deg_edge) <- c("geneID", "adj_pval_snATAC", "lfc_snATAC")
-rna_deg_edge <- rna_deg_edge %>% dplyr::select(geneID, adj_pval, lfc)
+rna_deg_edge <- rna_deg_edge %>% dplyr::select(geneID, lfc, adj_pval)
 colnames(rna_deg_edge) <- c("geneID", "adj_pval_snRNA", "lfc_snRNA")
 overlap_edge <- dplyr::full_join(atac_deg_edge, rna_deg_edge, by = "geneID")
 
@@ -230,14 +231,25 @@ gseGO <- clusterProfiler::gseGO(gene_list_rank, ont = "All", OrgDb = org.Hs.eg.d
 
 # Select enriched pathways #
 res_gse <- gseGO@result
+
 res_gse <- res_gse %>%
-  filter(Description %in% c("positive regulation of cellular component biogenesis","MAPK cascade", 
-                            "regulation of apoptotic process","actin filament-based movement", 
-                            "actin-mediated cell contraction", "muscle contraction", "muscle system process", 
-                            "response to oxygen-containing compound")) %>% 
+  filter(Description %in% c("cellular modified amino acid metabolic process","actin filament binding", "sarcoplasm",
+                            "actin binding", "response to BMP","response to fibroblast growth factor", 
+                             "negative regulation of mitotic cell cycle", "cellular response to oxygen levels",
+                            "MAPK cascade", "response to calcium ion", "ERK1 and ERK2 cascade",
+                            "CD4-positive, alpha-beta T cell activation")) %>% 
   mutate(gene_clusters = case_when(
-    NES > 0  ~ 'up-regulated',
-    NES < 0  ~ 'down-regulated'))
+  NES > 0  ~ 'up-regulated',
+  NES < 0  ~ 'down-regulated'))
+
+#res_gse <- res_gse %>%
+  #filter(Description %in% c("positive regulation of cellular component biogenesis","MAPK cascade", 
+                            #"regulation of apoptotic process","actin filament-based movement", 
+                            #"actin-mediated cell contraction", "muscle contraction", "muscle system process", 
+                            #"response to oxygen-containing compound")) %>% 
+  #mutate(gene_clusters = case_when(
+    #NES > 0  ~ 'up-regulated',
+    #NES < 0  ~ 'down-regulated'))
 
 ### Visualize enrichment results ###
 
@@ -263,11 +275,12 @@ plot1 + theme(legend.position = "right")+
   font("xlab", size = 10)+
   font("ylab", size = 10)
 
-
-#res_gse_devil <- res_gse_devil %>% mutate(method = "Devil")
-#res_gse_glm <- res_gse_glm %>% mutate(method = "glmGamPoi")
-#res_gse <- rbind(res_gse_devil, res_gse_glm)
-#res_gse$method <- as.factor(res_gse$method)
+#res_gse_devil <- res_gse
+#res_gse_glm <- res_gse
+res_gse_devil <- res_gse_devil %>% mutate(method = "Devil")
+res_gse_glm <- res_gse_glm %>% mutate(method = "glmGamPoi")
+res_gse <- rbind(res_gse_devil, res_gse_glm)
+res_gse$method <- as.factor(res_gse$method)
 
 # Barplot #
 
