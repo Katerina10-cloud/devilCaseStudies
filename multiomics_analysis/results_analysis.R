@@ -207,7 +207,7 @@ corr1+corr2+corr3
 
 ### Gene set Enrichement analysis ###
 
-rm(list=ls())
+#rm(list=ls())
 pkgs <- c("ggplot2", "dplyr","tidyr","reactome.db", "fgsea", "org.Hs.eg.db", "data.table", "clusterProfiler", "enrichplot", "ggpubr")
 sapply(pkgs, require, character.only = TRUE)
 
