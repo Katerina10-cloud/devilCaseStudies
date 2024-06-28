@@ -1,6 +1,6 @@
-DATASET_NAMES <- c("MuscleRNA", "MuscleATAC")
+#DATASET_NAMES <- c("MuscleRNA", "MuscleATAC")
 
-read_data <- function(dataset_name, data_path = NULL) {
+read_data <- function(dataset_name, data_path) {
   if (dataset_name == "MuscleRNA") {
     seurat_data <- readRDS(data_path)
     counts <- Seurat::GetAssayData(object = seurat_data, layer = "counts")
@@ -18,7 +18,7 @@ read_data <- function(dataset_name, data_path = NULL) {
     stop("Dataset name not recognized")
   }
   
-  return(list(counts=counts, metadata=metadata, grange=granges, tissue=tissue))
+  return(list(counts=counts, metadata=metadata, tissue=tissue))
 }
 
 grange_annot <- function(input_data, data_path) {
@@ -91,6 +91,7 @@ prepare_rna_input <- function(input_data) {
       age_pop == "young_pop" ~ '0'
     ))
   metadata$age_cluster <- as.factor(metadata$age_cluster)
+  counts <- input_data$counts
   counts <- counts[,colnames(counts) %in% rownames(metadata)]
   
   total_counts <- colSums(counts)
