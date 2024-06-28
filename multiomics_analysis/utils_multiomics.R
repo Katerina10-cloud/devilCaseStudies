@@ -185,7 +185,8 @@ perform_analysis_rna <- function(input_data, method = "devil") {
       name = fit$summary$gene,
       pval = fit$summary$p_age_cluster1,
       adj_pval = p.adjust(fit$summary$p_age_cluster1, "BH"),
-      lfc=fit$summary$logFC_p_age_cluster1)
+      lfc = fit$summary$logFC_age_cluster1
+    )
   }
   res
 }
