@@ -58,10 +58,10 @@ atac_scaDA_path <- "multiomics_analysis/results/scADA_res.RDS"
 atac_scaDA <- readRDS(atac_scaDA_path) 
 
 rna_devil <- "multiomics_analysis/results/MuscleRNA/devil_rna.RDS"
-rna_devil <- readRDS(rna_devil) %>% rename(geneID=name)
+rna_devil <- readRDS(rna_devil) %>% dplyr::rename(geneID=name)
 
 rna_glm <- "multiomics_analysis/results/MuscleRNA/glmGamPoi_rna.RDS"
-rna_glm <- readRDS(rna_glm) %>% rename(geneID=name)
+rna_glm <- readRDS(rna_glm) %>% dplyr::rename(geneID=name)
 
 rna_edge <- "multiomics_analysis/results/MuscleRNA/edge_rna.RDS"
 rna_edge <- readRDS(rna_edge)
@@ -93,22 +93,36 @@ atac_down <- atac_down[order(atac_down$log2fc), ]
 atac_down_nodup <- atac_down[!duplicated(atac_down$geneID), ]
 
 atac_nodup <- rbind(atac_up_nodup, atac_down_nodup)
-#atac_nodup <- atac_nodup[!duplicated(atac_nodup$geneID), ]
+atac_nodup <- atac_nodup[!duplicated(atac_nodup$geneID), ]
 
 saveRDS(atac_nodup, file = "multiomics_analysis/results/atac_nodup_scaDA.RDS")
 
+# Gene selection based on LFC & pvalue cutoff #
 atac_deg <- atac_nodup %>% 
-  dplyr::filter(FDR < 0.05 & abs(log2fc) > 0.5)
+  dplyr::filter(FDR < 0.05 & abs(log2fc) >= 1.0)
 
 rna_deg_devil <- rna_devil %>% 
-  dplyr::filter(adj_pval < 0.05 & abs(lfc) > 0.5)
+  dplyr::filter(adj_pval < 0.05 & abs(lfc) >= 1.0)
 
 rna_deg_glm <- rna_glm %>% 
-  dplyr::filter(adj_pval < 0.05 & abs(lfc) > 0.5)
+  dplyr::filter(adj_pval < 0.05 & abs(lfc) >= 1.0)
 
 rna_deg_edge <- rna_edge %>% 
-  dplyr::filter(adj_pval < 0.05 & abs(lfc) > 0.5)
+  dplyr::filter(adj_pval < 0.05 & abs(lfc) > 1.0)
 
+
+# Gene selection based on pvalue cutoff #
+atac_deg <- atac_nodup %>% 
+  dplyr::filter(FDR < 0.05)
+
+rna_deg_devil <- rna_devil %>% 
+  dplyr::filter(adj_pval < 0.05)
+
+rna_deg_glm <- rna_glm %>% 
+  dplyr::filter(adj_pval < 0.05)
+
+rna_deg_edge <- rna_edge %>% 
+  dplyr::filter(adj_pval < 0.05)
 
 # Vienn diagram #
 devil <- list(snATAC=atac_deg$geneID, snRNA=rna_deg_devil$geneID)
@@ -159,42 +173,42 @@ saveRDS(overlap_glm, file = "multiomics_analysis/results/overlap_glm.RDS")
 
 atac_deg_edge <- atac_deg[ atac_deg$geneID %in% rna_deg_edge$geneID,]
 rna_deg_edge <- rna_deg_edge[ rna_deg_edge$geneID %in% atac_deg_edge$geneID,]
-atac_deg_edge<- atac_deg_edge %>% dplyr::select(geneID, FDR, log2fc)
-colnames(atac_deg_edge) <- c("geneID", "adj_pval_snATAC", "lfc_snATAC")
+atac_deg_edge<- atac_deg_edge %>% dplyr::select(geneID, log2fc, FDR)
+colnames(atac_deg_edge) <- c("geneID", "lfc_snATAC", "adj_pval_snATAC")
 rna_deg_edge <- rna_deg_edge %>% dplyr::select(geneID, lfc, adj_pval)
-colnames(rna_deg_edge) <- c("geneID", "adj_pval_snRNA", "lfc_snRNA")
+colnames(rna_deg_edge) <- c("geneID", "lfc_snRNA", "adj_pval_snRNA")
 overlap_edge <- dplyr::full_join(atac_deg_edge, rna_deg_edge, by = "geneID")
 
 
 ### Correlation plot ###
 
-corr1 <- ggplot2::ggplot(mapping = aes(x = overlap_devil$lfc_snRNA, y = overlap_devil$lfc_snATAC)) +
+corr1 <- ggplot2::ggplot(mapping = aes(x = -log10(overlap_devil$adj_pval_snRNA), y = -log10(overlap_devil$adj_pval_snATAC))) +
   geom_point(shape = 21, fill = 'black', size = 2) +
   labs(title = "Devil")+
-  xlab("snRNA log2FC") +
-  ylab ("snATAC log2FC") +
+  xlab("snRNA -log10(adj_pval)") +
+  ylab ("snATAC -log10(adj_pval)") +
   geom_smooth(method='lm',formula=y~x, color="red", fill="black", se=TRUE)+
   sm_statCorr()+
   geom_vline(xintercept = c(0.0), col = "gray", linetype = 'dashed') +
   geom_hline(yintercept = c(0.0), col = "gray", linetype = 'dashed') +
   theme_classic()
 
-corr2 <- ggplot2::ggplot(mapping = aes(x = overlap_glm$lfc_snRNA, y = overlap_glm$lfc_snATAC)) +
+corr2 <- ggplot2::ggplot(mapping = aes(x = -log10(overlap_glm$adj_pval_snRNA), y = -log10(overlap_glm$adj_pval_snATAC))) +
   geom_point(shape = 21, fill = 'black', size = 2) +
   labs(title = "glmGamPoi")+
-  xlab("snRNA log2FC") +
-  ylab ("snATAC log2FC") +
+  xlab("snRNA -log10(adj_pval)") +
+  ylab ("snATAC -log10(adj_pval)") +
   geom_smooth(method='lm',formula=y~x, color="red", fill="black", se=TRUE)+
   sm_statCorr()+
   geom_vline(xintercept = c(0.0), col = "gray", linetype = 'dashed') +
   geom_hline(yintercept = c(0.0), col = "gray", linetype = 'dashed') +
   theme_classic()
 
-corr3 <- ggplot2::ggplot(mapping = aes(x = overlap_edge$lfc_snRNA, y = overlap_edge$lfc_snATAC)) +
+corr3 <- ggplot2::ggplot(mapping = aes(x = -log10(overlap_edge$adj_pval_snRNA), y = -log10(overlap_edge$adj_pval_snATAC))) +
   geom_point(shape = 21, fill = 'black', size = 2) +
   labs(title = "edgeR")+
-  xlab("snRNA log2FC") +
-  ylab ("snATAC log2FC") +
+  xlab("snRNA -log10(adj_pval)") +
+  ylab ("snATAC -log10(adj_pval)") +
   geom_smooth(method='lm',formula=y~x, color="red", fill="black", se=TRUE)+
   sm_statCorr()+
   geom_vline(xintercept = c(0.0), col = "gray", linetype = 'dashed') +
@@ -301,4 +315,80 @@ p1
 
 
 
+# Load 10X count matrices from multiple directories #
+library(Seurat)
+library(scCustomize)
 
+base_path <- "/orfeo/LTS/CDSLab/LT_storage/kdavydzenka/sc_devil/data/multiomics/rna/counts_data/"
+
+counts_mtx <- scCustomize::Read10X_Multi_Directory(base_path = base_path, 
+                                                   default_10X = FALSE, 
+                                                   secondary_path = "gex_matrices",
+                                                   merge = TRUE)
+
+
+
+#metadata_1$`_index` %>% stringr::str_remove(pattern = "._[0-9]_[0-9]_[0-9]_[0-9]$")
+#metadata <- metadata[ (metadata$age_pop %in% c("young_pop", "old_pop") & metadata$Annotation %in% c("Type I", "Type II")),]
+
+# Formatting cell indexes #
+
+metadata <- metadata[ (metadata$tech %in% c("snRNA")) ,]
+#metadata <- metadata %>% 
+  #mutate(cell_index = paste(metadata$orig.ident, metadata$`_index`, sep = "_"))
+metadata_1 <- metadata[ (metadata$sample %in% c("OM1", "OM2", "OM3")) ,]
+metadata_1$`_index` <- substr(metadata_1$`_index`, 1, 21)
+
+metadata_2 <- metadata[ (metadata$sample %in% c("OM4", "OM5", "OM6", "OM7", "OM8", "OM9")) ,]
+metadata_2$`_index` <- substr(metadata_2$`_index`, 1, 11)
+metadata_2$`_index` <- gsub("._+[0-9]+_$", "", metadata_2$`_index`)
+metadata_2$`_index` <- metadata_2$`_index` %>% stringr::str_remove(pattern = "_")
+names(metadata_2$`_index`)[names(metadata_2$`_index`) == "CELL32N32"] <- "CELL32N3"
+names(metadata_2$`_index`)[names(metadata_2$`_index`) == "CELL10080N"] <- "CELL10080N1"
+names(metadata_2$`_index`)[names(metadata_2$`_index`) == "CELL77N31"] <- "CELL77N3"
+names(metadata_2$`_index`)[names(metadata_2$`_index`) == "CELL10209N"] <- "CELL10209N1"
+names(metadata_2$`_index`)[names(metadata_2$`_index`) == "CELL10077N"] <- "CELL10077N1"
+names(metadata_2$`_index`)[names(metadata_2$`_index`) == "CELL10226N"] <- "CELL10226N1"
+names(metadata_2$`_index`)[names(metadata_2$`_index`) == "CELL10396N"] <- "CELL10396N1"
+names(metadata_2$`_index`)[names(metadata_2$`_index`) == "CELL10210N"] <- "CELL10210N1"
+names(metadata_2$`_index`)[names(metadata_2$`_index`) == "CELL2N"] <- "CELL2N2"
+names(metadata_2$`_index`)[names(metadata_2$`_index`) == "CELL77N22"] <- "CELL77N2"
+names(metadata_2$`_index`)[names(metadata_2$`_index`) == "CELL38N32"] <- "CELL38N3"
+names(metadata_2$`_index`)[names(metadata_2$`_index`) == "CELL61N22"] <- "CELL61N2"
+names(metadata_2$`_index`)[names(metadata_2$`_index`) == "CELL83N22"] <- "CELL83N2"
+names(metadata_2$`_index`)[names(metadata_2$`_index`) == "CELL88N32"] <- "CELL88N3"
+names(metadata_2$`_index`)[names(metadata_2$`_index`) == "CELL47N22"] <- "CELL47N2"
+names(metadata_2$`_index`)[names(metadata_2$`_index`) == "CELL6N"] <- "CELL6N2"
+names(metadata_2$`_index`)[names(metadata_2$`_index`) == "CELL10317N"] <- "CELL10317N1"
+
+
+metadata_3 <- metadata[ (metadata$sample %in% c("P17", "P21", "P23", "P27", "P29", "P3", "P5")) ,]
+metadata_3$`_index` <- substr(metadata_3$`_index`, 1, 11)
+metadata_3$`_index` <- gsub("._+[0-9]+_$", "", metadata_3$`_index`)
+metadata_3$`_index` <- sub("_2", "", metadata_3$`_index`)
+metadata_3$`_index` <- metadata_3$`_index` %>% stringr::str_remove(pattern = "_")
+
+metadata_4 <- metadata[ (metadata$sample %in% c("YM1", "YM2", "YM3", "YM4")) ,]
+metadata_4$`_index` <- substr(metadata_4$`_index`, 1, 11)
+metadata_4$`_index` <- gsub("._+[0-9]+_$", "", metadata_4$`_index`)
+metadata_4$`_index` <- sub("_2", "", metadata_4$`_index`)
+metadata_4$`_index` <- metadata_4$`_index` %>% stringr::str_remove(pattern = "_")
+
+metadata <- rbind(metadata_1, metadata_2, metadata_3, metadata_4)
+
+metadata <- metadata %>% 
+  mutate(cell_index = paste(metadata$orig.ident, metadata$`_index`, sep = "_"))
+
+metadata_adj_rna <- metadata_adj_rna[ (metadata_adj_rna$Annotation %in% c("Type I", "Type II")) ,]
+metadata_adj_rna$cell_index <- metadata_adj_rna$cell_index %>% stringr::str_remove(pattern = "_")
+rownames(metadata_adj_rna) <- metadata_adj_rna$cell_index
+
+
+colnames(counts_mtx) <- colnames(counts_mtx) %>% stringr::str_remove(pattern = "_")
+counts_mtx <- counts_mtx[ , (colnames(counts_mtx) %in% rownames(metadata)) ]
+metadata <- metadata[ (rownames(metadata) %in% colnames(counts_mtx)), ]
+counts_mtx <- counts_mtx[!duplicated(rownames(counts_mtx)), ]
+metadata_adj_rna <- metadata_adj_rna[!duplicated(metadata_adj_rna$cell_index), ]
+rownames(metadata_adj_rna) <- metadata_adj_rna$cell_index
+
+saveRDS(metadata_adj_rna, file = "multiomics_analysis/results/metadata_adj_rna.RDS")

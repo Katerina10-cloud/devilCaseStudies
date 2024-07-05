@@ -70,19 +70,19 @@ atac <- atac[!duplicated(atac$geneID), ]
 
 rna_edge$name <- rownames(rna_edge)
 
-top_genes <- rna_edge %>% 
+top_genes <- rna_devil %>% 
   dplyr::filter(name %in% c("PPARA","PER2","MYH1","MYH2","MYH4","PDE7B", 
                      "TNNT2","ID1","SAA2-SAA4","JUN","JUND","FOS","EGR1")) 
 
-p3 <- EnhancedVolcano::EnhancedVolcano(rna_edge,
-                                       lab = rna_edge$name,
-                                       x = 'logFC',
-                                       y = 'PValue',
+p4 <- EnhancedVolcano::EnhancedVolcano(atac,
+                                       lab = atac$geneID,
+                                       x = 'log2fc',
+                                       y = 'FDR',
                                        selectLab = c("PPARA","PER2","MYH1","MYH2","MYH4","PDE7B", 
                                                      "TNNT2","ID1","SAA2-SAA4","JUN","JUND","FOS","EGR1"),
                                        xlab = bquote(~Log[2]~ 'fold change'),
                                        pCutoff = 0.05,
-                                       FCcutoff = 0.5,
+                                       FCcutoff = 1.0,
                                        pointSize = 1.0,
                                        labSize = 2.0,
                                        labCol = 'black',
@@ -116,6 +116,7 @@ plot3
 plot4 <- p4 + ggplot2::labs(title="scaDA: snATAC") +
   theme(plot.title=element_text(hjust=0.5, vjust=0.5))
 plot4
+
 gridExtra::grid.arrange(plot1, plot2, plot3, nrow = 1)
 
 

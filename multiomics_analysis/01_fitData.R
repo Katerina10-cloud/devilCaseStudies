@@ -9,7 +9,7 @@ set.seed(12345)
 
 ## Input data
 dataset_name <- "MuscleRNA"
-data_path <- "data/multiomics/seurat_muscl_rna.RDS"
+data_path <- "data/multiomics/rna/seurat_counts_adj.RDS"
 
 
 #data_path <- "data/atac_age.RDS"
@@ -25,8 +25,8 @@ input_data <- prepare_rna_input(input_data)
 
 # RNA analysis #
 #time <- dplyr::tibble()
-m <- 'nebula'
-for (m in c("nebula")) {
+m <- 'devil'
+for (m in c("devil", "glmGamPoi", "nebula")) {
  # s <- Sys.time()
   de_res <- perform_analysis_rna(input_data, method = m)
   #e <- Sys.time()
