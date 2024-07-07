@@ -53,31 +53,35 @@ p_umap_rna + p_umap_atac
 ### Volcano plot ###
   
 # Top cell type & muscle aging specific genes #
-data_rna_devil <- "multiomics_analysis/results/MuscleRNA/devil_rna.RDS"
-data_rna_glm <- "multiomics_analysis/results/MuscleRNA/glmGamPoi_rna.RDS"
-#data_rna_nebula <- "multiomics_analysis/results/MuscleRNA/nebula_rna.RDS"
-data_rna_edge <- "multiomics_analysis/results/MuscleRNA/edge_rna.RDS"
+data_rna_devil <- "multiomics_analysis/results/MuscleRNA/devil_rna_new.RDS"
+data_rna_glm <- "multiomics_analysis/results/MuscleRNA/glmGamPoi_rna_new.RDS"
+data_rna_nebula <- "multiomics_analysis/results/MuscleRNA/nebula_rna.RDS"
+#data_rna_edge <- "multiomics_analysis/results/MuscleRNA/edge_rna.RDS"
 data_atac_scaDA <- "multiomics_analysis/results/atac_nodup_scaDA.RDS"
 
 
 rna_devil <- readRDS(data_rna_devil)
 rna_glm <- readRDS(data_rna_glm)
-rna_edge <- readRDS(data_rna_edge)
-#rna_nebula <- readRDS(data_rna_nebula)
+#rna_edge <- readRDS(data_rna_edge)
+rna_nebula <- readRDS(data_rna_nebula)
 atac <- readRDS(data_atac_scaDA)
 
-atac <- atac[!duplicated(atac$geneID), ]
-
-rna_edge$name <- rownames(rna_edge)
+#atac <- atac[!duplicated(atac$geneID), ]
+#rna_edge$name <- rownames(rna_edge)
 
 top_genes <- rna_devil %>% 
   dplyr::filter(name %in% c("PPARA","PER2","MYH1","MYH2","MYH4","PDE7B", 
                      "TNNT2","ID1","SAA2-SAA4","JUN","JUND","FOS","EGR1")) 
+# Remove outliers
+row.remove.neb <- c("C21orf91", "AL137246.2")
+row.remove.devil <- c("KCTD1", "CASP4")
+rna_nebula <- rna_nebula[!(rna_nebula$name %in% row.remove.neb), ]
+rna_devil <- rna_devil[!(rna_devil$name %in% row.remove.devil), ]
 
-p4 <- EnhancedVolcano::EnhancedVolcano(atac,
-                                       lab = atac$geneID,
-                                       x = 'log2fc',
-                                       y = 'FDR',
+p3 <- EnhancedVolcano::EnhancedVolcano(rna_nebula,
+                                       lab = rna_nebula$name,
+                                       x = 'lfc',
+                                       y = 'adj_pval',
                                        selectLab = c("PPARA","PER2","MYH1","MYH2","MYH4","PDE7B", 
                                                      "TNNT2","ID1","SAA2-SAA4","JUN","JUND","FOS","EGR1"),
                                        xlab = bquote(~Log[2]~ 'fold change'),
@@ -109,7 +113,7 @@ plot2 <- p2 + ggplot2::labs(title="glmGamPoi: snRNA") +
   theme(plot.title=element_text(hjust=0.5, vjust=0.5))
 plot2
 
-plot3 <- p3 + ggplot2::labs(title="edgeR: snRNA") +
+plot3 <- p3 + ggplot2::labs(title="Nebula: snRNA") +
   theme(plot.title=element_text(hjust=0.5, vjust=0.5))
 plot3
 
@@ -122,34 +126,64 @@ gridExtra::grid.arrange(plot1, plot2, plot3, nrow = 1)
 
 ### P-values and lfc comparison ###
 
-rna_devil <- rna_devil[rna_devil$name %in% rna_glm$name,]
+rna_devil <- rna_devil[rna_devil$name %in% rna_nebula$name,]
+rna_nebula <- rna_nebula[rna_nebula$name %in% rna_devil$name,]
 rna_glm <- rna_glm[rna_glm$name %in% rna_devil$name,]
 
 p_devil <- rna_devil %>% dplyr::select(name,adj_pval) %>% 
   dplyr::rename(geneID=name,pval_devil=adj_pval)
 
+p_nebula <- rna_nebula %>% dplyr::select(name,adj_pval) %>% 
+  dplyr::rename(geneID=name,pval_nebula=adj_pval)
+p_pval_1 <- dplyr::full_join(p_devil, p_nebula, by = "geneID")
+
 p_glm <- rna_glm %>% dplyr::select(name,adj_pval) %>% 
   dplyr::rename(geneID=name,pval_glm=adj_pval)
-p_pval <- dplyr::full_join(p_devil, p_glm, by = "geneID")
+p_pval_2 <- dplyr::full_join(p_devil, p_glm, by = "geneID")
 
-pval_rna <- ggplot(p_pval, aes(x=pval_glm, y=pval_devil)) + 
+pval_rna_1 <- ggplot(p_pval_1, aes(x=-log10(pval_nebula), y=-log10(pval_devil))) + 
   geom_pointdensity(shape=20) +
   geom_smooth(method=lm, se=FALSE, linetype="dashed",
               color="darkred")+
   labs(title = "p-value snRNA")+
-  xlab("adjpval snRNA from glmGamPoi") +
-  ylab ("adjpval snRNA from Devil") +
+  xlab("-log10(adjpval) snRNA from Nebula") +
+  ylab ("-log10(adjpval) snRNA from Devil") +
+  theme_classic()+
+  theme(legend.position="none")
+
+pval_rna_2 <- ggplot(p_pval_2, aes(x=-log10(pval_glm), y=-log10(pval_devil))) + 
+  geom_pointdensity(shape=20) +
+  geom_smooth(method=lm, se=FALSE, linetype="dashed",
+              color="darkred")+
+  labs(title = "p-value snRNA")+
+  xlab("-log10(adjpval) snRNA from glmGamPoi") +
+  ylab ("-log10(adjpval) snRNA from Devil") +
   theme_classic()+
   theme(legend.position="none")
 
 lfc_devil <- rna_devil %>% dplyr::select(name,lfc) %>% 
   dplyr::rename(geneID=name,lfc_devil=lfc)
 
+lfc_nebula <- rna_nebula %>% dplyr::select(name,lfc) %>% 
+  dplyr::rename(geneID=name,lfc_nebula=lfc)
+
 lfc_glm <- rna_glm %>% dplyr::select(name,lfc) %>% 
   dplyr::rename(geneID=name,lfc_glm=lfc)
-p_lfc <- dplyr::full_join(lfc_devil, lfc_glm, by = "geneID")
 
-lfc_rna <- ggplot(p_lfc, aes(x=lfc_glm, y=lfc_devil)) + 
+p_lfc_1 <- dplyr::full_join(lfc_devil, lfc_nebula, by = "geneID")
+p_lfc_2 <- dplyr::full_join(lfc_devil, lfc_glm, by = "geneID")
+
+lfc_rna_1 <- ggplot(p_lfc_1, aes(x=lfc_nebula, y=lfc_devil)) + 
+  geom_pointdensity(shape=20) +
+  geom_smooth(method=lm, se=FALSE, linetype="dashed",
+              color="darkred")+
+  labs(title = "log2FC snRNA")+
+  xlab("log2FC snRNA from Nebula") +
+  ylab ("log2FC snRNA from Devil") +
+  theme_classic()+
+  theme(legend.position="none")
+
+lfc_rna_2 <- ggplot(p_lfc_2, aes(x=lfc_glm, y=lfc_devil)) + 
   geom_pointdensity(shape=20) +
   geom_smooth(method=lm, se=FALSE, linetype="dashed",
               color="darkred")+
@@ -159,4 +193,7 @@ lfc_rna <- ggplot(p_lfc, aes(x=lfc_glm, y=lfc_devil)) +
   theme_classic()+
   theme(legend.position="none")
 
-pval_rna+lfc_rna
+#pval_rna_1+lfc_rna_1
+#pval_rna_2+lfc_rna_2
+
+gridExtra::grid.arrange(pval_rna_1,lfc_rna_1, pval_rna_2,lfc_rna_2, nrow = 2)
