@@ -69,7 +69,7 @@ atac <- readRDS(data_atac_scaDA)
 #atac <- atac[!duplicated(atac$geneID), ]
 #rna_edge$name <- rownames(rna_edge)
 
-top_genes <- rna_devil %>% 
+top_genes <- devil_rna %>% 
   dplyr::filter(name %in% c("PPARA","PER2","MYH1","MYH2","MYH4","PDE7B", 
                      "TNNT2","ID1","SAA2-SAA4","JUN","JUND","FOS","EGR1")) 
 # Remove outliers
@@ -78,8 +78,8 @@ row.remove.devil <- c("KCTD1", "CASP4")
 rna_nebula <- rna_nebula[!(rna_nebula$name %in% row.remove.neb), ]
 rna_devil <- rna_devil[!(rna_devil$name %in% row.remove.devil), ]
 
-p3 <- EnhancedVolcano::EnhancedVolcano(rna_nebula,
-                                       lab = rna_nebula$name,
+p1 <- EnhancedVolcano::EnhancedVolcano(devil_rna,
+                                       lab = devil_rna$name,
                                        x = 'lfc',
                                        y = 'adj_pval',
                                        selectLab = c("PPARA","PER2","MYH1","MYH2","MYH4","PDE7B", 
