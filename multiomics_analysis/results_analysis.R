@@ -54,13 +54,13 @@ grange_scaDA <- readRDS(grange_scaDA_path)
 grange <- "multiomics_analysis/results/grange_annot.RDS"
 grange <- readRDS(grange)
 
-atac_scaDA_path <- "multiomics_analysis/results/scADA_res.RDS"
+atac_scaDA_path <- "multiomics_analysis/results/MuscleATAC/scADA_res.RDS"
 atac_scaDA <- readRDS(atac_scaDA_path) 
 
-rna_devil <- "multiomics_analysis/results/MuscleRNA/devil_rna_new.RDS"
+rna_devil <- "multiomics_analysis/results/MuscleRNA/devil_rna.RDS"
 rna_devil <- readRDS(rna_devil) %>% dplyr::rename(geneID=name)
 
-rna_glm <- "multiomics_analysis/results/MuscleRNA/glmGamPoi_rna_new.RDS"
+rna_glm <- "multiomics_analysis/results/MuscleRNA/glmGamPoi_rna.RDS"
 rna_glm <- readRDS(rna_glm) %>% dplyr::rename(geneID=name)
 
 rna_nebula <- "multiomics_analysis/results/MuscleRNA/nebula_rna.RDS"
@@ -113,19 +113,6 @@ rna_deg_glm <- rna_glm %>%
 rna_deg_nebula <- rna_nebula %>% 
   dplyr::filter(adj_pval < 0.05 & abs(lfc) > 0.5)
 
-
-# Gene selection based on pvalue cutoff #
-atac_deg <- atac_nodup %>% 
-  dplyr::filter(FDR < 0.05)
-
-rna_deg_devil <- rna_devil %>% 
-  dplyr::filter(adj_pval < 0.05)
-
-rna_deg_glm <- rna_glm %>% 
-  dplyr::filter(adj_pval < 0.05)
-
-rna_deg_nebula <- rna_nebula %>% 
-  dplyr::filter(adj_pval < 0.05)
 
 # Vienn diagram #
 devil <- list(snATAC=atac_deg$geneID, snRNA=rna_deg_devil$geneID)
@@ -185,33 +172,33 @@ overlap_nebula <- dplyr::full_join(atac_deg_nebula, rna_deg_nebula, by = "geneID
 
 ### Correlation plot ###
 
-corr1 <- ggplot2::ggplot(mapping = aes(x = overlap_devil$lfc_snRNA, y = overlap_devil$lfc_snATAC)) +
+corr1 <- ggplot2::ggplot(mapping = aes(x = -log10(overlap_devil$adj_pval_snRNA), y = -log10(overlap_devil$adj_pval_snATAC))) +
   geom_point(shape = 21, fill = 'black', size = 2) +
   labs(title = "Devil")+
-  xlab("snRNA log2FC") +
-  ylab ("snATAC log2FC") +
+  xlab("snRNA -log10(FDR)") +
+  ylab ("snATAC -log10(FDR)") +
   geom_smooth(method='lm',formula=y~x, color="red", fill="black", se=TRUE)+
   sm_statCorr()+
   geom_vline(xintercept = c(0.0), col = "gray", linetype = 'dashed') +
   geom_hline(yintercept = c(0.0), col = "gray", linetype = 'dashed') +
   theme_classic()
 
-corr2 <- ggplot2::ggplot(mapping = aes(x = overlap_glm$lfc_snRNA, y = overlap_glm$lfc_snATAC)) +
+corr2 <- ggplot2::ggplot(mapping = aes(x = -log10(overlap_glm$adj_pval_snRNA), y = -log10(overlap_glm$adj_pval_snATAC))) +
   geom_point(shape = 21, fill = 'black', size = 2) +
   labs(title = "glmGamPoi")+
-  xlab("snRNA log2FC") +
-  ylab ("snATAC log2FC") +
+  xlab("snRNA -log10(FDR)") +
+  ylab ("snATAC -log10(FDR)") +
   geom_smooth(method='lm',formula=y~x, color="red", fill="black", se=TRUE)+
   sm_statCorr()+
   geom_vline(xintercept = c(0.0), col = "gray", linetype = 'dashed') +
   geom_hline(yintercept = c(0.0), col = "gray", linetype = 'dashed') +
   theme_classic()
 
-corr3 <- ggplot2::ggplot(mapping = aes(x = overlap_nebula$lfc_snRNA, y = overlap_nebula$lfc_snATAC)) +
+corr3 <- ggplot2::ggplot(mapping = aes(x = -log10(overlap_nebula$adj_pval_snRNA), y = -log10(overlap_nebula$adj_pval_snATAC))) +
   geom_point(shape = 21, fill = 'black', size = 2) +
   labs(title = "Nebula")+
-  xlab("snRNA -log10(adj_pval)") +
-  ylab ("snATAC -log10(adj_pval)") +
+  xlab("snRNA -log10(FDR)") +
+  ylab ("snATAC -log10(FDR)") +
   geom_smooth(method='lm',formula=y~x, color="red", fill="black", se=TRUE)+
   sm_statCorr()+
   geom_vline(xintercept = c(0.0), col = "gray", linetype = 'dashed') +
