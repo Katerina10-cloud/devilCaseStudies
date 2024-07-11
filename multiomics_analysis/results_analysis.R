@@ -53,9 +53,14 @@ grange_scaDA <- readRDS(grange_scaDA_path)
 grange <- "multiomics_analysis/results/grange_annot.RDS"
 grange <- readRDS(grange)
 
+<<<<<<< HEAD
 atac_scaDA_path <- "multiomics_analysis/results/scADA_res.RDS"
 atac_scaDA_path <- "multiomics_analysis/results/MuscleATAC/scADA_res.RDS"
 atac_scaDA <- readRDS(atac_scaDA_path)
+=======
+atac_scaDA_path <- "multiomics_analysis/results/MuscleATAC/scADA_res.RDS"
+atac_scaDA <- readRDS(atac_scaDA_path) 
+>>>>>>> 67d7580bb0816df3bca99f2586a9efb70020ab6c
 
 rna_devil <- "multiomics_analysis/results/MuscleRNA/devil_rna.RDS"
 rna_devil <- readRDS(rna_devil) %>% dplyr::rename(geneID=name)
@@ -119,6 +124,7 @@ rna_deg_glm <- rna_glm %>%
 rna_deg_nebula <- rna_nebula %>%
   dplyr::filter(adj_pval < 0.05, abs(lfc) > stats::quantile(abs(rna_nebula$lfc), quantile))
 
+<<<<<<< HEAD
 # Gene selection based on pvalue cutoff #
 # atac_deg <- atac_nodup %>%
 #   dplyr::filter(FDR < 0.05)
@@ -132,6 +138,8 @@ rna_deg_nebula <- rna_nebula %>%
 # rna_deg_nebula <- rna_nebula %>%
 #   dplyr::filter(adj_pval < 0.05)
 
+=======
+>>>>>>> 67d7580bb0816df3bca99f2586a9efb70020ab6c
 # Vienn diagram #
 devil <- list(snATAC=atac_deg$geneID, snRNA=rna_deg_devil$geneID)
 glm <- list(snATAC=atac_deg$geneID, snRNA=rna_deg_glm$geneID)
@@ -212,6 +220,7 @@ overlap_nebula <- dplyr::full_join(atac_deg_nebula, rna_deg_nebula, by = "geneID
 
 ### Correlation plot ###
 
+<<<<<<< HEAD
 corr1 <- ggplot2::ggplot(mapping = aes(x = overlap_devil$lfc_snRNA, y = overlap_devil$lfc_snATAC)) +
   geom_point(shape = 21, fill = 'black', size = 1) +
   labs(title = "Devil")+
@@ -220,15 +229,29 @@ corr1 <- ggplot2::ggplot(mapping = aes(x = overlap_devil$lfc_snRNA, y = overlap_
   geom_smooth(method='lm',formula=y~x, color="red", fill="black", se=TRUE) +
   #smplot2::sm_statCorr(corr_method = "spearman", fit.params = list(color = method_colors["devil"])) +
   smplot2::sm_statCorr(fit.params = list(color = method_colors["devil"])) +
+=======
+corr1 <- ggplot2::ggplot(mapping = aes(x = -log10(overlap_devil$adj_pval_snRNA), y = -log10(overlap_devil$adj_pval_snATAC))) +
+  geom_point(shape = 21, fill = 'black', size = 2) +
+  labs(title = "Devil")+
+  xlab("snRNA -log10(FDR)") +
+  ylab ("snATAC -log10(FDR)") +
+  geom_smooth(method='lm',formula=y~x, color="red", fill="black", se=TRUE)+
+  sm_statCorr()+
+>>>>>>> 67d7580bb0816df3bca99f2586a9efb70020ab6c
   geom_vline(xintercept = c(0.0), col = "gray", linetype = 'dashed') +
   geom_hline(yintercept = c(0.0), col = "gray", linetype = 'dashed') +
   theme_classic()
 
+<<<<<<< HEAD
 corr2 <- ggplot2::ggplot(mapping = aes(x = overlap_glm$lfc_snRNA, y = overlap_glm$lfc_snATAC)) +
   geom_point(shape = 21, fill = 'black', size = 1) +
+=======
+corr2 <- ggplot2::ggplot(mapping = aes(x = -log10(overlap_glm$adj_pval_snRNA), y = -log10(overlap_glm$adj_pval_snATAC))) +
+  geom_point(shape = 21, fill = 'black', size = 2) +
+>>>>>>> 67d7580bb0816df3bca99f2586a9efb70020ab6c
   labs(title = "glmGamPoi")+
-  xlab("snRNA log2FC") +
-  ylab ("snATAC log2FC") +
+  xlab("snRNA -log10(FDR)") +
+  ylab ("snATAC -log10(FDR)") +
   geom_smooth(method='lm',formula=y~x, color="red", fill="black", se=TRUE)+
   #smplot2::sm_statCorr(corr_method = "spearman", fit.params = list(color = method_colors["glmGamPoi"])) +
   smplot2::sm_statCorr(fit.params = list(color = method_colors["glmGamPoi"])) +
@@ -236,11 +259,19 @@ corr2 <- ggplot2::ggplot(mapping = aes(x = overlap_glm$lfc_snRNA, y = overlap_gl
   geom_hline(yintercept = c(0.0), col = "gray", linetype = 'dashed') +
   theme_classic()
 
+<<<<<<< HEAD
 corr3 <- ggplot2::ggplot(mapping = aes(x = overlap_nebula$lfc_snRNA, y = overlap_nebula$lfc_snATAC)) +
   geom_point(shape = 21, fill = 'black', size = 1) +
   labs(title = "Nebula")+
   xlab("snRNA log2FC") +
   ylab ("snATAC log2FC") +
+=======
+corr3 <- ggplot2::ggplot(mapping = aes(x = -log10(overlap_nebula$adj_pval_snRNA), y = -log10(overlap_nebula$adj_pval_snATAC))) +
+  geom_point(shape = 21, fill = 'black', size = 2) +
+  labs(title = "Nebula")+
+  xlab("snRNA -log10(FDR)") +
+  ylab ("snATAC -log10(FDR)") +
+>>>>>>> 67d7580bb0816df3bca99f2586a9efb70020ab6c
   geom_smooth(method='lm',formula=y~x, color="red", fill="black", se=TRUE)+
   #smplot2::sm_statCorr(corr_method = "spearman", fit.params = list(color = method_colors["NEBULA"])) +
   smplot2::sm_statCorr(fit.params = list(color = method_colors["NEBULA"])) +
