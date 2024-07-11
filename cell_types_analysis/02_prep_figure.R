@@ -12,9 +12,9 @@ dataset_name <- args[1]
 tissue <- args[2]
 save_svg <- as.logical(args[3])
 
-#dataset_name <- "BaronPancreasData"
-#tissue <- "pancreas"
-#save_svg <- F
+dataset_name <- "BaronPancreasData"
+tissue <- "pancreas"
+save_svg <- F
 
 img_folder <- paste0("plot_figure/", dataset_name, "/")
 if (!dir.exists(img_folder)) {
@@ -70,6 +70,38 @@ umap_plot_seurat <- Seurat::DimPlot(
         axis.title.y=element_blank(),legend.position="none",
         panel.background=element_blank(),panel.border=element_blank(),panel.grid.major=element_blank(),
         panel.grid.minor=element_blank(),plot.background=element_blank())
+
+data_umap <- dplyr::tibble(
+  umap1=seurat_obj@reductions$umap@cell.embeddings[,1],
+  umap2=seurat_obj@reductions$umap@cell.embeddings[,2],
+  cluster=seurat_obj$seurat_clusters,
+  cell_type=seurat_obj$cell_type
+) %>%
+  dplyr::left_join(ground_truth, by = "cluster") %>%
+  dplyr::mutate(legend = paste(cluster, ". ", true_cell_type))
+
+strings <- unique(data_umap$legend)
+extract_numbers <- function(x) {
+  as.numeric(sub("\\..*", "", x))
+}
+numbers <- sapply(strings, extract_numbers)
+sorted_strings <- strings[order(numbers)]
+data_umap$legend = factor(data_umap$legend, levels = sorted_strings)
+
+data_avg_umap <- data_umap %>%
+  dplyr::group_by(cluster) %>%
+  dplyr::select(umap1, umap2) %>%
+  dplyr::summarise_all(mean)
+
+pA <- ggplot() +
+  geom_point(data_umap, mapping = aes(x=umap1, y=umap2, col=legend), size=.1) +
+  geom_point(data = data_avg_umap, mapping = aes(x=umap1, y = umap2)) +
+  scale_color_manual(values = my_large_palette) +
+  theme_bw() +
+  labs(x = "UMAP 1", y = "UMAP 2", col="Cluster") +
+  guides(color = guide_legend(override.aes = list(size=2))) +
+  geom_label(data_avg_umap, mapping=aes(x=umap1, y = umap2, label = cluster)) +
+  theme(text=element_text(size=12))
 
 # umap_plot_labels <- Seurat::DimPlot(
 #   seurat_obj,
@@ -207,7 +239,7 @@ for (m in c("devil", "nebula", "glmGamPoi")) {
   }
 }
 
-comparison_tibble %>%
+pB <- comparison_tibble %>%
   #dplyr::filter(n_markers <= 100) %>%
   #dplyr::filter(pval_cut >= 1e-10) %>%
   dplyr::group_by(model, n_markers) %>%
@@ -221,9 +253,11 @@ comparison_tibble %>%
   scale_x_continuous(trans = 'log10') +
   labs(x = "N markers", y = "Classification score", col="Algorithm", fill="Algorithm") +
   theme(
-    text=element_text(size=10),
+    text=element_text(size=12),
     legend.position = 'right'
 )
+pB
+
 
 
 ggsave(filename = paste0(img_folder, "assigment_score.pdf"), plot = last_plot(), dpi=300, width = 150, height = 60, units = "mm")
@@ -411,15 +445,16 @@ scMayoInput <- lapply(unique(top_genes$cluster), function(c) {
 }) %>% do.call('bind_rows', .)
 
 scMayoRes <- scMayoMap::scMayoMap(scMayoInput, scMayoMap::scMayoMapDatabase, pct.cutoff = 0, tissue = tissue)
-      rez <- scMayoRes$markers %>%
-        dplyr::left_join(computeGroundTruth(seurat_obj), by='cluster') %>%
-        dplyr::mutate(pred = str_replace_all(celltype, " cell", "")) %>%
-        dplyr::mutate(score = as.numeric(score)) %>%
-        dplyr::filter(score > 0)
-      rez$pred <- lapply(rez$pred, function(ct) {
-        v <- scTypeMapper %>% dplyr::filter(from == ct) %>% dplyr::distinct() %>%pull(to)
-        unique(v)
-      }) %>% unlist()
+rez <- scMayoRes$markers %>%
+  dplyr::left_join(computeGroundTruth(seurat_obj), by='cluster') %>%
+  dplyr::mutate(pred = str_replace_all(celltype, " cell", "")) %>%
+  dplyr::mutate(score = as.numeric(score)) %>%
+  dplyr::filter(score > 0)
+
+rez$pred <- lapply(rez$pred, function(ct) {
+  v <- scTypeMapper %>% dplyr::filter(from == ct) %>% dplyr::distinct() %>%pull(to)
+  unique(str_replace_all(v, " cell", ""))
+}) %>% unlist()
 
 rez_max <- rez %>%
   dplyr::group_by(cluster) %>%
@@ -445,9 +480,9 @@ rez_max <- rez %>%
 res_heatmap <- ggplot() +
   # geom_point(rez_max %>% dplyr::filter(score > .1, is_correct), mapping = aes(x = ground_truth, y=pred, size=score * 3), shape=20, col="yellowgreen") +
   # geom_point(rez_max %>% dplyr::filter(score > .1, !is_correct), mapping = aes(x = ground_truth, y=pred, size=score * 3), shape=20, col="indianred") +
-  geom_point(rez %>% dplyr::filter(score > .1), mapping = aes(x=ground_truth, y=pred, fill=score, col=score, size=score * 5)) +
-  geom_point(rez_max %>% dplyr::filter(score > .1, is_correct), mapping = aes(x = ground_truth, y=pred, size=score), shape=20, col="yellowgreen") +
-  geom_point(rez_max %>% dplyr::filter(score > .1, !is_correct), mapping = aes(x = ground_truth, y=pred, size = score), shape=20, col="indianred") +
+  geom_point(rez %>% dplyr::filter(score > .1), mapping = aes(x=true_cell_type, y=pred, fill=score, col=score, size=score * 5)) +
+  geom_point(rez_max %>% dplyr::filter(score > .1, is_correct), mapping = aes(x = true_cell_type, y=pred, size=score), shape=20, col="yellowgreen") +
+  geom_point(rez_max %>% dplyr::filter(score > .1, !is_correct), mapping = aes(x = true_cell_type, y=pred, size = score), shape=20, col="indianred") +
   theme_bw() +
   scale_color_gradient(low = "#deebf7", high = "#08519c") +
   scale_fill_gradient(low = "#deebf7", high = "#08519c") +
@@ -465,11 +500,12 @@ ggsave(filename = paste0(img_folder, "heatmap.pdf"), dpi=300, width = 140, heigh
 if (save_svg) { ggsave(filename = paste0(img_folder, "heatmap.svg"), dpi=300, width = 140, height = 105, units = 'mm') }
 
 # Upset Plot ####
-mutations <- read.csv( system.file("extdata", "mutations.csv", package = "UpSetR"), header=T, sep = ",")
+#mutations <- read.csv( system.file("extdata", "mutations.csv", package = "UpSetR"), header=T, sep = ",")
 
 n_markers <- 1000000
 pval_cut <- .05
 all_markers <- c()
+c <- 1
 
 for (m in c("devil", "nebula", "glmGamPoi")) {
   de_res <- de_res_total <- readRDS(paste0('results/', dataset_name, '/', m, '.RDS')) %>% na.omit()
@@ -529,7 +565,7 @@ timing <- readRDS(paste0("results/",dataset_name,"/time.RDS")) %>%
   dplyr::mutate(time = as.numeric(delta_time, units = "secs")) %>%
   dplyr::arrange(-time)
 
-timing %>%
+pC <- timing %>%
   ggplot(mapping = aes(x=method, y=time, fill=method)) +
   geom_col() +
   theme_bw() +
@@ -537,11 +573,18 @@ timing %>%
   scale_fill_manual(values = method_colors) +
   theme(
     axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
-    text=element_text(size=10),
+    text=element_text(size=12),
     legend.position = 'none'
   )
+pC
 
 ggsave(filename = paste0(img_folder, "timing.pdf"), dpi=300, width = 40, height = 60, units = 'mm')
 if (save_svg) {ggsave(filename = paste0(img_folder, "timing.svg"), dpi=300, width = 40, height = 60, units = 'mm')}
 
 unlink("Rplots.pdf")
+
+# save figure
+
+pCB <- (pC | pB) + plot_layout(widths = c(1.2,3))
+final_plot <- (pA / pCB) + plot_annotation(tag_levels = "A")
+ggsave(paste0("plot_figure/", dataset_name, ".png"), dpi=400, width = 10, height = 7, plot = final_plot)
