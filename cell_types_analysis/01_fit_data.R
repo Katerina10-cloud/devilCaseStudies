@@ -1,5 +1,5 @@
 rm(list=ls())
-pkgs <- c("ggplot2", "dplyr","tidyr","tibble","reshape2", "Seurat", "glmGamPoi", "devil", "nebula")
+pkgs <- c("ggplot2","dplyr","tidyr","tibble","reshape2", "Seurat", "glmGamPoi", "devil", "nebula")
 sapply(pkgs, require, character.only = TRUE)
 source("utils.R")
 
@@ -11,8 +11,8 @@ args = commandArgs(trailingOnly=TRUE)
 data_path <- args[2]
 dataset_name <- args[1]
 
-#dataset_name <- 'liver'
-#data_path <- "datasets/liver.rds"
+dataset_name <- 'BigLiverData'
+data_path <- "datasets/"
 
 if (!(file.exists(paste0("results/", dataset_name)))) {
   dir.create(paste0("results/", dataset_name))
