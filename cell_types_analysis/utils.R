@@ -143,7 +143,7 @@ perform_analysis <- function(seurat_obj, method = "devil") {
 
     design_matrix <- model.matrix(~group, dplyr::tibble(group = seurat_obj$seurat_clusters == c))
     dm <- design_matrix[idxs,]
-    cc <- counts[,idxs]
+    cc <- counts[rowMeans(counts) > .01,idxs]
     rownames(dm) <- colnames(cc)
 
     sf <- devil:::calculate_sf(cc)
