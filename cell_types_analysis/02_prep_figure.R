@@ -1,5 +1,5 @@
 rm(list=ls())
-pkgs <- c("ggplot2", "dplyr","tidyr","tibble","reshape2", "stringr", "AnnotationDbi", "scMayoMap", "Seurat", "org.Hs.eg.db")
+pkgs <- c("patchwork", "ggpubr","ggplot2", "dplyr","tidyr","tibble","reshape2", "stringr", "AnnotationDbi", "scMayoMap", "Seurat", "org.Hs.eg.db")
 sapply(pkgs, require, character.only = TRUE)
 source("utils.R")
 
@@ -12,9 +12,9 @@ dataset_name <- args[1]
 tissue <- args[2]
 save_svg <- as.logical(args[3])
 
-dataset_name <- "BaronPancreasData"
-tissue <- "pancreas"
-save_svg <- F
+#dataset_name <- "BaronPancreasData"
+#tissue <- "pancreas"
+#save_svg <- F
 
 img_folder <- paste0("plot_figure/", dataset_name, "/")
 if (!dir.exists(img_folder)) {
@@ -48,7 +48,7 @@ new_cell_type <- rep(NA, length(seurat_obj$cell_type))
 for (ct in unique(seurat_obj$cell_type)) {
   print(ct)
   idx <- which(seurat_obj$cell_type == ct)
-  n.ct <- scTypeMapper %>% dplyr::filter(from == ct) %>% dplyr::distinct() %>% dplyr::pull(to)
+  n.ct <- scTypeMapper %>% dplyr::filter(from == ct) %>% dplyr::distinct() %>% dplyr::pull(to) %>% unique()
   new_cell_type[idx] <- n.ct
 }
 seurat_obj$cell_type <- new_cell_type
@@ -586,5 +586,5 @@ unlink("Rplots.pdf")
 # save figure
 
 pCB <- (pC | pB) + plot_layout(widths = c(1.2,3))
-final_plot <- (pA / pCB) + plot_annotation(tag_levels = "A")
-ggsave(paste0("plot_figure/", dataset_name, ".png"), dpi=400, width = 10, height = 7, plot = final_plot)
+final_plot <- (pA / pCB) + plot_annotation(tag_levels = "A") + plot_layout(heights = c(2,1))
+ggsave(paste0("plot_figure/", dataset_name, ".png"), dpi=400, width = 8, height = 8, plot = final_plot)
