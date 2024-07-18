@@ -3,7 +3,7 @@
 setwd("~/GitHub/devilCaseStudies")
 rm(list = ls())
 pkgs <- c("ggplot2", "dplyr","tidyr","tibble", "viridis", "smplot2", "Seurat", "VennDiagram", "gridExtra",
-          "ggpubr", "ggrepel", "ggvenn", "ggpointdensity", "edgeR")
+          "ggpubr", "ggrepel", "ggvenn", "ggpointdensity", "edgeR", "patchwork")
 sapply(pkgs, require, character.only = TRUE)
 
 grange_path <- "multiomics_analysis/results/grange_annot.RDS"
@@ -53,14 +53,8 @@ grange_scaDA <- readRDS(grange_scaDA_path)
 grange <- "multiomics_analysis/results/grange_annot.RDS"
 grange <- readRDS(grange)
 
-<<<<<<< HEAD
-atac_scaDA_path <- "multiomics_analysis/results/scADA_res.RDS"
 atac_scaDA_path <- "multiomics_analysis/results/MuscleATAC/scADA_res.RDS"
 atac_scaDA <- readRDS(atac_scaDA_path)
-=======
-atac_scaDA_path <- "multiomics_analysis/results/MuscleATAC/scADA_res.RDS"
-atac_scaDA <- readRDS(atac_scaDA_path) 
->>>>>>> 67d7580bb0816df3bca99f2586a9efb70020ab6c
 
 rna_devil <- "multiomics_analysis/results/MuscleRNA/devil_rna.RDS"
 rna_devil <- readRDS(rna_devil) %>% dplyr::rename(geneID=name)
@@ -69,7 +63,7 @@ rna_glm <- "multiomics_analysis/results/MuscleRNA/glmGamPoi_rna.RDS"
 rna_glm <- readRDS(rna_glm) %>% dplyr::rename(geneID=name)
 
 rna_nebula <- "multiomics_analysis/results/MuscleRNA/nebula_rna.RDS"
-rna_nebula <- readRDS(rna_nebula) %>% dplyr::rename(geneID=name)
+rna_nebula <- readRDS(rna_nebula) %>% dplyr::rename(geneID=name) %>% dplyr::mutate(lfc = lfc / log(2))
 
 #rna_edge <- "multiomics_analysis/results/MuscleRNA/edge_rna.RDS"
 #rna_edge <- readRDS(rna_edge)
@@ -110,21 +104,26 @@ atac_nodup <- atac_nodup[!duplicated(atac_nodup$geneID), ]
 saveRDS(atac_nodup, file = "multiomics_analysis/results/atac_nodup_scaDA.RDS")
 
 # Gene selection based on LFC & pvalue cutoff #
-quantile <- .95
+quantile <- .5
+lfc_cut <- 1
+pval_cut <- .01
 
 atac_deg <- atac_nodup %>%
-  dplyr::filter(FDR < 0.05, abs(log2fc) > stats::quantile(abs(atac_nodup$log2fc), quantile))
+  #dplyr::filter(FDR < 0.05, abs(log2fc) > stats::quantile(abs(atac_nodup$log2fc), quantile))
+  dplyr::filter(FDR < pval_cut, abs(log2fc) > lfc_cut)
 
 rna_deg_devil <- rna_devil %>%
-  dplyr::filter(adj_pval < 0.05, abs(lfc) > stats::quantile(abs(rna_devil$lfc), quantile))
+  #dplyr::filter(adj_pval < 0.05, abs(lfc) > stats::quantile(abs(rna_devil$lfc), quantile))
+  dplyr::filter(adj_pval < pval_cut, abs(lfc) > lfc_cut)
 
 rna_deg_glm <- rna_glm %>%
-  dplyr::filter(adj_pval < 0.05, abs(lfc) > stats::quantile(abs(rna_glm$lfc), quantile))
+  #dplyr::filter(adj_pval < 0.05, abs(lfc) > stats::quantile(abs(rna_glm$lfc), quantile))
+  dplyr::filter(adj_pval < pval_cut, abs(lfc) > lfc_cut)
 
 rna_deg_nebula <- rna_nebula %>%
-  dplyr::filter(adj_pval < 0.05, abs(lfc) > stats::quantile(abs(rna_nebula$lfc), quantile))
+  #dplyr::filter(adj_pval < 0.05, abs(lfc) > stats::quantile(abs(rna_nebula$lfc), quantile))
+  dplyr::filter(adj_pval < pval_cut, abs(lfc) > lfc_cut)
 
-<<<<<<< HEAD
 # Gene selection based on pvalue cutoff #
 # atac_deg <- atac_nodup %>%
 #   dplyr::filter(FDR < 0.05)
@@ -138,8 +137,7 @@ rna_deg_nebula <- rna_nebula %>%
 # rna_deg_nebula <- rna_nebula %>%
 #   dplyr::filter(adj_pval < 0.05)
 
-=======
->>>>>>> 67d7580bb0816df3bca99f2586a9efb70020ab6c
+
 # Vienn diagram #
 devil <- list(snATAC=atac_deg$geneID, snRNA=rna_deg_devil$geneID)
 glm <- list(snATAC=atac_deg$geneID, snRNA=rna_deg_glm$geneID)
@@ -220,7 +218,6 @@ overlap_nebula <- dplyr::full_join(atac_deg_nebula, rna_deg_nebula, by = "geneID
 
 ### Correlation plot ###
 
-<<<<<<< HEAD
 corr1 <- ggplot2::ggplot(mapping = aes(x = overlap_devil$lfc_snRNA, y = overlap_devil$lfc_snATAC)) +
   geom_point(shape = 21, fill = 'black', size = 1) +
   labs(title = "Devil")+
@@ -229,26 +226,12 @@ corr1 <- ggplot2::ggplot(mapping = aes(x = overlap_devil$lfc_snRNA, y = overlap_
   geom_smooth(method='lm',formula=y~x, color="red", fill="black", se=TRUE) +
   #smplot2::sm_statCorr(corr_method = "spearman", fit.params = list(color = method_colors["devil"])) +
   smplot2::sm_statCorr(fit.params = list(color = method_colors["devil"])) +
-=======
-corr1 <- ggplot2::ggplot(mapping = aes(x = -log10(overlap_devil$adj_pval_snRNA), y = -log10(overlap_devil$adj_pval_snATAC))) +
-  geom_point(shape = 21, fill = 'black', size = 2) +
-  labs(title = "Devil")+
-  xlab("snRNA -log10(FDR)") +
-  ylab ("snATAC -log10(FDR)") +
-  geom_smooth(method='lm',formula=y~x, color="red", fill="black", se=TRUE)+
-  sm_statCorr()+
->>>>>>> 67d7580bb0816df3bca99f2586a9efb70020ab6c
   geom_vline(xintercept = c(0.0), col = "gray", linetype = 'dashed') +
   geom_hline(yintercept = c(0.0), col = "gray", linetype = 'dashed') +
   theme_classic()
 
-<<<<<<< HEAD
 corr2 <- ggplot2::ggplot(mapping = aes(x = overlap_glm$lfc_snRNA, y = overlap_glm$lfc_snATAC)) +
   geom_point(shape = 21, fill = 'black', size = 1) +
-=======
-corr2 <- ggplot2::ggplot(mapping = aes(x = -log10(overlap_glm$adj_pval_snRNA), y = -log10(overlap_glm$adj_pval_snATAC))) +
-  geom_point(shape = 21, fill = 'black', size = 2) +
->>>>>>> 67d7580bb0816df3bca99f2586a9efb70020ab6c
   labs(title = "glmGamPoi")+
   xlab("snRNA -log10(FDR)") +
   ylab ("snATAC -log10(FDR)") +
@@ -259,19 +242,12 @@ corr2 <- ggplot2::ggplot(mapping = aes(x = -log10(overlap_glm$adj_pval_snRNA), y
   geom_hline(yintercept = c(0.0), col = "gray", linetype = 'dashed') +
   theme_classic()
 
-<<<<<<< HEAD
+
 corr3 <- ggplot2::ggplot(mapping = aes(x = overlap_nebula$lfc_snRNA, y = overlap_nebula$lfc_snATAC)) +
   geom_point(shape = 21, fill = 'black', size = 1) +
   labs(title = "Nebula")+
   xlab("snRNA log2FC") +
   ylab ("snATAC log2FC") +
-=======
-corr3 <- ggplot2::ggplot(mapping = aes(x = -log10(overlap_nebula$adj_pval_snRNA), y = -log10(overlap_nebula$adj_pval_snATAC))) +
-  geom_point(shape = 21, fill = 'black', size = 2) +
-  labs(title = "Nebula")+
-  xlab("snRNA -log10(FDR)") +
-  ylab ("snATAC -log10(FDR)") +
->>>>>>> 67d7580bb0816df3bca99f2586a9efb70020ab6c
   geom_smooth(method='lm',formula=y~x, color="red", fill="black", se=TRUE)+
   #smplot2::sm_statCorr(corr_method = "spearman", fit.params = list(color = method_colors["NEBULA"])) +
   smplot2::sm_statCorr(fit.params = list(color = method_colors["NEBULA"])) +
@@ -288,9 +264,11 @@ ggsave("multiomics_analysis/plot/corr_plot.pdf", dpi = 300, width = 16, height =
 pkgs <- c("ggplot2", "dplyr","tidyr","reactome.db", "fgsea", "org.Hs.eg.db", "data.table", "clusterProfiler", "enrichplot", "ggpubr")
 sapply(pkgs, require, character.only = TRUE)
 
+overlap_genes <- overlap_devil
+
 # Convert Gene symbols to EntrezID #
 hs <- org.Hs.eg.db
-my_symbols <- overlap_glm$geneID
+my_symbols <- overlap_genes$geneID
 gene_list <- AnnotationDbi::select(hs,
                                    keys = my_symbols,
                                    columns = c("ENTREZID", "SYMBOL"),
@@ -298,8 +276,8 @@ gene_list <- AnnotationDbi::select(hs,
 
 gene_list <- na.omit(gene_list)
 gene_list <- gene_list[!duplicated(gene_list$SYMBOL),]
-gene_list <- gene_list[gene_list$SYMBOL %in% overlap_glm$geneID,]
-gene_list_rank <- as.vector(overlap_glm$lfc_snRNA)
+gene_list <- gene_list[gene_list$SYMBOL %in% overlap_genes$geneID,]
+gene_list_rank <- as.vector(overlap_genes$lfc_snRNA)
 names(gene_list_rank) <- gene_list$ENTREZID
 gene_list_rank <- sort(gene_list_rank, decreasing = TRUE)
 
