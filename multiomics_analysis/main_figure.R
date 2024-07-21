@@ -196,24 +196,22 @@ deg_list <- list(
 )
 
 GO_pathways <- c(
+  "actin filament-based movement",
+  "actin-mediated cell contraction",
+  "muscle contraction",
+  "muscle system process",
+  "structural constituent of muscle",
   "response to oxygen-containing compound",
-  "reactive oxygen species metabolic process",
-  "negative regulation of cellular metabolic process",
-  "MAPK cascade",
-  "ERK1 and ERK2 cascade",
-  "cytoskeletal protein binding",
-  "alpha-beta T cell activation",
-  "actin filament-based process",
-  "actin cytoskeleton",
-  "actin binding",
-  "cellular modified amino acid metabolic process",
-  "sarcoplasm",
-  "response to BMP",
   "response to fibroblast growth factor",
-  "negative regulation of mitotic cell cycle",
-  "cellular response to oxygen levels",
-  "response to calcium ion",
-  "CD4-positive, alpha-beta T cell activation"
+  "ERK1 and ERK2 cascade",
+  "response to hydrogen peroxide",
+  "striated muscle cell proliferation",
+  "cell-cell adhesion",
+  "inflammatory response",
+  "negative regulation of apoptotic process",
+  "negative regulation of cellular metabolic process",
+  "cellular oxidant detoxification"
+  
 )
 
 n <- names(deg_list)[1]
@@ -290,8 +288,6 @@ plots[[3]]
 # overlap_genes <- deg_genes %>%
 #   dplyr::left_join(atac_deg, by="geneID") %>%
 #   dplyr::filter(!is.na(log2fc))
-
-
 
 
 #res_gse_devil <- res_gse
