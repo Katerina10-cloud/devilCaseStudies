@@ -51,6 +51,7 @@ counts <- counts[,cell_filter]
 counts <- counts[range_filter,]
 grange_annot <- grange_annot[range_filter,]
 
+
 ### Fit scaDA ###
 coldata = metadata$group
 scaDA.obj <- scaDAdatasetFromMatrix(count = as.matrix(counts), colData = data.frame(coldata))

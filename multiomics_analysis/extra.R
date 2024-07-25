@@ -61,8 +61,16 @@ grange_annot <- grange_annot[range_filter,]
 # saveRDS(res, "results/scADA_res.glm")
 # saveRDS(grange_annot, "results/grange_annot")
 
+counts_avg <- lapply(unique(grange_annot$SYMBOL), function(s) {
+  print(s)
+  if (length(which(grange_annot$SYMBOL == s)) > 1) {
+    rowSums(counts[which(grange_annot$SYMBOL == s),])
+  } else {
+    counts[which(grange_annot$SYMBOL == s),]
+  }
+}) %>% do.call("rbind", .)
 
-
+counts <- counts_avg
 colnames(counts) <- NULL
 sce.obj <- SingleCellExperiment::SingleCellExperiment(list(counts=counts), colData=metadata)
 sce.pb <- glmGamPoi::pseudobulk_sce(
@@ -70,7 +78,6 @@ sce.pb <- glmGamPoi::pseudobulk_sce(
   group_by=vars(sample, group),
   verbose=FALSE
 )
-
 
 
 design <- model.matrix(~1+group, data=sce.pb@colData)
@@ -88,4 +95,4 @@ result <- dplyr::as_tibble(cbind(beta, se, tval, pval))
 colnames(result) <- c('Estimate', 'Std. Error', 't value', 'Pr(>|t|)')
 
 saveRDS(result, "results/edgeR_res.rds")
-saveRDS(grange_annot, "results/grange_annot")
+saveRDS(grange_annot, "results/grange_annot_edgeR.rds")

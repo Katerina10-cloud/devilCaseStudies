@@ -48,28 +48,27 @@ umaps <- ggplot() +
 rm(d_atac, metadata_atac, d_omics, d_rna, metadata_rna)
 
 # read results ####
-grange_path <- "results/grange_annot_scADA.RDS"
 grange_path <- "results/grange_annot_edgeR.rds"
-#grange_path <- "multiomics_analysis/results/grange_annot.RDS"
-
 grange <- readRDS(grange_path)
 
-atac_scaDA <- readRDS("results/edgeR_res.rds")
+edgeR_test <- readRDS("results/edgeR_test.rds")
+edgeR_res <- dplyr::tibble(pval=edgeR_test$table$PValue, lfc = edgeR_test$table$logFC)
+edgeR_res$FDR = edgeR_res$pval
+edgeR_res$log2fc = edgeR_res$lfc / log(2)
 
-atac_scaDA_path <- "results/MuscleATAC/scADA_res.RDS"
-atac_scaDA <- readRDS(atac_scaDA_path)
+#atac_scaDA_path <- "results/MuscleATAC/scADA_res.RDS"
+#atac_scaDA <- readRDS(atac_scaDA_path)
+#colnames(atac_scaDA)
 
-atac_scaDA <- cbind(grange, atac_scaDA)
+atac_scaDA <- cbind(grange, edgeR_res)
 
-atac_scaDA$pval = atac_scaDA$`Pr(>|t|)`
-atac_scaDA$log2fc <- atac_scaDA$Estimate
-at
-
+atac_scaDA$annotation %>% unique()
 atac_scaDA <- atac_scaDA %>%
-  dplyr::group_by(SYMBOL) %>%
-  dplyr::filter(abs(distanceToTSS) == min(abs(distanceToTSS)))
-  # dplyr::mutate(log2fc = mean(log2fc), pval = mean(pval), FDR = mean(FDR)) %>%
-  # dplyr::distinct(SYMBOL, log2fc, pval, FDR)
+  dplyr::filter(annotation == "Promoter (<=1kb)")
+  #dplyr::group_by(SYMBOL) %>%
+  #dplyr::filter(abs(distanceToTSS) == min(abs(distanceToTSS)))
+# dplyr::mutate(log2fc = mean(log2fc), pval = mean(pval), FDR = mean(FDR)) %>%
+# dplyr::distinct(SYMBOL, log2fc, pval, FDR)
 # atac_scaDA <- atac_scaDA %>%
 #   dplyr::filter(distanceToTSS <= 100, distanceToTSS >= -1000)
 atac_scaDA$log2fc <- -1 * atac_scaDA$log2fc
@@ -90,7 +89,7 @@ rna_nebula <- readRDS(rna_nebula) %>% dplyr::rename(geneID=name) %>% dplyr::muta
 
 # volcano plots ####
 lfc_cut <- 1
-lfc_cut_atac <- .5
+lfc_cut_atac <- 1
 pval_cut <- .05
 de_gene_colors <- c("Not significant" = "gainsboro", "Down-regulated" = "steelblue", "Up-regulated"="indianred")
 
@@ -117,8 +116,7 @@ atac_d <- atac_scaDA %>%
   dplyr::mutate(isDE = (abs(lfc) >= lfc_cut_atac) & (adj_pval <= pval_cut)) %>%
   dplyr::mutate(DEtype = if_else(!isDE, "Not significant", if_else(lfc > 0, "Up-regulated", "Down-regulated"))) %>%
   dplyr::select(geneID, pval, adj_pval, lfc, isDE, DEtype) %>%
-  dplyr::mutate(method = "ATAC") %>%
-  dplyr::select(!SYMBOL)
+  dplyr::mutate(method = "ATAC")
 
 
 volcanos <- rbind(devil_d, glm_d, nebula_d, atac_d[,2:ncol(atac_d)]) %>%
@@ -172,8 +170,8 @@ i <- 1
 venn_plots <- lapply(1:length(all_lists), function(i) {
   algo <- names(all_lists)[i]
   ggvenn::ggvenn(all_lists[[i]], c("snATAC", "snRNA"), show_percentage = FALSE, set_name_size = 4, fill_color = unname(c("purple3", method_colors[algo])), fill_alpha = .75) #+
-    #ggplot2::labs(title=algo) +
-    #theme(plot.title=element_text(hjust=0.5, vjust=0.5))
+  #ggplot2::labs(title=algo) +
+  #theme(plot.title=element_text(hjust=0.5, vjust=0.5))
 })
 
 venns <- patchwork::wrap_plots(venn_plots, ncol = 3)
@@ -193,7 +191,7 @@ d_corr_nebula <- rna_deg_nebula %>%
   dplyr::filter(!is.na(log2fc)) %>% dplyr::mutate(method = 'NEBULA')
 
 corr_plot <- rbind(d_corr_devil, d_corr_glm, d_corr_nebula) %>%
-  ggplot2::ggplot(mapping = aes(x = lfc, y = log2fc)) +
+  ggplot2::ggplot(mapping = aes(x = lfc.x, y = log2fc)) +
   geom_point(shape = 21, fill = 'black', size = 1) +
   xlab("snRNA log2FC") +
   ylab ("snATAC log2FC") +
@@ -256,7 +254,7 @@ plots <- lapply(names(deg_list), function(n) {
   # gene_list <- gene_list[!duplicated(gene_list$SYMBOL),]
   # gene_list <- gene_list[!is.na(gene_list$SYMBOL),]
   # gene_list <- gene_list[gene_list$SYMBOL %in% overlap_genes$geneID,]
-  gene_list_rank <- as.vector(overlap_genes$lfc)
+  gene_list_rank <- as.vector(overlap_genes$lfc.x)
   names(gene_list_rank) <- gene_list$SYMBOL
   gene_list_rank <- sort(gene_list_rank, decreasing = TRUE)
 
@@ -268,7 +266,7 @@ plots <- lapply(names(deg_list), function(n) {
     eps = 0,
     minGSSize = 10,
     maxGSSize = 1000,
-    pAdjustMethod = "none",
+    pAdjustMethod = "BH",
     pvalueCutoff = .05
   )
 
@@ -324,7 +322,7 @@ res_gse <- rbind(res_gse_devil, res_gse_glm, res_gse_nebula)
 res_gse$method <- as.factor(res_gse$method)
 
 # Barplot #
-pbar <- ggplot(res_gse %>% filter(Description %in% GO_pathways), aes(x = log_padjust, y = Description, fill=method)) +
+pbar <- ggplot(res_gse , aes(x = log_padjust, y = Description, fill=method)) +
   geom_bar(stat="identity", position="dodge", width = 0.50) +
   labs(x = "-Log10(pvalue)", y = "GO Pathways", fill="") +
   theme_bw() +

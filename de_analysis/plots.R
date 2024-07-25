@@ -7,12 +7,13 @@ method_colors = c(
   "Nebula" =  "#E4A6A7",
   "Devil (base)" = "#099668",
   "Devil (mixed)" = "#099668",
+  "Devil" = "#099668",
   "limma (Pb)" = "#B96461"
 )
 
 
 all_null_plots <- function(author, is.pb, algos = c("glmGamPoi (Pb)", "glmGamPoi (cell)", "Nebula", "Devil (base)", "Devil (mixed)"),
-                                                    ct.indexes = NULL, genes.values=NULL, n_samples_vec=NULL, pde.values=NULL) {
+                                                    ct.indexes = NULL, genes.values=NULL, n_samples_vec=NULL, pde.values=NULL, only_tibble=FALSE) {
   if (is.pb) {
     head_foler = "nullpower/null_subject"
   } else {
@@ -76,6 +77,10 @@ all_null_plots <- function(author, is.pb, algos = c("glmGamPoi (Pb)", "glmGamPoi
       dplyr::summarise(min = 0, max = 1) %>%
       pivot_longer(!c(ct.index, n.genes))
 
+    if (only_tibble) {
+      return(dd %>% dplyr::mutate(n.samples = n_samples))
+    }
+
     p <- dd %>%
       #dplyr::filter(grepl("devil", name) | grepl("Nebula", name)) %>%
       ggplot(mapping = aes(x=x, y=observed_p_value, col=name)) +
@@ -102,7 +107,7 @@ all_null_plots <- function(author, is.pb, algos = c("glmGamPoi (Pb)", "glmGamPoi
 
 
 all_pow_plots <- function(author, is.pb, algos = c("glmGamPoi (Pb)", "glmGamPoi (cell)", "Nebula", "Devil (base)", "Devil (mixed)"),
-                          ct.indexes = NULL, genes.values=NULL, n_samples_vec=NULL, pde.values=NULL) {
+                          ct.indexes = NULL, genes.values=NULL, n_samples_vec=NULL, pde.values=NULL, only_tibble=FALSE) {
   if (is.pb) {
     head_foler = "nullpower/pow_subject/"
   } else {
@@ -184,6 +189,10 @@ all_pow_plots <- function(author, is.pb, algos = c("glmGamPoi (Pb)", "glmGamPoi 
       group_by(name, n.genes) %>%
       dplyr::arrange(observed_p_value) %>%
       dplyr::mutate(x = row_number() / n())
+
+    if (only_tibble) {
+      return(dd %>% dplyr::mutate(n.samples = n_samples))
+    }
 
     p <- dd %>%
       #dplyr::filter(grepl("devil", name) | grepl("Nebula", name)) %>%
