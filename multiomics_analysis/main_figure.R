@@ -49,10 +49,10 @@ rm(d_atac, metadata_atac, d_omics, d_rna, metadata_rna)
 
 # read results ####
 grange_path <- "results/grange_annot_scADA.RDS"
-grange_path <- "results/grange_annot_edgeR.rds"
 #grange_path <- "multiomics_analysis/results/grange_annot.RDS"
 
 grange <- readRDS(grange_path)
+which(grange$SYMBOL == 'CEP170P1') / nrow(grange)
 
 atac_scaDA <- readRDS("results/edgeR_res.rds")
 

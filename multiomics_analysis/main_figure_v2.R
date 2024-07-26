@@ -118,8 +118,7 @@ atac_d <- atac_scaDA %>%
   dplyr::select(geneID, pval, adj_pval, lfc, isDE, DEtype) %>%
   dplyr::mutate(method = "ATAC")
 
-
-volcanos <- rbind(devil_d, glm_d, nebula_d, atac_d[,2:ncol(atac_d)]) %>%
+volcanos <- rbind(devil_d, glm_d, nebula_d, atac_d) %>%
   ggplot(mapping = aes(x=lfc, y=-log10(adj_pval), col=DEtype)) +
   geom_point(size=.8) +
   theme_bw() +
