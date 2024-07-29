@@ -136,6 +136,7 @@ perform_analysis <- function(seurat_obj, method = "devil") {
 
     if (length(idx_others) > length(idx_cluster)) {
       set.seed(SEED)
+      #idx_others <- sample(idx_others, as.integer(length(idx_others) * .05), replace = F)
       idx_others <- sample(idx_others, length(idx_cluster), replace = F)
     }
 
@@ -143,7 +144,8 @@ perform_analysis <- function(seurat_obj, method = "devil") {
 
     design_matrix <- model.matrix(~group, dplyr::tibble(group = seurat_obj$seurat_clusters == c))
     dm <- design_matrix[idxs,]
-    cc <- counts[rowMeans(counts) > .01,idxs]
+    cc <- counts[,idxs]
+    cc <- cc[rowMeans(cc) > .005,]
     rownames(dm) <- colnames(cc)
 
     sf <- devil:::calculate_sf(cc)
@@ -151,15 +153,17 @@ perform_analysis <- function(seurat_obj, method = "devil") {
     clusters <- as.numeric(as.factor(seurat_obj$donor[idxs]))
     if (method == 'devil') {
       fit <- devil::fit_devil(cc, dm, verbose = T, size_factors = T, parallel.cores = 1, min_cells = -1, avg_counts = -1)
-      #res <- devil::test_de(fit, contrast = c(0,1), clusters = clusters, max_lfc = Inf) %>% dplyr::mutate(cluster = c)
-      res <- devil::test_de(fit, contrast = c(0,1), clusters = 1:length(idxs), max_lfc = Inf) %>% dplyr::mutate(cluster = c)
+      res <- devil::test_de(fit, contrast = c(0,1), clusters = clusters, max_lfc = Inf) %>% dplyr::mutate(cluster = c)
+      #res <- devil::test_de(fit, contrast = c(0,1), clusters = 1:length(idxs), max_lfc = Inf) %>% dplyr::mutate(cluster = c)
     } else if (method == "glmGamPoi") {
       fit <- glmGamPoi::glm_gp(cc, dm, size_factors = "normed_sum", verbose = T)
+      #fit <- glmGamPoi::glm_gp(cc, dm, size_factors = FALSE, verbose = T)
       res <- glmGamPoi::test_de(fit, contrast = c(0,1))
       res <- res %>% dplyr::as_tibble() %>% dplyr::select(name, pval, adj_pval, lfc) %>% dplyr::mutate(cluster = c)
     } else if (method == "nebula") {
       data_g = nebula::group_cell(count=cc,id=clusters,pred=dm)
       fit <- nebula::nebula(data_g$count, id = data_g$id, pred = data_g$pred, ncore = 1, mincp = 0, cpc = 0, offset = sf)
+      #fit <- nebula::nebula(data_g$count, id = data_g$id, pred = data_g$pred, ncore = 1, mincp = 0, cpc = 0)
       res <- dplyr::tibble(
         name = fit$summary$gene,
         pval = fit$summary$p_groupTRUE,

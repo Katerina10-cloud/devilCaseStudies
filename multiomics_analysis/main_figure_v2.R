@@ -195,7 +195,7 @@ corr_plot <- rbind(d_corr_devil, d_corr_glm, d_corr_nebula) %>%
   xlab("snRNA log2FC") +
   ylab ("snATAC log2FC") +
   geom_smooth(method='lm',formula=y~x, color="red", fill="black", se=TRUE) +
-  smplot2::sm_statCorr(fit.params = list(color = "indianred"), separate_by = "\n", corr_method = 'pearson') +
+  smplot2::sm_statCorr(fit.params = list(color = "indianred"), separate_by = "\n") +
   #smplot2::sm_statCorr(corr_method = "spearman", fit.params = list(color = method_colors["devil"])) +
   geom_vline(xintercept = c(0.0), col = "gray", linetype = 'dashed') +
   geom_hline(yintercept = c(0.0), col = "gray", linetype = 'dashed') +

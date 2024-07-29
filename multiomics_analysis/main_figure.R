@@ -52,27 +52,22 @@ grange_path <- "results/grange_annot_scADA.RDS"
 #grange_path <- "multiomics_analysis/results/grange_annot.RDS"
 
 grange <- readRDS(grange_path)
-which(grange$SYMBOL == 'CEP170P1') / nrow(grange)
-
-atac_scaDA <- readRDS("results/edgeR_res.rds")
-
 atac_scaDA_path <- "results/MuscleATAC/scADA_res.RDS"
 atac_scaDA <- readRDS(atac_scaDA_path)
-
 atac_scaDA <- cbind(grange, atac_scaDA)
+atac_scaDA$adj_pval = p.adjust(atac_scaDA$pval, "BH")
 
-atac_scaDA$pval = atac_scaDA$`Pr(>|t|)`
-atac_scaDA$log2fc <- atac_scaDA$Estimate
-at
-
+atac_scaDA$annotation %>% unique()
 atac_scaDA <- atac_scaDA %>%
+  dplyr::filter(annotation == 'Promoter (<=1kb)') %>%
   dplyr::group_by(SYMBOL) %>%
-  dplyr::filter(abs(distanceToTSS) == min(abs(distanceToTSS)))
+  dplyr::filter(abs(log2fc) == max(abs(log2fc)))
+  #dplyr::filter(abs(distanceToTSS) == min(abs(distanceToTSS)))
   # dplyr::mutate(log2fc = mean(log2fc), pval = mean(pval), FDR = mean(FDR)) %>%
-  # dplyr::distinct(SYMBOL, log2fc, pval, FDR)
+  #dplyr::distinct(SYMBOL, log2fc, pval, FDR)
 # atac_scaDA <- atac_scaDA %>%
 #   dplyr::filter(distanceToTSS <= 100, distanceToTSS >= -1000)
-atac_scaDA$log2fc <- -1 * atac_scaDA$log2fc
+atac_scaDA$log2fc <- (-1 * atac_scaDA$log2fc)
 atac_scaDA$geneID = atac_scaDA$SYMBOL
 
 # atac_scaDA <- atac_scaDA %>%
@@ -91,7 +86,7 @@ rna_nebula <- readRDS(rna_nebula) %>% dplyr::rename(geneID=name) %>% dplyr::muta
 # volcano plots ####
 lfc_cut <- 1
 lfc_cut_atac <- .5
-pval_cut <- .05
+pval_cut <- .01
 de_gene_colors <- c("Not significant" = "gainsboro", "Down-regulated" = "steelblue", "Up-regulated"="indianred")
 
 devil_d <- rna_devil %>%
@@ -198,13 +193,14 @@ corr_plot <- rbind(d_corr_devil, d_corr_glm, d_corr_nebula) %>%
   xlab("snRNA log2FC") +
   ylab ("snATAC log2FC") +
   geom_smooth(method='lm',formula=y~x, color="red", fill="black", se=TRUE) +
-  smplot2::sm_statCorr(fit.params = list(color = "indianred"), separate_by = "\n", corr_method = 'pearson') +
+  smplot2::sm_statCorr(fit.params = list(color = "indianred"), separate_by = "\n", corr_method = 'spearman') +
   #smplot2::sm_statCorr(corr_method = "spearman", fit.params = list(color = method_colors["devil"])) +
   geom_vline(xintercept = c(0.0), col = "gray", linetype = 'dashed') +
   geom_hline(yintercept = c(0.0), col = "gray", linetype = 'dashed') +
   theme_bw() +
   facet_wrap(. ~ method)
 corr_plot
+dev.off()
 
 ggsave("plot/corr_plot.pdf", dpi = 300, width = 16, height = 8, plot = corr_plot)
 
@@ -268,7 +264,7 @@ plots <- lapply(names(deg_list), function(n) {
     eps = 0,
     minGSSize = 10,
     maxGSSize = 1000,
-    pAdjustMethod = "none",
+    pAdjustMethod = "BH",
     pvalueCutoff = .05
   )
 
@@ -333,6 +329,15 @@ pbar <- ggplot(res_gse %>% filter(Description %in% GO_pathways), aes(x = log_pad
   theme(legend.position = 'bottom')
 pbar
 
+# pbar <- ggplot(res_gse, aes(x = log_padjust, y = Description, fill=method)) +
+#   geom_bar(stat="identity", position="dodge", width = 0.50) +
+#   labs(x = "-Log10(pvalue)", y = "GO Pathways", fill="") +
+#   theme_bw() +
+#   scale_fill_manual(values = method_colors) +
+#   theme(text = element_text(size = 12)) +
+#   theme(legend.position = 'bottom')
+# pbar
+
 # Main figure ####
 design <- "
 AAABBB
@@ -355,3 +360,5 @@ main_fig <- wrap_plots(
   plot_annotation(tag_levels = "A") &
   theme(text = element_text(size = 12))
 ggsave("plot/main_fig.png", dpi = 400, width = 8.3, height = 11.7, plot = main_fig)
+
+

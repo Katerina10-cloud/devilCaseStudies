@@ -11,8 +11,8 @@ args = commandArgs(trailingOnly=TRUE)
 data_path <- args[2]
 dataset_name <- args[1]
 
-#dataset_name <- 'pbmc'
-#data_path <- "datasets/pbmc.rds"
+dataset_name <- 'pbmc'
+data_path <- "datasets/pbmc.rds"
 
 if (!(file.exists(paste0("results/", dataset_name)))) {
   dir.create(paste0("results/", dataset_name))
@@ -46,7 +46,7 @@ umap_plot_labels <- Seurat::DimPlot(
 saveRDS(seurat_obj, paste0('results/', dataset_name, '/seurat.RDS'))
 
 time <- dplyr::tibble()
-m <- 'devil'
+m <- 'glmGamPoi'
 for (m in c("devil", "nebula", "glmGamPoi")) {
   s <- Sys.time()
   de_res_total <- perform_analysis(seurat_obj, method = m)

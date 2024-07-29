@@ -263,87 +263,86 @@ pB
 ggsave(filename = paste0(img_folder, "assigment_score.pdf"), plot = last_plot(), dpi=300, width = 150, height = 60, units = "mm")
 if (save_svg) { ggsave(filename = paste0(img_folder, "assigment_score.svg"), plot = last_plot(), dpi=300, width = 150, height = 60, units = "mm") }
 
-# Comparison ####
-lfc_cut <- 1
-comparison_tibble <- dplyr::tibble()
-m <- 'devil'
-n_markers <- 20
-pval_cut <- .01
-for (m in c("devil", "nebula", "glmGamPoi")) {
-  de_res <- de_res_total <- readRDS(paste0('results/', dataset_name, '/', m, '.RDS')) %>% na.omit()
-  if (sum(grepl("ENSG", de_res$name)) == nrow(de_res)) {
-    suppressMessages(de_res$name <- mapIds(org.Hs.eg.db, keys=de_res$name,column="SYMBOL", keytype="ENSEMBL", multiVals="first"))
-  }
-  for (n_markers in c(20)) {
-    print(n_markers)
-    #for (pval_cut in c(.05, 1e-5, 1e-10, 1e-20, 1e-30, 1e-40, 1e-50)) {
-    for (pval_cut in c(.01)) {
-      print(pval_cut)
-
-      de_res <- de_res_total <- readRDS(paste0('results/', dataset_name, '/', m, '.RDS')) %>% na.omit()
-      if (sum(grepl("ENSG", de_res$name)) == nrow(de_res)) {
-        suppressMessages(de_res$name <- mapIds(org.Hs.eg.db, keys=de_res$name,column="SYMBOL", keytype="ENSEMBL", multiVals="first"))
-      }
-
-      cluster_values <- de_res$cluster %>% unique()
-      remove_genes <- is.na(de_res$name)
-      de_res <- de_res[!remove_genes, ]
-
-      top_genes <- de_res %>%
-        dplyr::group_by(cluster) %>%
-        dplyr::filter(lfc > lfc_cut, adj_pval <= pval_cut) %>%
-        dplyr::arrange(-lfc) %>%
-        dplyr::slice(1:n_markers)
-
-      if (nrow(top_genes) > 0) {
-
-        scMayoInput <- lapply(unique(top_genes$cluster), function(c) {
-          top_genes %>%
-            dplyr::filter(cluster == c) %>% pull(name) %>% table() %>% max()
-
-          top_genes %>%
-            dplyr::filter(cluster == c) %>%
-            dplyr::left_join(percentage_tibble %>% dplyr::filter(cluster == c) %>% dplyr::select(!cluster), by='name') %>%
-            dplyr::ungroup() %>%
-            dplyr::select(name, pval, adj_pval, lfc, pct.1, pct.2, cluster) %>%
-            dplyr::rename(p_val_adj = adj_pval, gene=name, avg_log2FC=lfc)
-        }) %>% do.call('bind_rows', .)
-
-        scMayoRes <- scMayoMap::scMayoMap(scMayoInput, scMayoMap::scMayoMapDatabase, pct.cutoff = 0, tissue = tissue)
-        rez <- scMayoRes$markers %>%
-          dplyr::left_join(computeGroundTruth(seurat_obj), by='cluster') %>%
-          dplyr::mutate(pred = str_replace_all(celltype, " cell", "")) %>%
-          dplyr::mutate(score = as.numeric(score)) %>%
-          dplyr::filter(score > 0)
-        rez$pred <- lapply(rez$pred, function(ct) {
-          v <- scTypeMapper %>% dplyr::filter(from == ct) %>% dplyr::distinct() %>%pull(to)
-          unique(v)
-        }) %>% unlist()
-
-        rez <- rez %>%
-          dplyr::select(cluster, score, true_cell_type, pred) %>%
-          dplyr::group_by(cluster, pred) %>%
-          dplyr::mutate(score = sum(score)) %>%
-          dplyr::ungroup() %>%
-          dplyr::distinct() %>%
-          dplyr::group_by(cluster) %>%
-          dplyr::filter(score == max(score)) %>%
-          dplyr::mutate(true_score = ifelse(true_cell_type == pred, score, 0))
-
-        n_max <- length(unique(seurat_obj$seurat_clusters))
-
-        acc = sum(rez$true_score) / n_max
-        acc_1 = sum(rez$true_score > 0) / n_max
-
-        comparison_tibble <- dplyr::bind_rows(
-          comparison_tibble,
-          dplyr::tibble(model=m, acc=acc, acc_1 =acc_1, n_markers=n_markers, pval_cut=pval_cut)
-        )
-      }
-    }
-  }
-}
-
+# # Comparison ####
+# lfc_cut <- 1
+# comparison_tibble <- dplyr::tibble()
+# m <- 'devil'
+# n_markers <- 20
+# pval_cut <- .01
+# for (m in c("devil", "nebula", "glmGamPoi")) {
+#   de_res <- de_res_total <- readRDS(paste0('results/', dataset_name, '/', m, '.RDS')) %>% na.omit()
+#   if (sum(grepl("ENSG", de_res$name)) == nrow(de_res)) {
+#     suppressMessages(de_res$name <- mapIds(org.Hs.eg.db, keys=de_res$name,column="SYMBOL", keytype="ENSEMBL", multiVals="first"))
+#   }
+#   for (n_markers in c(20)) {
+#     print(n_markers)
+#     #for (pval_cut in c(.05, 1e-5, 1e-10, 1e-20, 1e-30, 1e-40, 1e-50)) {
+#     for (pval_cut in c(.01)) {
+#       print(pval_cut)
+#
+#       de_res <- de_res_total <- readRDS(paste0('results/', dataset_name, '/', m, '.RDS')) %>% na.omit()
+#       if (sum(grepl("ENSG", de_res$name)) == nrow(de_res)) {
+#         suppressMessages(de_res$name <- mapIds(org.Hs.eg.db, keys=de_res$name,column="SYMBOL", keytype="ENSEMBL", multiVals="first"))
+#       }
+#
+#       cluster_values <- de_res$cluster %>% unique()
+#       remove_genes <- is.na(de_res$name)
+#       de_res <- de_res[!remove_genes, ]
+#
+#       top_genes <- de_res %>%
+#         dplyr::group_by(cluster) %>%
+#         dplyr::filter(lfc > lfc_cut, adj_pval <= pval_cut) %>%
+#         dplyr::arrange(-lfc) %>%
+#         dplyr::slice(1:n_markers)
+#
+#       if (nrow(top_genes) > 0) {
+#
+#         scMayoInput <- lapply(unique(top_genes$cluster), function(c) {
+#           top_genes %>%
+#             dplyr::filter(cluster == c) %>% pull(name) %>% table() %>% max()
+#
+#           top_genes %>%
+#             dplyr::filter(cluster == c) %>%
+#             dplyr::left_join(percentage_tibble %>% dplyr::filter(cluster == c) %>% dplyr::select(!cluster), by='name') %>%
+#             dplyr::ungroup() %>%
+#             dplyr::select(name, pval, adj_pval, lfc, pct.1, pct.2, cluster) %>%
+#             dplyr::rename(p_val_adj = adj_pval, gene=name, avg_log2FC=lfc)
+#         }) %>% do.call('bind_rows', .)
+#
+#         scMayoRes <- scMayoMap::scMayoMap(scMayoInput, scMayoMap::scMayoMapDatabase, pct.cutoff = 0, tissue = tissue)
+#         rez <- scMayoRes$markers %>%
+#           dplyr::left_join(computeGroundTruth(seurat_obj), by='cluster') %>%
+#           dplyr::mutate(pred = str_replace_all(celltype, " cell", "")) %>%
+#           dplyr::mutate(score = as.numeric(score)) %>%
+#           dplyr::filter(score > 0)
+#         rez$pred <- lapply(rez$pred, function(ct) {
+#           v <- scTypeMapper %>% dplyr::filter(from == ct) %>% dplyr::distinct() %>%pull(to)
+#           unique(v)
+#         }) %>% unlist()
+#
+#         rez <- rez %>%
+#           dplyr::select(cluster, score, true_cell_type, pred) %>%
+#           dplyr::group_by(cluster, pred) %>%
+#           dplyr::mutate(score = sum(score)) %>%
+#           dplyr::ungroup() %>%
+#           dplyr::distinct() %>%
+#           dplyr::group_by(cluster) %>%
+#           dplyr::filter(score == max(score)) %>%
+#           dplyr::mutate(true_score = ifelse(true_cell_type == pred, score, 0))
+#
+#         n_max <- length(unique(seurat_obj$seurat_clusters))
+#
+#         acc = sum(rez$true_score) / n_max
+#         acc_1 = sum(rez$true_score > 0) / n_max
+#
+#         comparison_tibble <- dplyr::bind_rows(
+#           comparison_tibble,
+#           dplyr::tibble(model=m, acc=acc, acc_1 =acc_1, n_markers=n_markers, pval_cut=pval_cut)
+#         )
+#       }
+#     }
+#   }
+# }
 
 
 
@@ -495,8 +494,8 @@ if (save_svg) { ggsave(filename = paste0(img_folder, "volcano_",c,".svg"), dpi=3
 
 # Heatmap ####
 lfc_cut <- 1
-n_markers <- 100
-pval_cut <- 1e-20
+n_markers <- 50
+pval_cut <- .005
 m <- 'devil'
 
 de_res <- de_res_total <- readRDS(paste0('results/', dataset_name, '/', m, '.RDS')) %>% na.omit()
@@ -590,7 +589,7 @@ if (save_svg) { ggsave(filename = paste0(img_folder, "heatmap.svg"), dpi=300, wi
 n_markers <- 1000000
 pval_cut <- .05
 all_markers <- c()
-c <- 1
+c <- 11
 
 for (m in c("devil", "nebula", "glmGamPoi")) {
   de_res <- de_res_total <- readRDS(paste0('results/', dataset_name, '/', m, '.RDS')) %>% na.omit()
@@ -649,6 +648,8 @@ dev.off()
 timing <- readRDS(paste0("results/",dataset_name,"/time.RDS")) %>%
   dplyr::mutate(time = as.numeric(delta_time, units = "secs")) %>%
   dplyr::arrange(-time)
+
+timing %>% dplyr::mutate(time_ratio = time / time[method == "devil"])
 
 pC <- timing %>%
   ggplot(mapping = aes(x=method, y=time, fill=method)) +
