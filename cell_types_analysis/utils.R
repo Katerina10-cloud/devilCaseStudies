@@ -129,6 +129,8 @@ perform_analysis <- function(seurat_obj, method = "devil") {
 
   whole_res <- dplyr::tibble()
   for (c in unique(seurat_obj$seurat_clusters)) {
+
+    s <- Sys.time()
     print(c)
 
     idx_cluster <- which(seurat_obj$seurat_clusters == c)
@@ -148,8 +150,6 @@ perform_analysis <- function(seurat_obj, method = "devil") {
     cc <- cc[rowMeans(cc) > .005,]
     rownames(dm) <- colnames(cc)
 
-    sf <- devil:::calculate_sf(cc)
-
     clusters <- as.numeric(as.factor(seurat_obj$donor[idxs]))
     if (method == 'devil') {
       fit <- devil::fit_devil(cc, dm, verbose = T, size_factors = T, parallel.cores = 1, min_cells = -1, avg_counts = -1)
@@ -161,6 +161,7 @@ perform_analysis <- function(seurat_obj, method = "devil") {
       res <- glmGamPoi::test_de(fit, contrast = c(0,1))
       res <- res %>% dplyr::as_tibble() %>% dplyr::select(name, pval, adj_pval, lfc) %>% dplyr::mutate(cluster = c)
     } else if (method == "nebula") {
+      sf <- devil:::calculate_sf(cc)
       data_g = nebula::group_cell(count=cc,id=clusters,pred=dm)
       fit <- nebula::nebula(data_g$count, id = data_g$id, pred = data_g$pred, ncore = 1, mincp = 0, cpc = 0, offset = sf)
       #fit <- nebula::nebula(data_g$count, id = data_g$id, pred = data_g$pred, ncore = 1, mincp = 0, cpc = 0)
@@ -174,6 +175,8 @@ perform_analysis <- function(seurat_obj, method = "devil") {
       stop("method not recognized")
     }
 
+    e <- Sys.time()
+    res <- res %>% dplyr::mutate(delta_time = s - e)
     whole_res <- dplyr::bind_rows(whole_res, res)
   }
   whole_res

@@ -644,6 +644,22 @@ svg(filename = paste0(img_folder, 'upset_plot.svg'), width = 9, height = 5)
 upset_plot %>% print()
 dev.off()
 
+# Gene overlap ####
+de_genes_called <- lapply(c("devil", "nebula", "glmGamPoi"), function(m) {
+  de_res <- de_res_total <- readRDS(paste0('results/', dataset_name, '/', m, '.RDS')) %>% na.omit()
+  de_res %>%
+    dplyr::filter(lfc >= lfc_cut, adj_pval <= pval_cut) %>%
+    dplyr::group_by(cluster) %>%
+    dplyr::mutate(n = n()) %>%
+    dplyr::distinct(cluster, n) %>%
+    dplyr::mutate(model = m)
+}) %>% do.call('bind_rows', .)
+
+de_genes_called %>%
+  ggplot(mapping = aes(x = as.numeric(cluster), y=n, col=model)) +
+  geom_point() +
+  geom_line()
+
 # Timing plot ####
 timing <- readRDS(paste0("results/",dataset_name,"/time.RDS")) %>%
   dplyr::mutate(time = as.numeric(delta_time, units = "secs")) %>%
