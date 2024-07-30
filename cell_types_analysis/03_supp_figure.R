@@ -10,20 +10,20 @@ args = commandArgs(trailingOnly=TRUE)
 ## Input data
 dataset_name <- args[1]
 tissue <- args[2]
-save_svg <- as.logical(args[3])
+#save_svg <- as.logical(args[3])
 
 dataset_name <- "BaronPancreasData"
 tissue <- "pancreas"
-save_svg <- F
+#save_svg <- F
 
-img_folder <- paste0("plot_figure/", dataset_name, "/")
-if (!dir.exists(img_folder)) {
-  dir.create(img_folder)
-}
-
-if (!(file.exists(paste0("results/", dataset_name)))) {
-  dir.create(paste0("results/", dataset_name))
-}
+# img_folder <- paste0("plot_figure/", dataset_name, "/")
+# if (!dir.exists(img_folder)) {
+#   dir.create(img_folder)
+# }
+#
+# if (!(file.exists(paste0("results/", dataset_name)))) {
+#   dir.create(paste0("results/", dataset_name))
+# }
 
 scTypeMapper <- read.delim("scTypeMapper.csv", sep = ",") %>% dplyr::rename(Tissue = tissue) %>% dplyr::filter(Tissue == tissue)
 
@@ -118,8 +118,8 @@ pA
 #         panel.background=element_blank(),panel.border=element_blank(),panel.grid.major=element_blank(),
 #         panel.grid.minor=element_blank(),plot.background=element_blank())
 
-ggsave(filename = paste0(img_folder, "umap_cluster.pdf"), dpi=400, plot = umap_plot_seurat, width = 8, height = 8)
-if (save_svg) { ggsave(filename = paste0(img_folder, "umap_cluster.svg"), dpi=400, plot = umap_plot_seurat, width = 8, height = 8) }
+# ggsave(filename = paste0(img_folder, "umap_cluster.pdf"), dpi=400, plot = umap_plot_seurat, width = 8, height = 8)
+# if (save_svg) { ggsave(filename = paste0(img_folder, "umap_cluster.svg"), dpi=400, plot = umap_plot_seurat, width = 8, height = 8) }
 #ggsave(filename = paste0("plot_figure/umap_labels.svg"), dpi=400, plot = umap_plot_labels, width = 8, height = 8)
 
 # anno <- scMayoMap::scMayoMapDatabase
@@ -160,9 +160,9 @@ if (sum(grepl("ENSG", percentage_tibble$name)) == nrow(percentage_tibble)) {
 rm(counts)
 
 # Comparison tibble ####
-#lfc_cut <- 1
-#pval_cut <- .05
+lfc_cut <- 1
 comparison_tibble <- dplyr::tibble()
+m <- 'devil'
 for (m in c("devil", "nebula", "glmGamPoi")) {
   de_res <- de_res_total <- readRDS(paste0('results/', dataset_name, '/', m, '.RDS')) %>% na.omit()
   if (m == "nebula") {
@@ -173,14 +173,8 @@ for (m in c("devil", "nebula", "glmGamPoi")) {
   }
   for (n_markers in c(5,10,25,50,100,500,1000)) {
     print(n_markers)
-    #for (pval_cut in c(.05, 1e-5, 1e-10, 1e-20, 1e-30, 1e-40, 1e-50)) {
-    for (pval_cut in c(.05, .01, .001, 1e-20)) {
+    for (pval_cut in c(.05, .01, 1e-10, 1e-20)) {
       print(pval_cut)
-
-      de_res <- de_res_total <- readRDS(paste0('results/', dataset_name, '/', m, '.RDS')) %>% na.omit()
-      if (sum(grepl("ENSG", de_res$name)) == nrow(de_res)) {
-        suppressMessages(de_res$name <- mapIds(org.Hs.eg.db, keys=de_res$name,column="SYMBOL", keytype="ENSEMBL", multiVals="first"))
-      }
 
       cluster_values <- de_res$cluster %>% unique()
       remove_genes <- is.na(de_res$name)
@@ -206,7 +200,9 @@ for (m in c("devil", "nebula", "glmGamPoi")) {
             dplyr::rename(p_val_adj = adj_pval, gene=name, avg_log2FC=lfc)
         }) %>% do.call('bind_rows', .)
 
-        scMayoRes <- scMayoMap::scMayoMap(scMayoInput, scMayoMap::scMayoMapDatabase, pct.cutoff = 0, tissue = tissue)
+        db <- scMayoMap::scMayoMapDatabase
+        db <- cbind(db[,1:2], db[,grepl(tissue, colnames(db))])
+        scMayoRes <- scMayoMap::scMayoMap(scMayoInput, db, tissue = tissue)
         rez <- scMayoRes$markers %>%
           dplyr::left_join(computeGroundTruth(seurat_obj), by='cluster') %>%
           dplyr::mutate(pred = str_replace_all(celltype, " cell", "")) %>%
@@ -241,9 +237,22 @@ for (m in c("devil", "nebula", "glmGamPoi")) {
   }
 }
 
+comparison_tibble %>%
+  ggplot(mapping = aes(x=n_markers, y=acc, col=model)) +
+  geom_point() +
+  geom_line() +
+  theme_bw() +
+  facet_wrap(~pval_cut) +
+  scale_color_manual(values=method_colors) +
+  scale_x_continuous(trans = 'log10') +
+  labs(x = "N markers", y = "Classification score", col="Algorithm", fill="Algorithm") +
+  theme(
+    text=element_text(size=12),
+    legend.position = 'right'
+  )
+
 pB <- comparison_tibble %>%
-  #dplyr::filter(n_markers <= 100) %>%
-  dplyr::filter(pval_cut >= 1e-10) %>%
+  dplyr::filter(pval_cut %in% c(.05, .01, 1e-10, 1e-20)) %>%
   dplyr::group_by(model, n_markers) %>%
   dplyr::summarise(mean_acc = mean(acc), sd_acc = sd(acc)) %>%
   #dplyr::summarise(mean_acc = mean(acc_1), sd_acc = sd(acc_1)) %>%
@@ -260,8 +269,9 @@ pB <- comparison_tibble %>%
   )
 pB
 
-ggsave(filename = paste0(img_folder, "assigment_score.pdf"), plot = last_plot(), dpi=300, width = 150, height = 60, units = "mm")
-if (save_svg) { ggsave(filename = paste0(img_folder, "assigment_score.svg"), plot = last_plot(), dpi=300, width = 150, height = 60, units = "mm") }
+#
+# ggsave(filename = paste0(img_folder, "assigment_score.pdf"), plot = last_plot(), dpi=300, width = 150, height = 60, units = "mm")
+# if (save_svg) { ggsave(filename = paste0(img_folder, "assigment_score.svg"), plot = last_plot(), dpi=300, width = 150, height = 60, units = "mm") }
 
 # Gene overlap ####
 lfc_cut <- 1
@@ -277,51 +287,84 @@ de_genes_called <- lapply(c("devil", "nebula", "glmGamPoi"), function(m) {
     dplyr::group_by(cluster) %>%
     dplyr::mutate(n = n()) %>%
     dplyr::distinct(cluster, n) %>%
-    dplyr::mutate(method = m)
+    dplyr::mutate(model = m)
 }) %>% do.call('bind_rows', .)
 
-de_genes_called %>%
-  ggplot(mapping = aes(x = as.numeric(cluster), y=n, col=method)) +
+pC <- de_genes_called %>%
+  ggplot(mapping = aes(x = as.numeric(cluster), y=n, col=model)) +
   geom_point() +
   geom_line() +
-  scale_color_manual(values = method_colors) +
-  theme_bw()
-
-# Timing plot ####
-timing <- readRDS(paste0("results/",dataset_name,"/time.RDS")) %>%
-  dplyr::mutate(time = as.numeric(delta_time, units = "secs")) %>%
-  dplyr::arrange(-time)
-
-timing %>%
-  dplyr::left_join(de_genes_called, by="method") %>%
-  dplyr::mutate(time_ratio = time / time[method == "devil"]) %>%
-  dplyr::group_by(cluster) %>%
-  dplyr::mutate(genes_ratio = n / n[method == "devil"]) %>%
-  dplyr::filter(method != "devil") %>%
-  ggplot(mapping = aes(x = time_ratio, y = genes_ratio, col = method)) +
-  geom_point()
-
-
-pC <- timing %>%
-  ggplot(mapping = aes(x=method, y=time, fill=method)) +
-  geom_col() +
   theme_bw() +
-  labs(x = "", y="Time (s)") +
-  scale_fill_manual(values = method_colors) +
-  theme(
-    axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
-    text=element_text(size=12),
-    legend.position = 'none'
-  )
+  labs(x = "Cluster", y = "Up-regulated genes", col="Algorithm") +
+  scale_color_manual(values = method_colors)
 pC
 
-ggsave(filename = paste0(img_folder, "timing.pdf"), dpi=300, width = 40, height = 60, units = 'mm')
-if (save_svg) {ggsave(filename = paste0(img_folder, "timing.svg"), dpi=300, width = 40, height = 60, units = 'mm')}
+pC <- de_genes_called %>%
+  ggplot(mapping = aes(x = factor(cluster, levels = sort(as.numeric(unique(cluster)))), y=n, fill=model)) +
+  geom_bar(position = "dodge", stat = 'identity') +
+  theme_bw() +
+  labs(x = "Cluster", y = "Up-regulated genes", col="Algorithm") +
+  scale_fill_manual(values = method_colors)
+pC
 
+# Timing plot ####
+timings <- lapply(c("devil", "nebula", "glmGamPoi"), function(m) {
+  de_res <- de_res_total <- readRDS(paste0('results/', dataset_name, '/', m, '.RDS')) %>% na.omit()
+  de_res %>%
+    dplyr::distinct(cluster, delta_time) %>%
+    dplyr::mutate(delta_time = -as.numeric(delta_time, units = "secs")) %>%
+    dplyr::mutate(model = m)
+}) %>% do.call('bind_rows', .)
+
+pD <- timings %>%
+  group_by(cluster) %>%
+  dplyr::mutate(fold_change = delta_time / delta_time[model == 'devil']) %>%
+  dplyr::filter(model != 'devil') %>%
+  ggplot(mapping = aes(x = as.numeric(cluster), y=fold_change, col=model)) +
+  geom_point() +
+  geom_line() +
+  geom_hline(yintercept = 1, linetype = 'dashed', col = "darkslategray") +
+  scale_color_manual(values = method_colors) +
+  theme_bw() +
+  labs(x = "Cluster", y = "Time fold change", col="Algorithm")
+pD
+
+# timing <- readRDS(paste0("results/",dataset_name,"/time.RDS")) %>%
+#   dplyr::mutate(time = as.numeric(delta_time, units = "secs")) %>%
+#   dplyr::arrange(-time)
+#
+# timing %>%
+#   dplyr::left_join(de_genes_called, by="method") %>%
+#   dplyr::mutate(time_ratio = time / time[method == "devil"]) %>%
+#   dplyr::group_by(cluster) %>%
+#   dplyr::mutate(genes_ratio = n / n[method == "devil"]) %>%
+#   dplyr::filter(method != "devil") %>%
+#   ggplot(mapping = aes(x = time_ratio, y = genes_ratio, col = method)) +
+#   geom_point()
+
+
+# pC <- timing %>%
+#   ggplot(mapping = aes(x=method, y=time, fill=method)) +
+#   geom_col() +
+#   theme_bw() +
+#   labs(x = "", y="Time (s)") +
+#   scale_fill_manual(values = method_colors) +
+#   theme(
+#     axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
+#     text=element_text(size=12),
+#     legend.position = 'none'
+#   )
+# pC
+
+# ggsave(filename = paste0(img_folder, "timing.pdf"), dpi=300, width = 40, height = 60, units = 'mm')
+# if (save_svg) {ggsave(filename = paste0(img_folder, "timing.svg"), dpi=300, width = 40, height = 60, units = 'mm')}
+#
 unlink("Rplots.pdf")
 
 # save figure
+final_plot <- (pA / pB / pC / pD) + plot_annotation(tag_levels = "A") + plot_layout(heights = c(2,1,1,1))
+ggsave(paste0("plot_figure/", dataset_name, ".png"), dpi=400, width = 8, height = 12, plot = final_plot)
 
-pCB <- (pC | pB) + plot_layout(widths = c(1.2,3))
-final_plot <- (pA / pCB) + plot_annotation(tag_levels = "A") + plot_layout(heights = c(2,1))
-ggsave(paste0("plot_figure/", dataset_name, ".png"), dpi=400, width = 8, height = 8, plot = final_plot)
+# pCB <- (pC | pB) + plot_layout(widths = c(1.2,3))
+# final_plot <- (pA / pCB) + plot_annotation(tag_levels = "A") + plot_layout(heights = c(2,1))
+# ggsave(paste0("plot_figure/", dataset_name, ".png"), dpi=400, width = 8, height = 8, plot = final_plot)

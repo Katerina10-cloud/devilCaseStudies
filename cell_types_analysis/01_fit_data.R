@@ -46,7 +46,7 @@ umap_plot_labels <- Seurat::DimPlot(
 saveRDS(seurat_obj, paste0('results/', dataset_name, '/seurat.RDS'))
 
 time <- dplyr::tibble()
-m <- 'glmGamPoi'
+m <- 'devil'
 for (m in c("devil", "nebula", "glmGamPoi")) {
   s <- Sys.time()
   de_res_total <- perform_analysis(seurat_obj, method = m)
