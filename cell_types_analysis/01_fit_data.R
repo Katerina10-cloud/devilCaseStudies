@@ -18,6 +18,9 @@ if (!(file.exists(paste0("results/", dataset_name)))) {
   dir.create(paste0("results/", dataset_name))
 }
 
+print(dataset_name)
+print(data_path)
+
 # if (!(file.exists(paste0("plot/", dataset_name)))) {
 #   dir.create(paste0("plot/", dataset_name))
 # }

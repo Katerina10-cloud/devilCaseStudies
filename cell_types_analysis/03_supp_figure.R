@@ -12,8 +12,8 @@ dataset_name <- args[1]
 tissue <- args[2]
 #save_svg <- as.logical(args[3])
 
-dataset_name <- "BaronPancreasData"
-tissue <- "pancreas"
+#dataset_name <- "BaronPancreasData"
+#tissue <- "pancreas"
 #save_svg <- F
 
 # img_folder <- paste0("plot_figure/", dataset_name, "/")
