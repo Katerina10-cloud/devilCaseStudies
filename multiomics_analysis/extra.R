@@ -32,13 +32,14 @@ tissue <- "muscle"
 
 cell_filter <- (metadata$group %in% c("young", "old") & metadata$Annotation %in% c("Type I", "Type II"))
 
+
 genes_of_interest <- c()
-load("results/glm/res_rna_age_glm.Rdata")
-genes_of_interest <- c(genes_of_interest, res_rna_glm$name)
-load("results/devil/res_rna_age_devil.Rdata")
-genes_of_interest <- c(genes_of_interest, res$name)
-load("results/nebula/res_rna_age_nebula.Rdata")
-genes_of_interest <- c(genes_of_interest, res_rna_neb$name)
+glm_rna <- readRDS("results/MuscleRNA/glmGamPoi_rna.RDS")
+genes_of_interest <- c(genes_of_interest, glm_rna$name)
+devil_rna <- readRDS("results/MuscleRNA/devil_rna.RDS")
+genes_of_interest <- c(genes_of_interest, devil_rna$name)
+nebula_rna <- readRDS("results/MuscleRNA/nebula_rna.RDS")
+genes_of_interest <- c(genes_of_interest, nebula_rna$name)
 genes_of_interest <- unique(genes_of_interest)
 
 range_filter <- (grange_annot$annotation %in% c("Promoter (<=1kb)", "Promoter (1-2kb)", "Promoter (2-3kb)")) & (grange_annot$SYMBOL %in% genes_of_interest)

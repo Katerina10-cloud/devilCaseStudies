@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --partition=THIN
+#SBATCH --partition=cpuq
 #SBATCH --mem=200GB
 #SBATCH --time=12:00:00
 #SBATCH --nodes=1

@@ -128,7 +128,6 @@ perform_analysis <- function(seurat_obj, method = "devil") {
   counts <- as.matrix(seurat_obj@assays$RNA$counts)
 
   whole_res <- dplyr::tibble()
-  c <- 13
   for (c in unique(seurat_obj$seurat_clusters)) {
 
     s <- Sys.time()
@@ -144,10 +143,11 @@ perform_analysis <- function(seurat_obj, method = "devil") {
     }
 
     idxs <- c(idx_cluster, idx_others)
-
+    
     design_matrix <- model.matrix(~group, dplyr::tibble(group = seurat_obj$seurat_clusters == c))
     dm <- design_matrix[idxs,]
-    cc <- counts[,idxs]
+    expressed_genes <- rowSums(counts[,idx_cluster]) > 0
+    cc <- counts[expressed_genes,idxs]
     cc <- cc[rowMeans(cc) > .005,]
     rownames(dm) <- colnames(cc)
 
@@ -155,13 +155,11 @@ perform_analysis <- function(seurat_obj, method = "devil") {
     if (method == 'devil') {
       fit <- devil::fit_devil(cc, dm, verbose = T, size_factors = T, parallel.cores = 1, min_cells = -1, avg_counts = -1)
       res <- devil::test_de(fit, contrast = c(0,1), clusters = clusters, max_lfc = 50) %>% dplyr::mutate(cluster = c)
-      fit$beta[1:5,]
-      res
       #res <- devil::test_de(fit, contrast = c(0,1), clusters = 1:length(idxs), max_lfc = Inf) %>% dplyr::mutate(cluster = c)
     } else if (method == "glmGamPoi") {
       fit <- glmGamPoi::glm_gp(cc, dm, size_factors = "normed_sum", verbose = T)
       #fit <- glmGamPoi::glm_gp(cc, dm, size_factors = FALSE, verbose = T)
-      res <- glmGamPoi::test_de(fit, contrast = c(0,1), max_lfc = 50)
+      res <- glmGamPoi::test_de(fit, contrast = c(0,1))
       res <- res %>% dplyr::as_tibble() %>% dplyr::select(name, pval, adj_pval, lfc) %>% dplyr::mutate(cluster = c)
     } else if (method == "nebula") {
       sf <- devil:::calculate_sf(cc)

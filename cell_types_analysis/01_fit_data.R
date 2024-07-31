@@ -11,9 +11,6 @@ args = commandArgs(trailingOnly=TRUE)
 data_path <- args[2]
 dataset_name <- args[1]
 
-#dataset_name <- 'pbmc'
-#data_path <- "datasets/pbmc.rds"
-
 if (!(file.exists(paste0("results/", dataset_name)))) {
   dir.create(paste0("results/", dataset_name))
 }
@@ -21,32 +18,14 @@ if (!(file.exists(paste0("results/", dataset_name)))) {
 print(dataset_name)
 print(data_path)
 
-# if (!(file.exists(paste0("plot/", dataset_name)))) {
-#   dir.create(paste0("plot/", dataset_name))
-# }
-
-input_data <- read_data(dataset_name, data_path)
-seurat_obj <- prep_seurat_object(input_data, NPC=20, cluster_res = .2)
-
-umap_plot_seurat <- Seurat::DimPlot(
-  seurat_obj,
-  reduction = "umap",
-  group.by = "seurat_clusters",
-  label = T,
-  repel = T) +
-  theme_minimal() +
-  theme(legend.position = 'none')
-
-umap_plot_labels <- Seurat::DimPlot(
-  seurat_obj,
-  reduction = "umap",
-  group.by = "cell_type",
-  label = T,
-  repel = T) +
-  theme_minimal() +
-  theme(legend.position = 'none')
-
-saveRDS(seurat_obj, paste0('results/', dataset_name, '/seurat.RDS'))
+seurat_file_name <- paste0('results/', dataset_name, '/seurat.RDS')
+if (file.exists(seurat_file_name)) {
+  seurat_obj <- readRDS(seurat_file_name)
+} else {
+  input_data <- read_data(dataset_name, data_path)
+  seurat_obj <- prep_seurat_object(input_data, NPC=20, cluster_res = .2)
+  saveRDS(seurat_obj, seurat_file_name)
+}
 
 time <- dplyr::tibble()
 m <- 'devil'
