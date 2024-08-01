@@ -1,194 +1,225 @@
-"","from","to","tissue"
-"1","natural killer cell","NK cell","blood"
-"2","central memory CD4-positive, alpha-beta T cell","T cell","blood"
-"3","effector memory CD8-positive, alpha-beta T cell","T cell","blood"
-"4","classical monocyte","Monocyte","blood"
-"5","CD4-positive, alpha-beta cytotoxic T cell","T cell","blood"
-"6","naive B cell","B cell","blood"
-"7","gamma-delta T cell","T cell","blood"
-"8","naive thymus-derived CD4-positive, alpha-beta T cell","T cell","blood"
-"9","platelet","Mega-kayocyte","blood"
-"10","mucosal invariant T cell","T cell","blood"
-"11","lymphocyte","Lymphocyte","blood"
-"12","non-classical monocyte","Monocyte","blood"
-"13","memory B cell","B cell","blood"
-"14","regulatory T cell","T cell","blood"
-"15","transitional stage B cell","B cell","blood"
-"16","erythrocyte","Erythrocyte","blood"
-"17","naive thymus-derived CD8-positive, alpha-beta T cell","T cell","blood"
-"18","CD16-negative, CD56-bright natural killer cell, human","NK cell","blood"
-"19","plasmablast","B cell","blood"
-"20","neutrophil","Neutrophil","blood"
-"21","conventional dendritic cell","Dendritic cell","blood"
-"22","hematopoietic stem cell","Stem","blood"
-"23","plasmacytoid dendritic cell, human","Dendritic cell","blood"
-"24","immature neutrophil","Neutrophil","blood"
-"25","B","B cell","blood"
-"26","Basophil","Basophil","blood"
-"27","CD14 Monocyte","Monocyte","blood"
-"28","CD16 Monocyte","Monocyte","blood"
-"29","CD4 Central Memory T","T cell","blood"
-"30","CD4 Cytotoxic T","T cell","blood"
-"31","CD4 Effector Memory T","T cell","blood"
-"32","CD4 Naive T","T cell","blood"
-"33","CD4 Proliferating T","T cell","blood"
-"34","CD4 T","T cell","blood"
-"35","CD8 Proliferating T","T cell","blood"
-"36","CD8 T","T cell","blood"
-"37","Dendritic","Dendritic cell","blood"
-"38","Double-negative T","T cell","blood"
-"39","Embryonic stem","Stem","blood"
-"40","Endothelial","Endothelial","blood"
-"41","Endothelial progenitor","Endothelial","blood"
-"42","Endothelial stem","Endothelial","blood"
-"43","Eosinophil","Eosinophil","blood"
-"44","Epithelial","Epithelial","blood"
-"45","Erythroblast","Erythrocyte","blood"
-"46","Granulocyte","Granulocyte","blood"
-"47","Erythroid","Erythrocyte","blood"
-"48","Erythroid precursor","Erythrocyte","blood"
-"49","Gamma delta T","T cell","blood"
-"50","Hematopoietic stem","Stem","blood"
-"51","Immature myeloid","Myeloid","blood"
-"52","Innate lymphoid","Lymphoid","blood"
-"53","Intermediate B","B cell","blood"
-"54","Leukocyte","Leukocyte","blood"
-"55","Lymphoid","Lymphoid","blood"
-"56","Megakaryocyte","Mega-kayocyte","blood"
-"57","Memory B","B cell","blood"
-"58","Mesenchymal stem","Stem","blood"
-"59","Monocyte","Monocyte","blood"
-"60","Mucosal-associated invariant T","T cell","blood"
-"61","Myeloid","Myeloid","blood"
-"62","Myeloid dendritic","Dendritic cell","blood"
-"63","Myeloid-derived suppressor","Myeloid","blood"
-"64","Naive B","B cell","blood"
-"65","Natural killer","NK cell","blood"
-"66","Neutrophil","Neutrophil","blood"
-"67","Plasma","B cell","blood"
-"68","Plasmablast","B cell","blood"
-"69","Plasmacytoid dendritic","Dendritic cell","blood"
-"70","Platelet","Mega-kayocyte","blood"
-"71","Regulatory T","T cell","blood"
-"72","Reticulocyte","Reticulocyte","blood"
-"73","T","T cell","blood"
-"74","Thymic emigrant","T cell","blood"
-"75","CD56-bright natural killer","NK cell","blood"
-"76","CD56-dim natural killer","NK cell","blood"
-"77","CD8 Central Memory T","T cell","blood"
-"78","CD8 Effector Memory T","T cell","blood"
-"79","CD8 Naive T","T cell","blood"
-"80","Endothelial","Endothelial","liver"
-"81","Cholangiocyte","Cholangiocyte","liver"
-"82","Kupffer","Kupffer","liver"
-"83","T/NK-cell","T/NK cell","liver"
-"84","Hepatocyte","Hepatocyte","liver"
-"85","B-cell","B cell","liver"
-"86","Erythroid","Erythrocyte","liver"
-"87","Stellate","Stellate","liver"
-"88","B","B cell","liver"
-"89","Cholangiocyte","Cholangiocyte","liver"
-"90","Dendritic","Dendritic cell","liver"
-"91","Endothelial","Endothelial","liver"
-"92","Epithelial","Epithelial","liver"
-"93","Hematopoietic","Stem","liver"
-"94","Hepatoblast","Hepatocyte","liver"
-"95","Hepatocyte","Hepatocyte","liver"
-"96","Kupffer","Kupffer","liver"
-"97","Liver bud hepatic","Liver bud hepatic","liver"
-"98","Mesenchymal","Mesenchymal","liver"
-"99","Mesenchymal stem","Mesenchymal","liver"
-"100","Monocyte","Monocyte","liver"
-"101","Myofibroblast","Myofibroblast","liver"
-"102","Natural killer","NK cell","liver"
-"103","Neutrophil","Neutrophil","liver"
-"104","Progenitor","Progenitor","liver"
-"105","Stellate","Stellate","liver"
-"106","Stem","Stem","liver"
-"107","T","T cell","liver"
-"108","acinar","Acinar","liver"
-"109","delta","Delta","liver"
-"110","beta","Beta","liver"
-"111","alpha","Alpha","liver"
-"112","activated_stellate","Stellate","liver"
-"113","ductal","Ductal","liver"
-"114","epsilon","Epsilon","liver"
-"115","gamma","Gamma","liver"
-"116","endothelial","Endothelial","liver"
-"117","quiescent_stellate","Stellate","liver"
-"118","macrophage","Macrophage","liver"
-"119","schwann","Schwann","liver"
-"120","mast","Mast","liver"
-"121","t_cell","T cell","liver"
-"122","Acinar","Acinar","liver"
-"123","Alpha","Alpha","liver"
-"124","B","B cell","liver"
-"125","Beta","Beta","liver"
-"126","Delta","Delta","liver"
-"127","Dendritic","Dendritic cell","liver"
-"128","Ductal","Ductal","liver"
-"129","Ductal stem","Ductal","liver"
-"130","Endocrine","Endocrine","liver"
-"131","Endothelial","Endothelial","liver"
-"132","Epithelial","Epithelial","liver"
-"133","Epsilon","Epsilon","liver"
-"134","Gamma","Gamma","liver"
-"135","Glial","Glial","liver"
-"136","Granulocyte","Granulocyte","liver"
-"137","Macrophage","Macrophage","liver"
-"138","Mast","Mast","liver"
-"139","Pancreatic progenitor","Pancreatic progenitor","liver"
-"140","Polypeptide","Polypeptide","liver"
-"141","Schwann","Schwann","liver"
-"142","Stellate","Stellate","liver"
-"143","T","T cell","liver"
-"144","monocyte","Monocyte","liver"
-"145","conventional dendritic cell","Dendritic cell","liver"
-"146","plasmacytoid dendritic cell","Dendritic cell","liver"
-"147","macrophage","Macrophage","liver"
-"148","plasma cell","B cell","liver"
-"149","T cell","T cell","liver"
-"150","B cell","B cell","liver"
-"151","natural killer cell","NK cell","liver"
-"152","cholangiocyte","Cholangiocyte","liver"
-"153","basophil","Basophil","liver"
-"154","neutrophil","Neutrophil","liver"
-"155","endothelial cell","Endothelial","liver"
-"156","hepatocyte","Hepatocyte","liver"
-"157","fibroblast","Myofibroblast","liver"
-"158","acinar","Acinar","pancreas"
-"159","delta","Delta","pancreas"
-"160","beta","Beta","pancreas"
-"161","alpha","Alpha","pancreas"
-"162","activated_stellate","Stellate","pancreas"
-"163","ductal","Ductal","pancreas"
-"164","epsilon","Epsilon","pancreas"
-"165","gamma","Gamma","pancreas"
-"166","endothelial","Endothelial","pancreas"
-"167","quiescent_stellate","Stellate","pancreas"
-"168","macrophage","Macrophage","pancreas"
-"169","schwann","Schwann","pancreas"
-"170","mast","Mast","pancreas"
-"171","t_cell","T cell","pancreas"
-"172","Acinar","Acinar","pancreas"
-"173","Alpha","Alpha","pancreas"
-"174","B","B cell","pancreas"
-"175","Beta","Beta","pancreas"
-"176","Delta","Delta","pancreas"
-"177","Dendritic","Dendritic","pancreas"
-"178","Ductal","Ductal","pancreas"
-"179","Ductal stem","Ductal","pancreas"
-"180","Endocrine","Endocrine","pancreas"
-"181","Endothelial","Endothelial","pancreas"
-"182","Epithelial","Epithelial","pancreas"
-"183","Epsilon","Epsilon","pancreas"
-"184","Gamma","Gamma","pancreas"
-"185","Glial","Glial","pancreas"
-"186","Granulocyte","Granulocyte","pancreas"
-"187","Macrophage","Macrophage","pancreas"
-"188","Mast","Mast","pancreas"
-"189","Pancreatic progenitor","Pancreatic progenitor","pancreas"
-"190","Polypeptide","Polypeptide","pancreas"
-"191","Schwann","Schwann","pancreas"
-"192","Stellate","Stellate","pancreas"
-"193","T","T cell","pancreas"
+from,to,tissue
+natural killer cell,NK cell,blood
+"central memory CD4-positive, alpha-beta T cell",T cell,blood
+"effector memory CD8-positive, alpha-beta T cell",T cell,blood
+classical monocyte,Monocyte,blood
+"CD4-positive, alpha-beta cytotoxic T cell",T cell,blood
+naive B cell,B cell,blood
+gamma-delta T cell,T cell,blood
+"naive thymus-derived CD4-positive, alpha-beta T cell",T cell,blood
+platelet,Mega-kayocyte,blood
+mucosal invariant T cell,T cell,blood
+lymphocyte,Lymphocyte,blood
+non-classical monocyte,Monocyte,blood
+memory B cell,B cell,blood
+regulatory T cell,T cell,blood
+transitional stage B cell,B cell,blood
+erythrocyte,Erythrocyte,blood
+"naive thymus-derived CD8-positive, alpha-beta T cell",T cell,blood
+"CD16-negative, CD56-bright natural killer cell, human",NK cell,blood
+plasmablast,B cell,blood
+neutrophil,Neutrophil,blood
+conventional dendritic cell,Dendritic cell,blood
+hematopoietic stem cell,Stem,blood
+"plasmacytoid dendritic cell, human",Dendritic cell,blood
+immature neutrophil,Neutrophil,blood
+B,B cell,blood
+Basophil,Basophil,blood
+CD14 Monocyte,Monocyte,blood
+CD16 Monocyte,Monocyte,blood
+CD4 Central Memory T,T cell,blood
+CD4 Cytotoxic T,T cell,blood
+CD4 Effector Memory T,T cell,blood
+CD4 Naive T,T cell,blood
+CD4 Proliferating T,T cell,blood
+CD4 T,T cell,blood
+CD8 Proliferating T,T cell,blood
+CD8 T,T cell,blood
+Dendritic,Dendritic cell,blood
+Double-negative T,T cell,blood
+Embryonic stem,Stem,blood
+Endothelial,Endothelial,blood
+Endothelial progenitor,Endothelial,blood
+Endothelial stem,Endothelial,blood
+Eosinophil,Eosinophil,blood
+Epithelial,Epithelial,blood
+Erythroblast,Erythrocyte,blood
+Granulocyte,Granulocyte,blood
+Erythroid,Erythrocyte,blood
+Erythroid precursor,Erythrocyte,blood
+Gamma delta T,T cell,blood
+Hematopoietic stem,Stem,blood
+Immature myeloid,Myeloid,blood
+Innate lymphoid,Lymphoid,blood
+Intermediate B,B cell,blood
+Leukocyte,Leukocyte,blood
+Lymphoid,Lymphoid,blood
+Megakaryocyte,Mega-kayocyte,blood
+Memory B,B cell,blood
+Mesenchymal stem,Stem,blood
+Monocyte,Monocyte,blood
+Mucosal-associated invariant T,T cell,blood
+Myeloid,Myeloid,blood
+Myeloid dendritic,Dendritic cell,blood
+Myeloid-derived suppressor,Myeloid,blood
+Naive B,B cell,blood
+Natural killer,NK cell,blood
+Neutrophil,Neutrophil,blood
+Plasma,B cell,blood
+Plasmablast,B cell,blood
+Plasmacytoid dendritic,Dendritic cell,blood
+Platelet,Mega-kayocyte,blood
+Regulatory T,T cell,blood
+Reticulocyte,Reticulocyte,blood
+T,T cell,blood
+Thymic emigrant,T cell,blood
+CD56-bright natural killer,NK cell,blood
+CD56-dim natural killer,NK cell,blood
+CD8 Central Memory T,T cell,blood
+CD8 Effector Memory T,T cell,blood
+CD8 Naive T,T cell,blood
+Endothelial,Endothelial,liver
+Cholangiocyte,Cholangiocyte,liver
+Kupffer,Kupffer,liver
+T/NK-cell,T/NK cell,liver
+Hepatocyte,Hepatocyte,liver
+B-cell,B cell,liver
+Erythroid,Erythrocyte,liver
+Stellate,Stellate,liver
+B,B cell,liver
+Cholangiocyte,Cholangiocyte,liver
+Dendritic,Dendritic cell,liver
+Endothelial,Endothelial,liver
+Epithelial,Epithelial,liver
+Hematopoietic,Stem,liver
+Hepatoblast,Hepatocyte,liver
+Hepatocyte,Hepatocyte,liver
+Kupffer,Kupffer,liver
+Liver bud hepatic,Liver bud hepatic,liver
+Mesenchymal,Mesenchymal,liver
+Mesenchymal stem,Mesenchymal,liver
+Monocyte,Monocyte,liver
+Myofibroblast,Myofibroblast,liver
+Natural killer,NK cell,liver
+Neutrophil,Neutrophil,liver
+Progenitor,Progenitor,liver
+Stellate,Stellate,liver
+Stem,Stem,liver
+T,T cell,liver
+acinar,Acinar,liver
+delta,Delta,liver
+beta,Beta,liver
+alpha,Alpha,liver
+activated_stellate,Stellate,liver
+ductal,Ductal,liver
+epsilon,Epsilon,liver
+gamma,Gamma,liver
+endothelial,Endothelial,liver
+quiescent_stellate,Stellate,liver
+macrophage,Macrophage,liver
+schwann,Schwann,liver
+mast,Mast,liver
+t_cell,T cell,liver
+Acinar,Acinar,liver
+Alpha,Alpha,liver
+B,B cell,liver
+Beta,Beta,liver
+Delta,Delta,liver
+Dendritic,Dendritic,liver
+Ductal,Ductal,liver
+Ductal stem,Ductal,liver
+Endocrine,Endocrine,liver
+Endothelial,Endothelial,liver
+Epithelial,Epithelial,liver
+Epsilon,Epsilon,liver
+Gamma,Gamma,liver
+Glial,Glial,liver
+Granulocyte,Granulocyte,liver
+Macrophage,Macrophage,liver
+Mast,Mast,liver
+Pancreatic progenitor,Pancreatic progenitor,liver
+Polypeptide,Polypeptide,liver
+Schwann,Schwann,liver
+Stellate,Stellate,liver
+T,T cell,liver
+monocyte,Monocyte,liver
+conventional dendritic cell,Dendritic cell,liver
+plasmacytoid dendritic cell,Dendritic cell,liver
+macrophage,Macrophage,liver
+plasma cell,B cell,liver
+T cell,T cell,liver
+B cell,B cell,liver
+natural killer cell,NK cell,liver
+cholangiocyte,Cholangiocyte,liver
+basophil,Basophil,liver
+neutrophil,Neutrophil,liver
+endothelial cell,Endothelial,liver
+hepatocyte,Hepatocyte,liver
+fibroblast,Myofibroblast,liver
+acinar,Acinar,pancreas
+delta,Delta,pancreas
+beta,Beta,pancreas
+alpha,Alpha,pancreas
+activated_stellate,Stellate,pancreas
+ductal,Ductal,pancreas
+epsilon,Epsilon,pancreas
+gamma,Gamma,pancreas
+endothelial,Endothelial,pancreas
+quiescent_stellate,Stellate,pancreas
+macrophage,Macrophage,pancreas
+schwann,Schwann,pancreas
+mast,Mast,pancreas
+t_cell,T cell,pancreas
+Acinar,Acinar,pancreas
+Alpha,Alpha,pancreas
+B,B cell,pancreas
+Beta,Beta,pancreas
+Delta,Delta,pancreas
+Dendritic,Dendritic,pancreas
+Ductal,Ductal,pancreas
+Ductal stem,Ductal,pancreas
+Endocrine,Endocrine,pancreas
+Endothelial,Endothelial,pancreas
+Epithelial,Epithelial,pancreas
+Epsilon,Epsilon,pancreas
+Gamma,Gamma,pancreas
+Glial,Glial,pancreas
+Granulocyte,Granulocyte,pancreas
+Macrophage,Macrophage,pancreas
+Mast,Mast,pancreas
+Pancreatic progenitor,Pancreatic progenitor,pancreas
+Polypeptide,Polypeptide,pancreas
+Schwann,Schwann,pancreas
+Stellate,Stellate,pancreas
+T,T cell,pancreas
+CD14 Mono,Monocyte,blood
+CD4 TCM,T cell,blood
+CD8 Naive,T cell,blood
+NK,NK cell,blood
+CD8 TEM,T cell,blood
+CD16 Mono,Monocyte,blood
+B intermediate,B cell,blood
+CD4 Naive,T cell,blood
+CD4 CTL,T cell,blood
+B naive,B cell,blood
+MAIT,T cell,blood
+gdT,T cell,blood
+CD8 TCM,T cell,blood
+dnT,T cell,blood
+B memory,B cell,blood
+Doublet,Doublet,blood
+pDC,Dendritic cell,blood
+CD8 Proliferating,T cell,blood
+Treg,T cell,blood
+Plasmablast,B cell,blood
+CD4 TEM,T cell,blood
+cDC2,Dendritic cell,blood
+NK Proliferating,NK cell,blood
+ASDC,Dendritic cell,blood
+HSPC,Stem,blood
+Platelet,Mega-kayocyte,blood
+NK_CD56bright,NK cell,blood
+cDC1,Dendritic cell,blood
+Eryth,Erythrocyte,blood
+CD4 Proliferating,T cell,blood
+ILC,Lymphoid,blood
