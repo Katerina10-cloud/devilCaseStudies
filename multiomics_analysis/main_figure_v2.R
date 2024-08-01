@@ -88,8 +88,8 @@ rna_nebula <- "results/MuscleRNA/nebula_rna.RDS"
 rna_nebula <- readRDS(rna_nebula) %>% dplyr::rename(geneID=name) %>% dplyr::mutate(lfc = lfc / log(2))
 
 # volcano plots ####
-lfc_cut <- 1
-lfc_cut_atac <- 1
+lfc_cut <- 0.5
+lfc_cut_atac <- 0.5
 pval_cut <- .05
 de_gene_colors <- c("Not significant" = "gainsboro", "Down-regulated" = "steelblue", "Up-regulated"="indianred")
 

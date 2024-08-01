@@ -1,48 +1,11 @@
 ### Results downstream analysis ###
-#setwd("/Users/katsiarynadavydzenka/Documents/PhD_AI/devilCaseStudies/")
-setwd("~/GitHub/devilCaseStudies")
-rm(list = ls())
+
+setwd("/Users/katsiarynadavydzenka/Documents/PhD_AI/devilCaseStudies/multiomics_analysis/")
+#setwd("~/GitHub/devilCaseStudies")
+#rm(list = ls())
 pkgs <- c("ggplot2", "dplyr","tidyr","tibble", "viridis", "smplot2", "Seurat", "VennDiagram", "gridExtra",
           "ggpubr", "ggrepel", "ggvenn", "ggpointdensity", "edgeR", "patchwork")
 sapply(pkgs, require, character.only = TRUE)
-
-grange_path <- "multiomics_analysis/results/grange_annot.RDS"
-grange <- readRDS(grange_path)
-#
-# atac_path <- "multiomics_analysis/results/MuscleATAC/devil_atac.RDS"
-# atac_res <- readRDS(atac_path) %>% rename(ranges=name)
-#
-# rna_path <- "multiomics_analysis/results/MuscleRNA/devil_rna.RDS"
-# rna_res <- readRDS("multiomics_analysis/results/MuscleRNA/devil_rna.RDS") %>% rename(geneID=name)
-
-### Select non duplicated atac genes ###
-# grange <- grange %>% dplyr::select(SYMBOL, ranges, annotation)
-# grange <- grange[ (grange$annotation %in% c("Promoter (<=1kb)")) , ]
-# atac_res <- dplyr::full_join(atac_res, grange, by = "ranges") %>%
-#   dplyr::rename(geneID=SYMBOL) %>% na.omit()
-#
-# atac_up <- atac_res %>% dplyr::filter(lfc > 0) %>%
-#   dplyr::group_by(geneID) %>%
-#   dplyr::arrange(lfc)
-#
-# atac_up <- atac_up[order(atac_up$lfc, decreasing = TRUE), ]
-# atac_up_nodup <- atac_up[!duplicated(atac_up$geneID), ]
-#
-# atac_down <- atac_res %>% filter(lfc < 0) %>%
-#   dplyr::group_by(geneID) %>%
-#   dplyr::arrange(lfc)
-#
-# atac_down <- atac_down[order(atac_down$lfc), ]
-# atac_down_nodup <- atac_down[!duplicated(atac_down$geneID), ]
-#
-# atac_nodup <- rbind(atac_up_nodup, atac_down_nodup)
-# atac_nodup <- atac_nodup[!duplicated(atac_nodup$geneID), ]
-#
-# atac_deg <- atac_nodup %>%
-#   dplyr::filter(adj_pval < 0.05 & abs(lfc) > 0.5)
-#
-# rna_deg <- rna_res %>%
-#   dplyr::filter(adj_pval < 0.05 & abs(lfc) > 0.5)
 
 
 ### scaDA results analysis ###
@@ -65,12 +28,6 @@ rna_glm <- readRDS(rna_glm) %>% dplyr::rename(geneID=name)
 rna_nebula <- "multiomics_analysis/results/MuscleRNA/nebula_rna.RDS"
 rna_nebula <- readRDS(rna_nebula) %>% dplyr::rename(geneID=name) %>% dplyr::mutate(lfc = lfc / log(2))
 
-#rna_edge <- "multiomics_analysis/results/MuscleRNA/edge_rna.RDS"
-#rna_edge <- readRDS(rna_edge)
-#rna_edge <- topTags(rna_edge, n=15563)$table
-#rna_edge$geneID <- rownames(rna_edge)
-#colnames(rna_edge) <- c("lfc", "stError", "tval", "adj_pval", "geneID")
-
 grange_scaDA <- grange_scaDA %>% dplyr::select(SYMBOL) %>%
   dplyr::rename(geneID=SYMBOL)
 
@@ -79,7 +36,7 @@ atac_scaDA$log2fc <- -1 * atac_scaDA$log2fc
 
 grange$annotation %>% unique()
 
-grange <- grange[ (grange$annotation %in% c("Promoter (<=1kb)")) , ]
+grange <- grange[ (grange$annotation %in% c("Promoter (<=1kb)", "Promoter (1-2kb)" )) , ]
 #grange <- grange[ (grange$annotation %in% c("Promoter (1-2kb)")) , ]
 #grange <- grange[ (grange$annotation %in% c("Promoter (2-3kb)")) , ]
 atac_scaDA <- atac_scaDA[ (atac_scaDA$geneID %in% grange$SYMBOL) , ]
@@ -99,13 +56,15 @@ atac_down <- atac_down[order(atac_down$log2fc), ]
 atac_down_nodup <- atac_down[!duplicated(atac_down$geneID), ]
 
 atac_nodup <- rbind(atac_up_nodup, atac_down_nodup)
+atac_nodup$log2fc_arr <- abs(atac_nodup$log2fc)
+atac_nodup <- atac_nodup[order(atac_nodup$log2fc_arr, decreasing = TRUE),] 
 atac_nodup <- atac_nodup[!duplicated(atac_nodup$geneID), ]
 
-saveRDS(atac_nodup, file = "multiomics_analysis/results/atac_nodup_scaDA.RDS")
+saveRDS(atac_nodup, file = "results/atac_nodup_scaDA.RDS")
 
 # Gene selection based on LFC & pvalue cutoff #
 quantile <- .5
-lfc_cut <- 1
+lfc_cut <- 0.5
 pval_cut <- .01
 
 atac_deg <- atac_nodup %>%
@@ -123,19 +82,6 @@ rna_deg_glm <- rna_glm %>%
 rna_deg_nebula <- rna_nebula %>%
   #dplyr::filter(adj_pval < 0.05, abs(lfc) > stats::quantile(abs(rna_nebula$lfc), quantile))
   dplyr::filter(adj_pval < pval_cut, abs(lfc) > lfc_cut)
-
-# Gene selection based on pvalue cutoff #
-# atac_deg <- atac_nodup %>%
-#   dplyr::filter(FDR < 0.05)
-#
-# rna_deg_devil <- rna_devil %>%
-#   dplyr::filter(adj_pval < 0.05)
-#
-# rna_deg_glm <- rna_glm %>%
-#   dplyr::filter(adj_pval < 0.05)
-#
-# rna_deg_nebula <- rna_nebula %>%
-#   dplyr::filter(adj_pval < 0.05)
 
 
 # Vienn diagram #
@@ -216,6 +162,9 @@ rna_deg_nebula <- rna_deg_nebula %>% dplyr::select(geneID, lfc, adj_pval)
 colnames(rna_deg_nebula) <- c("geneID", "lfc_snRNA", "adj_pval_snRNA")
 overlap_nebula <- dplyr::full_join(atac_deg_nebula, rna_deg_nebula, by = "geneID")
 
+saveRDS(overlap_nebula, file = "multiomics_analysis/results/overlap_nebula.RDS")
+
+
 ### Correlation plot ###
 
 corr1 <- ggplot2::ggplot(mapping = aes(x = overlap_devil$lfc_snRNA, y = overlap_devil$lfc_snATAC)) +
@@ -258,13 +207,14 @@ corr3 <- ggplot2::ggplot(mapping = aes(x = overlap_nebula$lfc_snRNA, y = overlap
 corr_plot <- (corr1 | corr2 | corr3) + plot_layout(axis_titles = 'collect')
 ggsave("multiomics_analysis/plot/corr_plot.pdf", dpi = 300, width = 16, height = 8)
 
+
 ### Gene set Enrichement analysis ###
 
 #rm(list=ls())
 pkgs <- c("ggplot2", "dplyr","tidyr","reactome.db", "fgsea", "org.Hs.eg.db", "data.table", "clusterProfiler", "enrichplot", "ggpubr")
 sapply(pkgs, require, character.only = TRUE)
 
-overlap_genes <- overlap_devil
+overlap_genes <- overlap_nebula
 
 # Convert Gene symbols to EntrezID #
 hs <- org.Hs.eg.db
@@ -285,68 +235,86 @@ gseGO <- clusterProfiler::gseGO(gene_list_rank, ont = "All", OrgDb = org.Hs.eg.d
                                     keyType = "ENTREZID", minGSSize = 10, maxGSSize = 350, pvalueCutoff = 0.05)
 
 # Select enriched pathways #
-res_gse <- gseGO@result
+res_gse_devil <- gseGO@result %>% mutate(method = "devil")
+res_gse_glm <- gseGO@result %>% mutate(method = "glmGamPoi")
+res_gse_nebula <- gseGO@result %>% mutate(method = "NEBULA")
 
-res_gse <- res_gse %>%
-  filter(Description %in% c("cellular modified amino acid metabolic process","actin filament binding", "sarcoplasm",
-                            "actin binding", "response to BMP","response to fibroblast growth factor",
-                             "negative regulation of mitotic cell cycle", "cellular response to oxygen levels",
-                            "MAPK cascade", "response to calcium ion", "ERK1 and ERK2 cascade",
-                            "CD4-positive, alpha-beta T cell activation")) %>%
+GO_pathways <- c("regulation of cytokine production",
+              "inflammatory response",
+              "negative regulation of apoptotic process",
+              "immune system process",
+              "regulation of actin filament organization",
+              "actin polymerization or depolymerization",
+              "regulation of supramolecular fiber organization",
+              "reactive oxygen species metabolic process",
+              "response to calcium ion",
+              "regulation of interleukin-6 production",
+              "phagocytosis",
+              "response to calcium ion",
+              "response to oxidative stress",
+              "negative regulation of cellular process",
+              "regulation of angiogenesis",
+              "response to oxygen-containing compound")
+
+res_gse_devil <- res_gse_devil %>%
+  filter(Description %in% GO_pathways) %>%
   mutate(gene_clusters = case_when(
-  NES > 0  ~ 'up-regulated',
-  NES < 0  ~ 'down-regulated'))
+    NES > 0  ~ 'up-regulated',
+    NES < 0  ~ 'down-regulated'))
 
-#res_gse <- res_gse %>%
-  #filter(Description %in% c("positive regulation of cellular component biogenesis","MAPK cascade",
-                            #"regulation of apoptotic process","actin filament-based movement",
-                            #"actin-mediated cell contraction", "muscle contraction", "muscle system process",
-                            #"response to oxygen-containing compound")) %>%
-  #mutate(gene_clusters = case_when(
-    #NES > 0  ~ 'up-regulated',
-    #NES < 0  ~ 'down-regulated'))
+res_gse_nebula <- res_gse_nebula %>%
+  filter(Description %in% GO_pathways) %>%
+  mutate(gene_clusters = case_when(
+    NES > 0  ~ 'up-regulated',
+    NES < 0  ~ 'down-regulated'))
+
+res_gse_glm <- res_gse_glm %>%
+  filter(Description %in% GO_pathways) %>%
+  mutate(gene_clusters = case_when(
+    NES > 0  ~ 'up-regulated',
+    NES < 0  ~ 'down-regulated'))
+
+res_gse <- rbind(res_gse_devil, res_gse_glm, res_gse_nebula)
+res_gse$method <- as.factor(res_gse$method)
+
+saveRDS(res_gse, file = "results/res_gse.RDS")
+
 
 ### Visualize enrichment results ###
 
-res_gse$log_padjust <- -log10(res_gse$p.adjust)
+#res_gse$log_padjust <- -log10(res_gse$p.adjust)
 
-plot1 <- ggpubr::ggdotchart(res_gse, x = "Description", y = "log_padjust",
-                    color = "gene_clusters",
-                    palette = c("blue", "#FC4E07"),
-                    sorting = "descending",
-                    rotate = TRUE,
-                    group = "gene_clusters",
-                    dot.size = "setSize",
-                    add = "segments",
-                    title = "GO enrichment - Devil",
-                    xlab = "GO Pathways",
-                    ylab = "-log10(padjust)",
-                    ggtheme = theme_pubr()
-)
-plot1 + theme(legend.position = "right")+
-  theme_bw()+
-  font("xy.text", size = 12, color = "black", face = "plain")+
-  font("title", size = 10, color = "black", face = "bold")+
-  font("xlab", size = 10)+
-  font("ylab", size = 10)
+#plot1 <- ggpubr::ggdotchart(res_gse, x = "Description", y = "log_padjust",
+                    #color = "gene_clusters",
+                    #palette = c("blue", "#FC4E07"),
+                    #sorting = "descending",
+                    #rotate = TRUE,
+                    #group = "gene_clusters",
+                    #dot.size = "setSize",
+                    #add = "segments",
+                    #title = "GO enrichment - Devil",
+                    #xlab = "GO Pathways",
+                    #ylab = "-log10(padjust)",
+                    #ggtheme = theme_pubr()
+#)
+#plot1 + theme(legend.position = "right")+
+  #theme_bw()+
+  #font("xy.text", size = 12, color = "black", face = "plain")+
+  #font("title", size = 10, color = "black", face = "bold")+
+  #font("xlab", size = 10)+
+  #font("ylab", size = 10)
 
-#res_gse_devil <- res_gse
-#res_gse_glm <- res_gse
-res_gse_devil <- res_gse_devil %>% mutate(method = "Devil")
-res_gse_glm <- res_gse_glm %>% mutate(method = "glmGamPoi")
-res_gse <- rbind(res_gse_devil, res_gse_glm)
-res_gse$method <- as.factor(res_gse$method)
 
 # Barplot #
 
-p1 <- ggplot(res_gse, aes(x = log_padjust, y = Description, fill=method)) +
+p_gse <- ggplot(res_gse, aes(x = log_padjust, y = Description, fill=method)) +
   geom_bar(stat="identity", position="dodge", width = 0.50)+
   labs(x = "-Log10(pvalue)",
        y = "GO Pathways",
        title = "GO analysis")+
   theme(strip.text.x = element_text(size=12, color="black", face="bold.italic"))+
   theme_bw()
-p1 <- p1 + scale_fill_manual(values=c("#0072B2", "#CC79A7"))
+p_gse <- p_gse + scale_fill_manual(values=c("#0072B2", "#CC79A7"))
 
 p1 <- p1 + font("xy.text", size = 12, color = "black", face = "plain")+
   font("title", size = 10, color = "black", face = "bold")+
@@ -355,5 +323,6 @@ p1 <- p1 + font("xy.text", size = 12, color = "black", face = "plain")+
 p1
 
 
-
-
+saveRDS(res_gse_devil, file = "multiomics_analysis/res_gse_devil.RDS")
+saveRDS(res_gse_glm, file = "multiomics_analysis/res_gse_glm.RDS")
+saveRDS(res_gse_nebula, file = "multiomics_analysis/res_gse_nebula.RDS")

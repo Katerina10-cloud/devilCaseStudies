@@ -10,8 +10,8 @@ sapply(pkgs, require, character.only = TRUE)
 #)
 
 cell_group_colors = c(
-  "old" = "#0072B2",
-  "young" = "pink"
+  "old" = "royalblue4",
+  "young" = "darkorange1"
 )
 
 # input UMAPs ####
@@ -36,32 +36,32 @@ d_rna <- metadata_rna %>%
 
 colnames(d_atac) <- colnames(d_rna)
 d_omics <- rbind(d_atac %>% dplyr::mutate(tech = "ATAC"), d_rna %>% dplyr::mutate(tech = "RNA"))
-#umaps <- ggplot() +
-  #geom_point(d_omics %>% dplyr::select(!cell_type), mapping = aes(x=umap_1, y=umap_2), size = .2, col="gainsboro", alpha = .3) +
-  #geom_point(d_omics, mapping = aes(x=umap_1, y=umap_2, col=group), size = .2, alpha = 1) +
-  #theme_bw() +
-  #labs(x="UMAP 1", y="UMAP 2", col="Sample age") +
+umaps <- ggplot() +
+  geom_point(d_omics %>% dplyr::select(!cell_type), mapping = aes(x=umap_1, y=umap_2), size = .2, col="gainsboro", alpha = .3) +
+  geom_point(d_omics, mapping = aes(x=umap_1, y=umap_2, col=group), size = .2, alpha = 1) +
+  theme_bw() +
+  labs(x="UMAP 1", y="UMAP 2", col="Sample age") +
   #facet_wrap(~tech) +
   #ggh4x::facet_nested(tech~cell_type) +
-  #ggh4x::facet_nested_wrap(tech~cell_type, scales = 'free')+
-  #guides(color = guide_legend(override.aes = list(size=2))) +
-  #scale_color_manual(values = cell_group_colors) +
-  #theme(legend.position = 'bottom')
-
-umaps <- ggplot(d_omics, aes(x = umap_1, y = umap_2, color = group))+
-  geom_point(size=0.2)+
-  labs(x = "UMAP_1",
-       y = "UMAP_2",
-       color = "Sample age") +
-  theme(plot.title=element_text(hjust=0.5, vjust=0.5))+
-  theme_bw() +
-  facet_wrap(~tech, nrow=2) +
+  ggh4x::facet_nested_wrap(tech~cell_type, scales = 'free')+
   guides(color = guide_legend(override.aes = list(size=2))) +
   scale_color_manual(values = cell_group_colors) +
   theme(legend.position = 'bottom')
 
-umaps <- Seurat::LabelClusters(plot = umaps, id = 'cell_type', color="black", 
-                               repel = T, position = "nearest", box = F)
+#umaps <- ggplot(d_omics, aes(x = umap_1, y = umap_2, color = group))+
+  #geom_point(size=0.2)+
+  #labs(x = "UMAP_1",
+       #y = "UMAP_2",
+       #color = "Sample age") +
+  #theme(plot.title=element_text(hjust=0.5, vjust=0.5))+
+  #theme_bw() +
+  #facet_wrap(~tech, nrow=2, scale = "free") +
+  #guides(color = guide_legend(override.aes = list(size=2))) +
+  #scale_color_manual(values = cell_group_colors) +
+  #theme(legend.position = 'bottom')
+
+#umaps <- Seurat::LabelClusters(plot = umaps, id = 'cell_type', color="black", 
+                               #repel = F, position = "nearest", box = F)
 umaps
 
 ggsave("plot/umaps.pdf", plot = umaps, dpi = 300, width = 10, height = 5)
@@ -182,8 +182,8 @@ upset_plot %>% print()
 dev.off()
 
 method_colors = c(
-  "glmGamPoi" = "#E69F00",
-  "NEBULA" =  "#CC79A7",
+  "glmGamPoi" = "#EAB578",
+  "NEBULA" =  "steelblue2",
   "devil" = "#099668"
 )
 
@@ -224,7 +224,7 @@ corr_plot <- rbind(d_corr_devil, d_corr_glm, d_corr_nebula) %>%
   geom_vline(xintercept = c(0.0), col = "gray", linetype = 'dashed') +
   geom_hline(yintercept = c(0.0), col = "gray", linetype = 'dashed') +
   theme_bw() +
-  facet_wrap(. ~ method)
+  facet_wrap(. ~ method, nrow=3)
 corr_plot
 ggsave("plot/corr_plot.pdf", dpi = 300, width = 16, height = 8, plot = corr_plot)
 
@@ -354,8 +354,8 @@ pbar <- ggplot(res_gse, aes(x = log_padjust, y = Description, fill=method)) +
   labs(x = "-Log10(pvalue)", y = "GO Pathways", fill="") +
   theme_bw() +
   scale_fill_manual(values = method_colors) +
-  theme(text = element_text(size = 10)) +
-  theme(legend.position = 'bottom')
+  theme(text = element_text(size = 9)) +
+  theme(legend.position = 'bottom', legend.box = "horizontal")
 
 # Main figure ####
 design <- "
@@ -364,13 +364,12 @@ AABBBB
 AABBBB
 AABBBB
 AABBBB
-CCCCCC
-CCCCCC
-CCCCCC
-LLLLLL
-LLLLLL
-LLLLLL
-LLLLLL
+CCLLLL
+CCLLLL
+CCLLLL
+CCLLLL
+CCLLLL
+CCLLLL
 "
 
 main_fig <- wrap_plots(
@@ -382,5 +381,5 @@ main_fig <- wrap_plots(
   design = design
 ) +
   plot_annotation(tag_levels = "A") &
-  theme(text = element_text(size = 10))
+  theme(text = element_text(size = 12))
 ggsave("plot/main_fig.png", dpi = 400, width = 8.3, height = 11.7, plot = main_fig)
