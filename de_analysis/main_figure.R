@@ -37,10 +37,12 @@ d4 <- all_pow_plots(author, TRUE, algos = method_patientwise, ct.indexes = c(1),
 # pB
 
 
-method_levels <- c("limma", "glmGamPoi (cell)", "Nebula", "Devil (mixed)", "Devil (base)", "Devil")
+method_levels <- c("limma", "glmGamPoi", "glmGamPoi (cell)", "Nebula", "NEBULA", "Devil (mixed)", "Devil (base)", "Devil", "devil")
 #dplyr::bind_rows(d1, d2, d3, d4) %>%
 pB <- dplyr::bind_rows(d1, d2) %>%
-  dplyr::mutate(name = if_else(grepl("Devil", name), "Devil", name)) %>%
+  dplyr::mutate(name = dplyr::if_else(grepl("Devil", name), "devil", name)) %>%
+  dplyr::mutate(name = dplyr::if_else(grepl("glmGamPoi", name), "glmGamPoi", name)) %>%
+  dplyr::mutate(name = dplyr::if_else(grepl("Nebula", name), "NEBULA", name)) %>%
   dplyr::group_by(xtype, ytype) %>%
   dplyr::mutate(name = factor(name, levels = method_levels)) %>%
   ggplot(mapping = aes(x=observed_p_value, col=name, fill=name, y=name)) +
@@ -56,10 +58,13 @@ pB <- dplyr::bind_rows(d1, d2) %>%
   scale_x_continuous(breaks = scales::pretty_breaks(n=3), limits = c(0,1)) +
   scale_y_discrete(expand = expand_scale(mult = c(0.01, .25))) +
   theme(legend.position = "none") +
-  theme(axis.title.y = element_blank(), axis.text.y=element_blank())
+  theme()
+pB
 
 pC <- dplyr::bind_rows(d3, d4) %>%
-  dplyr::mutate(name = if_else(grepl("Devil", name), "Devil", name)) %>%
+  dplyr::mutate(name = if_else(grepl("Devil", name), "devil", name)) %>%
+  dplyr::mutate(name = if_else(grepl("glmGamPoi", name), "glmGamPoi", name)) %>%
+  dplyr::mutate(name = if_else(grepl("Nebula", name), "NEBULA", name)) %>%
   dplyr::group_by(xtype, ytype) %>%
   dplyr::mutate(name = factor(name, levels = method_levels)) %>%
   ggplot(mapping = aes(x=observed_p_value, col=name, fill=name, y=name)) +
@@ -76,9 +81,9 @@ pC <- dplyr::bind_rows(d3, d4) %>%
   #scale_x_continuous(breaks = scales::pretty_breaks(n=3), limits = c(0,1)) +
   scale_y_discrete(expand = expand_scale(mult = c(0.01, .25))) +
   theme(legend.position = "none") +
-  theme(axis.title.y = element_blank(), axis.text.y=element_blank())
-
-
+  theme()
+pB
+pC
 # p1 <- all_null_plots(author, FALSE, algos =method_cellwise, ct.indexes = c(1), pde.values = c(.05), n_samples_vec = c(20))[[1]] +
 #   ggtitle("Cell-wise") + labs(x = "Uniform quantile")
 # p2 <- all_null_plots(author, TRUE, algos = method_patientwise, ct.indexes = c(1), pde.values = c(.05), n_samples_vec = c(20))[[1]] +
@@ -226,8 +231,11 @@ a <- AUTHOR
 
 pfalse <- res %>%
   na.omit() %>%
-  dplyr::filter(author == a) %>%
   dplyr::filter(is.pb == FALSE, name %in% method_cellwise) %>%
+  dplyr::mutate(name = if_else(grepl("Devil", name), "devil", name)) %>%
+  dplyr::mutate(name = if_else(grepl("glmGamPoi", name), "glmGamPoi", name)) %>%
+  dplyr::mutate(name = if_else(grepl("Nebula", name), "NEBULA", name)) %>%
+  dplyr::filter(author == a) %>%
   dplyr::mutate(Dataset = paste0("Dataset : ", author), Npatients = paste0(patients, " patients"), Ngenes = paste0(ngenes, " genes")) %>%
   dplyr::mutate(Npatients = factor(Npatients, levels = c("4 patients", "20 patients"))) %>%
   dplyr::mutate(Ngenes = factor(Ngenes, levels = c("5 genes", "25 genes", "50 genes"))) %>%
@@ -250,17 +258,21 @@ pfalse <- res %>%
   scale_color_manual(values = method_colors) +
   #scale_fill_manual(values = c("sienna3", "plum4")) +
   #ggtitle(paste0("Cell-wise")) +
-  labs(x = "N genes", y = "MCC", col="Algorithm", linetype = "N patients", shape = "N patients") +
+  labs(x = "N genes", y = "MCC", col="", linetype = "N patients", shape = "N patients") +
   #facet_wrap(~patients, ncol = 2) +
   #ggh4x::facet_nested(~Npatients, scales = "free_y") +
   ggh4x::facet_nested(~Npatients, scales = "free_y") +
   theme_bw() +
-  theme(text = element_text(size = 12), legend.position = "none")
+  theme(text = element_text(size = 12), legend.position = "top")
+pfalse
 
 ptrue <- res %>%
   na.omit() %>%
-  dplyr::filter(author == a) %>%
   dplyr::filter(is.pb == TRUE, name %in% method_patientwise) %>%
+  dplyr::mutate(name = if_else(grepl("Devil", name), "devil", name)) %>%
+  dplyr::mutate(name = if_else(grepl("glmGamPoi", name), "glmGamPoi", name)) %>%
+  dplyr::mutate(name = if_else(grepl("Nebula", name), "NEBULA", name)) %>%
+  dplyr::filter(author == a) %>%
   dplyr::mutate(Dataset = paste0("Dataset : ", author), Npatients = paste0(patients, " patients"), Ngenes = paste0(ngenes, " genes")) %>%
   dplyr::mutate(Npatients = factor(Npatients, levels = c("4 patients", "20 patients"))) %>%
   dplyr::mutate(Ngenes = factor(Ngenes, levels = c("5 genes", "25 genes", "50 genes"))) %>%
@@ -281,11 +293,11 @@ ptrue <- res %>%
   scale_color_manual(values = method_colors) +
   #scale_fill_manual(values = c("sienna3", "plum4")) +
   #ggtitle(paste0("Patient-wise")) +
-  labs(x = "N genes", y = "MCC", col="Algorithm", linetype = "N patients", shape = "N patients") +
+  labs(x = "N genes", y = "MCC", col="", linetype = "N patients", shape = "N patients") +
   #facet_wrap(~patients, ncol = 2) +
   ggh4x::facet_nested(~Npatients, scales = "free_y") +
   theme_bw() +
-  theme(text = element_text(size = 12), legend.position = "none")
+  theme(text = element_text(size = 12), legend.position = "top")
 
 ptrue
 pfalse
@@ -321,12 +333,15 @@ ks_pvals <- lapply(method_cellwise[method_cellwise!="Devil (base)"], function(m)
 }) %>% do.call("bind_rows", .)
 
 ks_false <- r_ks_tot %>%
+  dplyr::mutate(name = if_else(grepl("Devil", name), "devil", name)) %>%
+  dplyr::mutate(name = if_else(grepl("glmGamPoi", name), "glmGamPoi", name)) %>%
+  dplyr::mutate(name = if_else(grepl("Nebula", name), "NEBULA", name)) %>%
   dplyr::mutate(name = factor(name, levels = method_levels)) %>%
   ggplot(mapping = aes(x=MCCs, y=ECDFs, col=name)) +
   geom_line(linewidth = .8, position = position_dodge(width = .02)) +
   scale_color_manual(values = sort(method_colors)) +
   #ggtitle(paste0("Cell-wise")) +
-  labs(x = "MCC", y = "Probability", col="Algorithm") +
+  labs(x = "MCC", y = "Probability", col="") +
   theme_bw() +
   theme(text = element_text(size = 12))
 ks_false
@@ -339,8 +354,9 @@ ks_false <- ks_false +
   annotate(geom='label', x=Lx, y=Ly, label=paste0('p ', ks_pvals$pval[1]), color=method_colors[ks_pvals$m[1]]) +
   annotate(geom='label', x=Lx, y=Ly - dx, label=paste0('p ', ks_pvals$pval[2]), color=method_colors[ks_pvals$m[2]]) +
   annotate(geom='label', x=Lx, y=Ly - 2*dx, label=paste0('p ', ks_pvals$pval[3]), color=method_colors[ks_pvals$m[3]]) +
-  theme(legend.position = "none")
+  theme(legend.position = "left")
 
+ks_false
 # kolmogorov smirnof plots - TRUE ####
 r_ks <- res %>%
   na.omit() %>%
@@ -371,12 +387,15 @@ ks_pvals <- lapply(method_patientwise[method_patientwise!="Devil (mixed)"], func
 }) %>% do.call("bind_rows", .)
 
 ks_true <- r_ks_tot %>%
+  dplyr::mutate(name = if_else(grepl("Devil", name), "devil", name)) %>%
+  dplyr::mutate(name = if_else(grepl("glmGamPoi", name), "glmGamPoi", name)) %>%
+  dplyr::mutate(name = if_else(grepl("Nebula", name), "NEBULA", name)) %>%
   dplyr::mutate(name = factor(name, levels = method_levels)) %>%
   ggplot(mapping = aes(x=MCCs, y=ECDFs, col=name)) +
   geom_line(linewidth = .8, position = position_dodge(width = .02)) +
   scale_color_manual(values = method_colors) +
   #ggtitle(paste0("Patient-wise")) +
-  labs(x = "MCC", y = "Probability", col="Algorithm") +
+  labs(x = "MCC", y = "Probability", col="") +
   theme_bw() +
   theme(text = element_text(size = 12))
 
@@ -388,7 +407,7 @@ ks_true <- ks_true +
   annotate(geom='label', x=Lx, y=Ly, label=paste0('p ', ks_pvals$pval[1]), color=method_colors[ks_pvals$m[1]]) +
   annotate(geom='label', x=Lx, y=Ly - dx, label=paste0('p ', ks_pvals$pval[2]), color=method_colors[ks_pvals$m[2]]) +
   annotate(geom='label', x=Lx, y=Ly - 2*dx, label=paste0('p ', ks_pvals$pval[3]), color=method_colors[ks_pvals$m[3]]) +
-  theme(legend.position = "none")
+  theme(legend.position = "left")
 
 
 ks_true
@@ -410,21 +429,27 @@ timing_res <- readRDS(paste0("nullpower/timing_results/", a,".rds"))
 
 timing_plot <- timing_res %>%
   dplyr::filter(algo %in% c("Devil (base)", "glmGamPoi (cell)", "Nebula")) %>%
+  dplyr::rename(name = algo) %>%
+  dplyr::mutate(name = if_else(grepl("Devil", name), "devil", name)) %>%
+  dplyr::mutate(name = if_else(grepl("glmGamPoi", name), "glmGamPoi", name)) %>%
+  dplyr::mutate(name = if_else(grepl("Nebula", name), "NEBULA", name)) %>%
+  dplyr::rename(algo = name) %>%
   dplyr::group_by(author, is.pb, n.sample, n.gene, int.ct, iter) %>%
-  dplyr::mutate(time_fold = timings/timings[algo == "Devil (base)"]) %>%
+  dplyr::mutate(time_fold = timings/timings[algo == "devil"]) %>%
   dplyr::mutate(cell_order = ifelse(n.cells < 1000, "< 1k", if_else(n.cells > 20000, "> 20k", "1k-20k"))) %>%
   dplyr::mutate(cell_order = factor(cell_order, levels = c("< 1k", "1k-20k", "> 20k"))) %>%
-  dplyr::filter(algo %in% c("glmGamPoi (cell)", "Nebula")) %>%
+  dplyr::filter(algo %in% c("glmGamPoi", "NEBULA")) %>%
   #ggplot(mapping = aes(x=cell_order, y=timings, col=algo)) +
   ggplot(mapping = aes(x=cell_order, y=time_fold, col=algo)) +
   geom_boxplot() +
   scale_color_manual(values = method_colors) +
-  labs(x = "N cells", y="Time fold", col = "Algorithm") +
+  labs(x = "N cells", y="Time fold", col = "") +
   theme_bw() +
   theme(text = element_text(size = 12)) +
-  theme(legend.position = "none") +
+  theme(legend.position = "left") +
   ggtitle("") +
-  geom_hline(yintercept = 1, color = "darkslategray", linetype = 'dashed')
+  geom_hline(yintercept = 1, color = "darkslategray", linetype = 'dashed') +
+  coord_flip()
 timing_plot
 
 #ggsave(filename = "main_fig/timing.svg", dpi=300, width = 80, height = 100, plot = last_plot(), units = 'mm')
@@ -444,37 +469,35 @@ layout <- "
 AABB
 AABB
 AABB
-CCDD
-CCDD
-CCFF
-EEFF
+AACC
+AACC
+AACC
+DDFF
+DDFF
+DDFF
+DDFF
+DDGG
+DDGG
 EEGG
 EEGG
+EEHH
+EEHH
+EEHH
+EEHH
 "
-
-row <- (ggplot() | wrap_plots(B = free(pB), C = free(pC), ncol = 1))
-
-#row <- wrap_plots(A = ggplot(), B = free(pB)) & theme(legend.position = "none")
-col1 <- wrap_plots(C = free(pfalse), E = free(ptrue), ncol = 1, nrow = 2) & theme(legend.position = "none")
-col2 <- wrap_plots(D = free(ks_false), F=free(ks_true), G=free(timing_plot+coord_flip()), ncol = 1) & theme(legend.position = "none")
-
-final_plot <- (row / (col1 | col2)) +
-  plot_layout(heights = c(1.3,2)) +
-  plot_annotation(tag_levels = "A") &
-  theme(legend.position = "none", text = element_text(size = 12))
 
 final_plot <- patchwork::wrap_plots(
   A = ggplot(),
   B = free(pB),
-  C = free(pfalse),
-  D = free(ks_false),
+  C = free(pC),
+  D = free(pfalse),
   E = free(ptrue),
-  F=free(ks_true),
-  G=free(timing_plot + coord_flip()),
+  F = free(ks_false),
+  G=free(ks_true),
+  H=free(timing_plot),
   design = layout) +
-  plot_annotation(tag_levels = "A") +
-  plot_layout(guides = "collect") &
-  theme(legend.position = "none", text = element_text(size = 12))
+  plot_annotation(tag_levels = "A") &
+  theme(text = element_text(size = 12))
 final_plot
 ggsave(filename = "main_fig/main_v0.pdf", plot = final_plot, dpi = 400, width = 11.7, height = 11.7, units = "in")
-ggsave(filename = "~/Dropbox/2023. DEVIL/figures/main2_v0.svg", plot = final_plot, dpi = 300, width = 11.7, height = 11.7, units = "in")
+ggsave(filename = "~/Dropbox/2023. DEVIL/figures/main2_v0.svg", plot = final_plot, dpi = 400, width = 11.7, height = 11.7, units = "in")

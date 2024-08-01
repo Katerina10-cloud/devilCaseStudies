@@ -1,14 +1,17 @@
 
 method_colors = c(
-  "glmGamPoi (Pb)" = "#A22E29",
-  "edgeR" = "#7D629E",
+  #"glmGamPoi (Pb)" = "#A22E29",
+  #"edgeR" = "#7D629E",
   "limma" = "#B96461",
+  "limma (Pb)" = "#B96461",
   "glmGamPoi (cell)" = "#EAB578",
-  "Nebula" =  "#E4A6A7",
+  "glmGamPoi" = "#EAB578",
+  "Nebula" =  'steelblue', #"#B0C4DE",
+  "NEBULA" =  'steelblue', #"#B0C4DE",
   "Devil (base)" = "#099668",
   "Devil (mixed)" = "#099668",
   "Devil" = "#099668",
-  "limma (Pb)" = "#B96461"
+  "devil" = "#099668"
 )
 
 

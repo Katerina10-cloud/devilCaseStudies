@@ -143,7 +143,7 @@ perform_analysis <- function(seurat_obj, method = "devil") {
     }
 
     idxs <- c(idx_cluster, idx_others)
-    
+
     design_matrix <- model.matrix(~group, dplyr::tibble(group = seurat_obj$seurat_clusters == c))
     dm <- design_matrix[idxs,]
     expressed_genes <- rowSums(counts[,idx_cluster]) > 0
@@ -420,6 +420,7 @@ my_large_palette <- c(my_large_palette, my_large_palette, my_large_palette)
 
 method_colors = c(
   "glmGamPoi" = "#EAB578",
-  "nebula" =  "#E4A6A7",
+  "nebula" =  "steelblue",
+  "NEBULA" =  "steelblue",
   "devil" = "#099668"
 )

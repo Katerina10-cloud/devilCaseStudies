@@ -158,7 +158,7 @@ dev.off()
 
 method_colors = c(
   "glmGamPoi" = "#EAB578",
-  "NEBULA" =  "#E4A6A7",
+  "NEBULA" =  "steelblue",
   "devil" = "#099668"
 )
 
