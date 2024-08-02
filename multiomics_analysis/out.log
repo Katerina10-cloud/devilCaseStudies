@@ -56,7 +56,6 @@ Loading required package: nebula
      TRUE      TRUE      TRUE      TRUE      TRUE      TRUE      TRUE      TRUE 
    nebula 
      TRUE 
-Compute size factors
 Initialize beta estimate
 Fit beta coefficients
 Fit overdispersion
