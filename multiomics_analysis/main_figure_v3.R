@@ -86,10 +86,14 @@ rna_glm <- readRDS(rna_glm) %>% dplyr::rename(geneID=name)
 rna_nebula <- "results/MuscleRNA/nebula_rna.RDS"
 rna_nebula <- readRDS(rna_nebula) %>% dplyr::rename(geneID=name) %>% dplyr::mutate(lfc = lfc / log(2))
 
+rna_glm <- rna_glm[ rna_glm$geneID %in% rna_devil$geneID,]
+rna_nebula <- rna_nebula[ rna_nebula$geneID %in% rna_devil$geneID,]
+rna_devil <- rna_devil[ rna_devil$geneID %in% rna_glm$geneID,]
+
 # Volcano plots ####
 lfc_cut <- 0.5
 lfc_cut_atac <- 0.5
-pval_cut <- .01
+pval_cut <- .05
 de_gene_colors <- c("Not significant" = "gainsboro", "Down-regulated" = "steelblue", "Up-regulated"="indianred")
 
 devil_d <- rna_devil %>%
@@ -119,7 +123,8 @@ atac_d <- atac_scaDA %>%
 
 #Remove outliers
 row.remove.neb <- c("C21orf91", "AL137246.2")
-row.remove.devil <- c("CASP4", "KCTD1")
+#row.remove.devil <- c("CASP4", "KCTD1")
+row.remove.devil <- c("SAA1", "CHI3L1")
 devil_d <- devil_d[!(devil_d$geneID %in% row.remove.devil), ]
 nebula_d <- nebula_d[!(nebula_d$geneID %in% row.remove.neb), ]
 
