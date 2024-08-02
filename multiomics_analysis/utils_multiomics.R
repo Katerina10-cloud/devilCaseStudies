@@ -105,8 +105,8 @@ prepare_rna_input <- function(input_data,metadata_atac) {
   mitocondrial_genes <- grepl("^MT-", rownames(counts))
   mitocondiral_prop <- colSums(counts[mitocondrial_genes, ]) / colSums(counts)
   mit_prop_filter <- mitocondiral_prop > .1
-  cell_outliers_filter <- mad5_filter | feat100_filter | feat_mad_filter |  mit_prop_filter
-  
+  cell_outliers_filter <- mad5_filter | feat100_filter | feat_mad_filter #|  mit_prop_filter
+
   counts <- counts[, !cell_outliers_filter]
   metadata <- metadata[!cell_outliers_filter, ]
   
@@ -125,7 +125,7 @@ perform_analysis_atac <- function(input_data, method = "devil") {
     metadata <- input_data$metadata
     peak_counts <- as.matrix(input_data$counts)
     design_matrix <- model.matrix(~age_cluster, metadata)
-    fit <- devil::fit_devil(peak_counts, design_matrix, verbose = T, size_factors = T)
+    fit <- devil::fit_devil(peak_counts, design_matrix, verbose = F, size_factors = T)
     clusters <- as.numeric(as.factor(metadata$patient))
     res <- devil::test_de(fit, contrast = c(0,1), clusters = clusters, max_lfc = Inf)
     
@@ -133,7 +133,7 @@ perform_analysis_atac <- function(input_data, method = "devil") {
     metadata <- input_data$metadata
     peak_counts <- as.matrix(input_data$counts)
     design_matrix <- model.matrix(~age_cluster, metadata)
-    fit <- glmGamPoi::glm_gp(peak_counts, design_matrix, size_factors = T, verbose = T)
+    fit <- glmGamPoi::glm_gp(peak_counts, design_matrix, size_factors = F, verbose = T)
     res <- glmGamPoi::test_de(fit, contrast = c(0,1))
     res <- res %>% select(name, pval, adj_pval, lfc)
     

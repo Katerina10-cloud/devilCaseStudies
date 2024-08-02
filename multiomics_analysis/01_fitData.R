@@ -2,15 +2,17 @@ rm(list=ls())
 pkgs <- c("ggplot2", "dplyr","tidyr","tibble","reshape2", "Seurat", "glmGamPoi", "devil", "nebula")
 sapply(pkgs, require, character.only = TRUE)
 
-setwd("/orfeo/LTS/CDSLab/LT_storage/kdavydzenka/sc_devil/")
-source("devilCaseStudies/multiomics_analysis/utils_multiomics.R")
+#setwd("/orfeo/LTS/CDSLab/LT_storage/kdavydzenka/sc_devil/")
+source("utils_multiomics.R")
 
 set.seed(12345)
 
 ## Input data
 dataset_name <- "MuscleRNA"
 data_path <- "data/multiomics/rna/seurat_counts_adj.RDS"
+data_path <- "/orfeo/LTS/CDSLab/LT_storage/kdavydzenka/sc_devil/data/multiomics/rna/seurat_counts_adj.RDS"
 
+metadata_atac <- readRDS("/orfeo/LTS/CDSLab/LT_storage/kdavydzenka/sc_devil/data/multiomics/rna/metadata_atac.RDS")
 
 #data_path <- "data/atac_age.RDS"
 #dataset_name <- "MuscleATAC"
@@ -20,7 +22,7 @@ if (!(file.exists(paste0("results/", dataset_name)))) {
 }
 
 input_data <- read_data(dataset_name, data_path)
-input_data <- prepare_rna_input(input_data)
+input_data <- prepare_rna_input(input_data, metadata_atac)
 #input_data <- prepare_atac_input(input_data)
 
 # RNA analysis #
