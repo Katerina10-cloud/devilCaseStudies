@@ -28,7 +28,7 @@ input_data <- prepare_rna_input(input_data, metadata_atac)
 # RNA analysis #
 #time <- dplyr::tibble()
 m <- 'devil'
-for (m in c("devil", "glmGamPoi", "nebula")) {
+for (m in c("devil", "nebula", 'glmGamPoi')) {
  # s <- Sys.time()
   de_res <- perform_analysis_rna(input_data, method = m)
   #e <- Sys.time()

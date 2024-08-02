@@ -56,13 +56,22 @@ Loading required package: nebula
      TRUE      TRUE      TRUE      TRUE      TRUE      TRUE      TRUE      TRUE 
    nebula 
      TRUE 
+Compute size factors
 Initialize beta estimate
 Fit beta coefficients
 Fit overdispersion
+The specified ncore is larger than the number of available cores. The detected number of cores is used instead.
+Remove  0  genes having low expression.
+Analyzing  15364  genes with  15  subjects and  96258  cells.
+Loading required package: foreach
+Loading required package: future
+Loading required package: rngtools
 Error: [matrixStats (>= 1.2.0)] useNames = NA is defunct. Instead, specify either useNames = TRUE or useNames = FALSE. See also ?matrixStats::matrixStats.options
 In addition: Warning messages:
 1: In asMethod(object) :
   sparse->dense coercion: allocating vector of size 11.0 GiB
 2: In asMethod(object) :
+  sparse->dense coercion: allocating vector of size 11.0 GiB
+3: In asMethod(object) :
   sparse->dense coercion: allocating vector of size 11.0 GiB
 Execution halted
