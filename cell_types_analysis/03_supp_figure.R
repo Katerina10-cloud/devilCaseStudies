@@ -12,8 +12,8 @@ dataset_name <- args[1]
 tissue <- args[2]
 #save_svg <- as.logical(args[3])
 
-#dataset_name <- "BaronPancreasData"
-#tissue <- "pancreas"
+#dataset_name <- "liver"
+#tissue <- "liver"
 #save_svg <- F
 
 # img_folder <- paste0("plot_figure/", dataset_name, "/")
@@ -163,7 +163,9 @@ rm(counts)
 lfc_cut <- 1
 comparison_tibble <- dplyr::tibble()
 m <- 'devil'
+scTypeMapper <- scTypeMapper %>% dplyr::mutate(to = dplyr::if_else(grepl("Dendritic", to), "Dendritic", to))
 for (m in c("devil", "nebula", "glmGamPoi")) {
+  print(m)
   de_res <- de_res_total <- readRDS(paste0('results/', dataset_name, '/', m, '.RDS')) %>% na.omit()
   if (m == "nebula") {
     de_res$lfc <- de_res$lfc / log(2)
@@ -197,7 +199,8 @@ for (m in c("devil", "nebula", "glmGamPoi")) {
             dplyr::left_join(percentage_tibble %>% dplyr::filter(cluster == c) %>% dplyr::select(!cluster), by='name') %>%
             dplyr::ungroup() %>%
             dplyr::select(name, pval, adj_pval, lfc, pct.1, pct.2, cluster) %>%
-            dplyr::rename(p_val_adj = adj_pval, gene=name, avg_log2FC=lfc)
+            dplyr::rename(p_val_adj = adj_pval, gene=name, avg_log2FC=lfc) %>%
+            dplyr::mutate(avg_log2FC = if_else(avg_log2FC >= 50, 50, avg_log2FC))
         }) %>% do.call('bind_rows', .)
 
         db <- scMayoMap::scMayoMapDatabase
@@ -209,7 +212,7 @@ for (m in c("devil", "nebula", "glmGamPoi")) {
           dplyr::mutate(score = as.numeric(score)) %>%
           dplyr::filter(score > 0)
         rez$pred <- lapply(rez$pred, function(ct) {
-          v <- scTypeMapper %>% dplyr::filter(from == ct) %>% dplyr::distinct() %>%pull(to)
+          v <- scTypeMapper %>% dplyr::filter(from == ct) %>% dplyr::distinct() %>% dplyr::pull(to) %>% unique()
           unique(v)
         }) %>% unlist()
 
