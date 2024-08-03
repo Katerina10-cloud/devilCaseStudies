@@ -85,7 +85,7 @@ prepare_atac_input <- function(input_data) {
 prepare_rna_input <- function(input_data,metadata_atac) {
   metadata <- input_data$metadata
   metadata <- metadata[ (metadata$tech %in% c("snRNA") & metadata$Annotation %in% c("Type I", "Type II")) , ]
-  metadata <- metadata[ metadata$sample %in% metadata_atac$patient,]
+  #metadata <- metadata[ metadata$sample %in% metadata_atac$patient,]
   metadata <- metadata %>%
     mutate(age_cluster = case_when(
       age_pop == "old_pop"  ~ '1',
@@ -162,7 +162,7 @@ perform_analysis_rna <- function(input_data, method = "devil") {
     metadata <- input_data$metadata
     counts <- as.matrix(input_data$counts)
     design_matrix <- model.matrix(~age_cluster, metadata)
-    fit <- devil::fit_devil(counts, design_matrix, verbose = T, size_factors = T)
+    fit <- devil::fit_devil(counts, design_matrix, verbose = T, size_factors = F)
     clusters <- as.numeric(as.factor(metadata$sample)) 
     res <- devil::test_de(fit, contrast = c(0,1), clusters = clusters, max_lfc = Inf)
     
@@ -181,7 +181,7 @@ perform_analysis_rna <- function(input_data, method = "devil") {
     metadata$patient <- as.numeric(as.factor(metadata$sample))
     sf <- devil:::calculate_sf(counts)
     #data_g = group_cell(count=counts,id=metadata$orig.ident,pred=design_matrix)
-    fit <- nebula::nebula(counts, id = metadata$patient, pred = design_matrix)
+    fit <- nebula::nebula(counts, id = metadata$patient, pred = design_matrix, offset = sf)
     res <- dplyr::tibble(
       name = fit$summary$gene,
       pval = fit$summary$p_age_cluster1,

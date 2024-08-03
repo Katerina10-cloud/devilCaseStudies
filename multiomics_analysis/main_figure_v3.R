@@ -10,8 +10,8 @@ sapply(pkgs, require, character.only = TRUE)
 #)
 
 cell_group_colors = c(
-  "old" = "royalblue4",
-  "young" = "darkorange1"
+  "old" = "#0072B2",
+  "young" = "pink"
 )
 
 # input UMAPs ####
@@ -36,32 +36,32 @@ d_rna <- metadata_rna %>%
 
 colnames(d_atac) <- colnames(d_rna)
 d_omics <- rbind(d_atac %>% dplyr::mutate(tech = "ATAC"), d_rna %>% dplyr::mutate(tech = "RNA"))
-umaps <- ggplot() +
-  geom_point(d_omics %>% dplyr::select(!cell_type), mapping = aes(x=umap_1, y=umap_2), size = .2, col="gainsboro", alpha = .3) +
-  geom_point(d_omics, mapping = aes(x=umap_1, y=umap_2, col=group), size = .2, alpha = 1) +
-  theme_bw() +
-  labs(x="UMAP 1", y="UMAP 2", col="Sample age") +
+#umaps <- ggplot() +
+  #geom_point(d_omics %>% dplyr::select(!cell_type), mapping = aes(x=umap_1, y=umap_2), size = .2, col="gainsboro", alpha = .3) +
+  #geom_point(d_omics, mapping = aes(x=umap_1, y=umap_2, col=group), size = .2, alpha = 1) +
+  #theme_bw() +
+  #labs(x="UMAP 1", y="UMAP 2", col="Sample age") +
   #facet_wrap(~tech) +
   #ggh4x::facet_nested(tech~cell_type) +
-  ggh4x::facet_nested_wrap(tech~cell_type, scales = 'free')+
-  guides(color = guide_legend(override.aes = list(size=2))) +
-  scale_color_manual(values = cell_group_colors) +
-  theme(legend.position = 'bottom')
-
-#umaps <- ggplot(d_omics, aes(x = umap_1, y = umap_2, color = group))+
-  #geom_point(size=0.2)+
-  #labs(x = "UMAP_1",
-       #y = "UMAP_2",
-       #color = "Sample age") +
-  #theme(plot.title=element_text(hjust=0.5, vjust=0.5))+
-  #theme_bw() +
-  #facet_wrap(~tech, nrow=2, scale = "free") +
+  #ggh4x::facet_nested_wrap(tech~cell_type, scales = 'free')+
   #guides(color = guide_legend(override.aes = list(size=2))) +
   #scale_color_manual(values = cell_group_colors) +
   #theme(legend.position = 'bottom')
 
-#umaps <- Seurat::LabelClusters(plot = umaps, id = 'cell_type', color="black", 
-                               #repel = F, position = "nearest", box = F)
+umaps <- ggplot(d_omics, aes(x = umap_1, y = umap_2, color = group))+
+  geom_point(size=0.2)+
+  labs(x = "UMAP_1",
+       y = "UMAP_2",
+       color = "Sample age") +
+  theme(plot.title=element_text(hjust=0.5, vjust=0.5))+
+  theme_bw() +
+  facet_wrap(~tech, nrow=2) +
+  guides(color = guide_legend(override.aes = list(size=2))) +
+  scale_color_manual(values = cell_group_colors) +
+  theme(legend.position = 'bottom')
+
+umaps <- Seurat::LabelClusters(plot = umaps, id = 'cell_type', color="black", 
+                               repel = T, position = "nearest", box = F)
 umaps
 
 ggsave("plot/umaps.pdf", plot = umaps, dpi = 300, width = 10, height = 5)
@@ -86,10 +86,14 @@ rna_glm <- readRDS(rna_glm) %>% dplyr::rename(geneID=name)
 rna_nebula <- "results/MuscleRNA/nebula_rna.RDS"
 rna_nebula <- readRDS(rna_nebula) %>% dplyr::rename(geneID=name) %>% dplyr::mutate(lfc = lfc / log(2))
 
+rna_glm <- rna_glm[ rna_glm$geneID %in% rna_devil$geneID,]
+rna_nebula <- rna_nebula[ rna_nebula$geneID %in% rna_devil$geneID,]
+rna_devil <- rna_devil[ rna_devil$geneID %in% rna_glm$geneID,]
+
 # Volcano plots ####
 lfc_cut <- 0.5
 lfc_cut_atac <- 0.5
-pval_cut <- .01
+pval_cut <- .05
 de_gene_colors <- c("Not significant" = "gainsboro", "Down-regulated" = "steelblue", "Up-regulated"="indianred")
 
 devil_d <- rna_devil %>%
@@ -119,7 +123,8 @@ atac_d <- atac_scaDA %>%
 
 #Remove outliers
 row.remove.neb <- c("C21orf91", "AL137246.2")
-row.remove.devil <- c("CASP4", "KCTD1")
+#row.remove.devil <- c("CASP4", "KCTD1")
+row.remove.devil <- c("SAA1", "CHI3L1")
 devil_d <- devil_d[!(devil_d$geneID %in% row.remove.devil), ]
 nebula_d <- nebula_d[!(nebula_d$geneID %in% row.remove.neb), ]
 
@@ -182,8 +187,8 @@ upset_plot %>% print()
 dev.off()
 
 method_colors = c(
-  "glmGamPoi" = "#EAB578",
-  "NEBULA" =  "steelblue2",
+  "glmGamPoi" = "#E69F00",
+  "NEBULA" =  "#CC79A7",
   "devil" = "#099668"
 )
 
@@ -224,7 +229,7 @@ corr_plot <- rbind(d_corr_devil, d_corr_glm, d_corr_nebula) %>%
   geom_vline(xintercept = c(0.0), col = "gray", linetype = 'dashed') +
   geom_hline(yintercept = c(0.0), col = "gray", linetype = 'dashed') +
   theme_bw() +
-  facet_wrap(. ~ method, nrow=3)
+  facet_wrap(. ~ method)
 corr_plot
 ggsave("plot/corr_plot.pdf", dpi = 300, width = 16, height = 8, plot = corr_plot)
 
@@ -354,8 +359,8 @@ pbar <- ggplot(res_gse, aes(x = log_padjust, y = Description, fill=method)) +
   labs(x = "-Log10(pvalue)", y = "GO Pathways", fill="") +
   theme_bw() +
   scale_fill_manual(values = method_colors) +
-  theme(text = element_text(size = 9)) +
-  theme(legend.position = 'bottom', legend.box = "horizontal")
+  theme(text = element_text(size = 10)) +
+  theme(legend.position = 'bottom')
 
 # Main figure ####
 design <- "
@@ -364,12 +369,13 @@ AABBBB
 AABBBB
 AABBBB
 AABBBB
-CCLLLL
-CCLLLL
-CCLLLL
-CCLLLL
-CCLLLL
-CCLLLL
+CCCCCC
+CCCCCC
+CCCCCC
+LLLLLL
+LLLLLL
+LLLLLL
+LLLLLL
 "
 
 main_fig <- wrap_plots(
@@ -381,5 +387,5 @@ main_fig <- wrap_plots(
   design = design
 ) +
   plot_annotation(tag_levels = "A") &
-  theme(text = element_text(size = 12))
+  theme(text = element_text(size = 10))
 ggsave("plot/main_fig.png", dpi = 400, width = 8.3, height = 11.7, plot = main_fig)

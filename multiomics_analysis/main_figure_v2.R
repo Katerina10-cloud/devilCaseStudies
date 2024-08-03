@@ -62,9 +62,12 @@ edgeR_res$log2fc = edgeR_res$lfc / log(2)
 
 atac_scaDA <- cbind(grange, edgeR_res)
 
+atac_scaDA$geneId %>% unique() %>% length()
 atac_scaDA$annotation %>% unique()
 atac_scaDA <- atac_scaDA %>%
-  dplyr::filter(annotation == "Promoter (<=1kb)")
+  dplyr::group_by(SYMBOL) %>%
+  dplyr::filter(abs(log2fc) == max(abs(log2fc)))
+  #dplyr::filter(annotation == "Promoter (<=1kb)")
   #dplyr::group_by(SYMBOL) %>%
   #dplyr::filter(abs(distanceToTSS) == min(abs(distanceToTSS)))
 # dplyr::mutate(log2fc = mean(log2fc), pval = mean(pval), FDR = mean(FDR)) %>%
@@ -88,8 +91,8 @@ rna_nebula <- "results/MuscleRNA/nebula_rna.RDS"
 rna_nebula <- readRDS(rna_nebula) %>% dplyr::rename(geneID=name) %>% dplyr::mutate(lfc = lfc / log(2))
 
 # volcano plots ####
-lfc_cut <- 0.5
-lfc_cut_atac <- 0.5
+lfc_cut <- 1
+lfc_cut_atac <- 1
 pval_cut <- .05
 de_gene_colors <- c("Not significant" = "gainsboro", "Down-regulated" = "steelblue", "Up-regulated"="indianred")
 
@@ -143,6 +146,59 @@ glm <- list(snATAC=atac_deg$geneID, snRNA=rna_deg_glm$geneID)
 nebula <- list(snATAC=atac_deg$geneID, snRNA=rna_deg_nebula$geneID)
 all_lists <- list(devil=devil, glmGamPoi=glm, NEBULA=nebula)
 all_genes <- unique(c(atac_deg$geneID, rna_deg_devil$geneID, rna_deg_glm$geneID, rna_deg_nebula$geneID))
+
+# Our plot ####
+library(biomaRt)
+coords <- CNAqc::chr_coordinates_GRCh38
+from = coords$from
+names(from) = coords$chr
+mart <- useEnsembl(biomart = "ensembl", dataset = "hsapiens_gene_ensembl")
+tool_deg <- rna_deg_devil
+
+DE_genes <- gene_positions <- getBM(
+  attributes = c("hgnc_symbol", "chromosome_name", "start_position", "end_position"),
+  filters = "hgnc_symbol",
+  values = tool_deg$geneID,
+  mart = mart
+) %>% dplyr::mutate(pos = (start_position + end_position) / 2) %>%
+  dplyr::filter(chromosome_name %in% c(1:22, 'X', 'Y'))
+
+DA_genes <- gene_positions <- getBM(
+  attributes = c("hgnc_symbol", "chromosome_name", "start_position", "end_position"),
+  filters = "hgnc_symbol",
+  values = atac_deg$geneID,
+  mart = mart
+) %>% dplyr::mutate(pos = (start_position + end_position) / 2) %>%
+  dplyr::filter(chromosome_name %in% c(1:22, 'X', 'Y'))
+
+genes_db <- rbind(DE_genes, DA_genes) %>%
+  distinct() %>%
+  dplyr::mutate(y1 = dplyr::if_else(hgnc_symbol %in% DE_genes$hgnc_symbol, "DE", "non DE")) %>%
+  dplyr::mutate(y2 = dplyr::if_else(hgnc_symbol %in% DA_genes$hgnc_symbol, "DA", "non DA")) %>%
+  dplyr::mutate(chr = paste0("chr", chromosome_name)) %>%
+  dplyr::group_by(chr) %>%
+  dplyr::mutate(x = start_position + from[chr])
+
+dd <- dplyr::bind_rows(
+  coords %>% dplyr::mutate(class = 'non DE'),
+  coords %>% dplyr::mutate(class = 'DA'),
+  coords %>% dplyr::mutate(class = 'DE'),
+  coords %>% dplyr::mutate(class = 'non DA')
+) %>% dplyr::mutate(class = factor(class, levels = c("non DE", "DA", "DE", "non DA")))
+
+ggplot() +
+  geom_segment(genes_db, mapping=aes(x=x, xend=x, y=y1, yend=y2, col=y1)) +
+  geom_vline(xintercept = coords$from, color = "darkslategray", linetype = "dashed") +
+  geom_vline(xintercept = coords$to, color = "darkslategray", linetype = "dashed") +
+  geom_line(dd, mapping = aes(x = from, y=class, col=class)) +
+  scale_x_continuous(breaks = coords$centromerStart, labels = str_replace_all(coords$chr, pattern = "chr", "")) +
+  theme_bw() +
+  theme(legend.position = 'none')
+
+genes_db %>%
+  group_by(y1, y2) %>%
+  dplyr::summarise(n = n())
+
 
 
 # UpSet and Venn plots ####
