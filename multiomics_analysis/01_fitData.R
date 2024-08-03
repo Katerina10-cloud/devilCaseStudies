@@ -10,7 +10,7 @@ set.seed(12345)
 ## Input data
 dataset_name <- "MuscleRNA"
 data_path <- "data/multiomics/rna/seurat_counts_adj.RDS"
-data_path <- "/orfeo/LTS/CDSLab/LT_storage/kdavydzenka/sc_devil/data/multiomics/rna/seurat_counts_adj.RDS"
+data_path <- "/orfeo/LTS/CDSLab/LT_storage/kdavydzenka/sc_devil/data/multiomics/rna/seurat_counts_rna.RDS"
 
 metadata_atac <- readRDS("/orfeo/LTS/CDSLab/LT_storage/kdavydzenka/sc_devil/data/multiomics/rna/metadata_atac.RDS")
 

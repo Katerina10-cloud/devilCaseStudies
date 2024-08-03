@@ -32,46 +32,20 @@ The following objects are masked from ‘package:base’:
     intersect, t
 
 Loading required package: glmGamPoi
-
-Attaching package: ‘glmGamPoi’
-
-The following object is masked from ‘package:dplyr’:
-
-    vars
-
-The following object is masked from ‘package:ggplot2’:
-
-    vars
-
-Loading required package: devil
-
-Attaching package: ‘devil’
-
-The following object is masked from ‘package:glmGamPoi’:
-
-    test_de
-
-Loading required package: nebula
-  ggplot2     dplyr     tidyr    tibble  reshape2    Seurat glmGamPoi     devil 
-     TRUE      TRUE      TRUE      TRUE      TRUE      TRUE      TRUE      TRUE 
-   nebula 
-     TRUE 
-Compute size factors
-Initialize beta estimate
-Fit beta coefficients
+slurmstepd: error: *** JOB 772222 ON thin006 CANCELLED AT 2024-08-02T16:30:42 ***
 Fit overdispersion
 The specified ncore is larger than the number of available cores. The detected number of cores is used instead.
 Remove  0  genes having low expression.
-Analyzing  15364  genes with  15  subjects and  96258  cells.
+Analyzing  16362  genes with  15  subjects and  96266  cells.
 Loading required package: foreach
 Loading required package: future
 Loading required package: rngtools
 Error: [matrixStats (>= 1.2.0)] useNames = NA is defunct. Instead, specify either useNames = TRUE or useNames = FALSE. See also ?matrixStats::matrixStats.options
 In addition: Warning messages:
 1: In asMethod(object) :
-  sparse->dense coercion: allocating vector of size 11.0 GiB
+  sparse->dense coercion: allocating vector of size 11.7 GiB
 2: In asMethod(object) :
-  sparse->dense coercion: allocating vector of size 11.0 GiB
+  sparse->dense coercion: allocating vector of size 11.7 GiB
 3: In asMethod(object) :
-  sparse->dense coercion: allocating vector of size 11.0 GiB
+  sparse->dense coercion: allocating vector of size 11.7 GiB
 Execution halted
