@@ -21,7 +21,6 @@ d_atac <- metadata_atac %>%
   dplyr::mutate(idx = row_number()) %>%
   dplyr::filter(UMAP_1 >= -1, UMAP_2 >= -6, UMAP_2 <= 7.5)
 
-
 d_rna <- metadata_rna %>%
   dplyr::filter(cell_type %in% c("Myonuclei TI", "Myonuclei TII")) %>%
   #dplyr::sample_n(5000) %>%
@@ -43,7 +42,6 @@ umaps <- ggplot() +
   guides(color = guide_legend(override.aes = list(size=2))) +
   scale_color_manual(values = cell_group_colors) +
   theme(legend.position = 'bottom')
-
 #umaps
 rm(d_atac, metadata_atac, d_omics, d_rna, metadata_rna)
 
@@ -84,10 +82,52 @@ rna_nebula <- "results/MuscleRNA/nebula_rna.RDS"
 rna_nebula <- readRDS(rna_nebula) %>% dplyr::rename(geneID=name) %>% dplyr::mutate(lfc = lfc / log(2))
 
 # volcano plots ####
+
 lfc_cut <- 1
 lfc_cut_atac <- 1
 pval_cut <- .05
+n_de_genes <- 1500
 de_gene_colors <- c("Not significant" = "gainsboro", "Down-regulated" = "steelblue", "Up-regulated"="indianred")
+
+devil_d <- rna_devil %>%
+  dplyr::mutate(isDE = adj_pval <= pval_cut) %>%
+  dplyr::arrange(-isDE, -abs(lfc)) %>%
+  dplyr::mutate(nrow = row_number()) %>%
+  dplyr::mutate(isDE = ifelse(!isDE, isDE, if_else(nrow<=n_de_genes, TRUE, FALSE))) %>%
+  dplyr::mutate(DEtype = if_else(!isDE, "Not significant", if_else(lfc > 0, "Up-regulated", "Down-regulated"))) %>%
+  dplyr::mutate(method = "devil")
+
+glm_d <- rna_glm %>%
+  dplyr::mutate(isDE = adj_pval <= pval_cut) %>%
+  dplyr::arrange(-isDE, -abs(lfc)) %>%
+  dplyr::mutate(nrow = row_number()) %>%
+  dplyr::mutate(isDE = ifelse(!isDE, isDE, if_else(nrow<=n_de_genes, TRUE, FALSE))) %>%
+  dplyr::mutate(DEtype = if_else(!isDE, "Not significant", if_else(lfc > 0, "Up-regulated", "Down-regulated"))) %>%
+  dplyr::mutate(method = "glmGamPoi")
+
+nebula_d <- rna_nebula %>%
+  dplyr::mutate(isDE = adj_pval <= pval_cut) %>%
+  dplyr::arrange(-isDE, -abs(lfc)) %>%
+  dplyr::mutate(nrow = row_number()) %>%
+  dplyr::mutate(isDE = ifelse(!isDE, isDE, if_else(nrow<=n_de_genes, TRUE, FALSE))) %>%
+  dplyr::mutate(DEtype = if_else(!isDE, "Not significant", if_else(lfc > 0, "Up-regulated", "Down-regulated"))) %>%
+  dplyr::mutate(method = "NEBULA")
+
+atac_d <- atac_scaDA %>%
+  dplyr::mutate(adj_pval = FDR, lfc = log2fc) %>%
+  dplyr::mutate(adj_pval = if_else(adj_pval == 0, min(atac_scaDA$FDR[atac_scaDA$FDR != 0]), adj_pval)) %>%
+  dplyr::mutate(isDE = adj_pval <= pval_cut) %>%
+  dplyr::arrange(-isDE, -abs(lfc)) %>%
+  dplyr::ungroup() %>%
+  dplyr::mutate(nrow = row_number()) %>%
+  dplyr::mutate(isDE = ifelse(!isDE, isDE, if_else(nrow<=n_de_genes, TRUE, FALSE))) %>%
+  dplyr::mutate(DEtype = if_else(!isDE, "Not significant", if_else(lfc > 0, "Up-regulated", "Down-regulated"))) %>%
+  dplyr::select(geneID, pval, adj_pval, lfc, isDE, DEtype, nrow) %>%
+  dplyr::mutate(method = "ATAC")
+
+nebula_d$isDE %>% sum()
+glm_d$isDE %>% sum()
+atac_d$isDE %>% sum()
 
 devil_d <- rna_devil %>%
   dplyr::mutate(isDE = (abs(lfc) >= lfc_cut) & (adj_pval <= pval_cut)) %>%
@@ -115,8 +155,7 @@ atac_d <- atac_scaDA %>%
   dplyr::mutate(method = "ATAC") %>%
   dplyr::select(!SYMBOL)
 
-
-volcanos <- rbind(devil_d, glm_d, nebula_d, atac_d[,2:ncol(atac_d)]) %>%
+volcanos <- rbind(devil_d, glm_d, nebula_d, atac_d) %>%
   ggplot(mapping = aes(x=lfc, y=-log10(adj_pval), col=DEtype)) +
   geom_point(size=.8) +
   theme_bw() +
@@ -131,6 +170,11 @@ volcanos
 rm(devil_d, glm_d, nebula_d, atac_d)
 
 # Filter differential expressed genes ####
+atac_deg <- atac_d %>% dplyr::filter(isDE)
+rna_deg_devil <- devil_d %>% dplyr::filter(isDE)
+rna_deg_glm <- glm_d %>% dplyr::filter(isDE)
+rna_deg_nebula <- nebula_d %>% dplyr::filter(isDE)
+
 atac_deg <- atac_scaDA %>% dplyr::filter(FDR < pval_cut, abs(log2fc) > lfc_cut_atac)
 rna_deg_devil <- rna_devil %>% dplyr::filter(adj_pval < pval_cut, abs(lfc) > lfc_cut)
 rna_deg_glm <- rna_glm %>% dplyr::filter(adj_pval < pval_cut, abs(lfc) > lfc_cut)
@@ -148,7 +192,7 @@ coords <- CNAqc::chr_coordinates_GRCh38
 from = coords$from
 names(from) = coords$chr
 mart <- useEnsembl(biomart = "ensembl", dataset = "hsapiens_gene_ensembl")
-tool_deg <- rna_deg_devil
+tool_deg <- rna_deg_nebula
 
 DE_genes <- gene_positions <- getBM(
   attributes = c("hgnc_symbol", "chromosome_name", "start_position", "end_position"),
@@ -186,7 +230,7 @@ ggplot() +
   geom_vline(xintercept = coords$from, color = "darkslategray", linetype = "dashed") +
   geom_vline(xintercept = coords$to, color = "darkslategray", linetype = "dashed") +
   geom_line(dd, mapping = aes(x = from, y=class, col=class)) +
-  scale_x_continuous(breaks = coords$centromerStart, labels = str_replace_all(coords$chr, pattern = "chr", "")) +
+  scale_x_continuous(breaks = coords$centromerStart, labels = stringr::str_replace_all(coords$chr, pattern = "chr", "")) +
   theme_bw() +
   theme(legend.position = 'none')
 
@@ -228,18 +272,25 @@ ggsave("plot/venns.pdf", plot = venns, dpi = 300, width = 10, height = 5)
 # Correlation plots ####
 d_corr_devil <- rna_deg_devil %>%
   dplyr::left_join(atac_deg, by="geneID") %>%
-  dplyr::filter(!is.na(log2fc)) %>% dplyr::mutate(method = 'devil')
+  #dplyr::filter(!is.na(log2fc)) %>%
+  dplyr::filter(!is.na(lfc.y)) %>%
+  dplyr::mutate(method = 'devil')
 
 d_corr_glm <- rna_deg_glm %>%
   dplyr::left_join(atac_deg, by="geneID") %>%
-  dplyr::filter(!is.na(log2fc)) %>% dplyr::mutate(method = 'glmGamPoi')
+  #dplyr::filter(!is.na(log2fc)) %>%
+  dplyr::filter(!is.na(lfc.y)) %>%
+  dplyr::mutate(method = 'glmGamPoi')
 
 d_corr_nebula <- rna_deg_nebula %>%
   dplyr::left_join(atac_deg, by="geneID") %>%
-  dplyr::filter(!is.na(log2fc)) %>% dplyr::mutate(method = 'NEBULA')
+  #dplyr::filter(!is.na(log2fc)) %>%
+  dplyr::filter(!is.na(lfc.y)) %>%
+  dplyr::mutate(method = 'NEBULA')
 
 corr_plot <- rbind(d_corr_devil, d_corr_glm, d_corr_nebula) %>%
-  ggplot2::ggplot(mapping = aes(x = lfc, y = log2fc)) +
+  ggplot2::ggplot(mapping = aes(x = lfc.x, y = lfc.y)) +
+  #ggplot2::ggplot(mapping = aes(x = lfc, y = log2fc)) +
   geom_point(shape = 21, fill = 'black', size = 1) +
   xlab("snRNA log2FC") +
   ylab ("snATAC log2FC") +

@@ -12,6 +12,7 @@ cell_group_colors = c(
 # input UMAPs ####
 load("results/metadata_rna_umap.Rdata")
 load("results/metadata_atac_umap.Rdata")
+use_n_genes <- TRUE
 
 d_atac <- metadata_atac %>%
   `rownames<-`(1:nrow(metadata_atac)) %>%
@@ -91,35 +92,77 @@ rna_nebula <- "results/MuscleRNA/nebula_rna.RDS"
 rna_nebula <- readRDS(rna_nebula) %>% dplyr::rename(geneID=name) %>% dplyr::mutate(lfc = lfc / log(2))
 
 # volcano plots ####
-lfc_cut <- 1
-lfc_cut_atac <- 1
-pval_cut <- .05
 de_gene_colors <- c("Not significant" = "gainsboro", "Down-regulated" = "steelblue", "Up-regulated"="indianred")
+pval_cut <- .05
+if (use_n_genes) {
+  n_de_genes <- 1000
 
-devil_d <- rna_devil %>%
-  dplyr::mutate(isDE = (abs(lfc) >= lfc_cut) & (adj_pval <= pval_cut)) %>%
-  dplyr::mutate(DEtype = if_else(!isDE, "Not significant", if_else(lfc > 0, "Up-regulated", "Down-regulated"))) %>%
-  dplyr::mutate(method = "devil")
+  devil_d <- rna_devil %>%
+    dplyr::mutate(isDE = adj_pval <= pval_cut) %>%
+    dplyr::arrange(-isDE, -abs(lfc)) %>%
+    dplyr::mutate(nrow = row_number()) %>%
+    dplyr::mutate(isDE = ifelse(!isDE, isDE, if_else(nrow<=n_de_genes, TRUE, FALSE))) %>%
+    dplyr::mutate(DEtype = if_else(!isDE, "Not significant", if_else(lfc > 0, "Up-regulated", "Down-regulated"))) %>%
+    dplyr::mutate(method = "devil")
 
-glm_d <- rna_glm %>%
-  dplyr::mutate(adj_pval = if_else(adj_pval == 0, min(adj_pval[adj_pval!=0]), adj_pval)) %>%
-  dplyr::mutate(isDE = (abs(lfc) >= lfc_cut) & (adj_pval <= pval_cut)) %>%
-  dplyr::mutate(DEtype = if_else(!isDE, "Not significant", if_else(lfc > 0, "Up-regulated", "Down-regulated"))) %>%
-  dplyr::mutate(method = "glmGamPoi")
+  glm_d <- rna_glm %>%
+    dplyr::mutate(isDE = adj_pval <= pval_cut) %>%
+    dplyr::arrange(-isDE, -abs(lfc)) %>%
+    dplyr::mutate(nrow = row_number()) %>%
+    dplyr::mutate(isDE = ifelse(!isDE, isDE, if_else(nrow<=n_de_genes, TRUE, FALSE))) %>%
+    dplyr::mutate(DEtype = if_else(!isDE, "Not significant", if_else(lfc > 0, "Up-regulated", "Down-regulated"))) %>%
+    dplyr::mutate(method = "glmGamPoi")
 
-nebula_d <- rna_nebula %>%
-  dplyr::mutate(adj_pval = if_else(adj_pval == 0, min(adj_pval[adj_pval!=0]), adj_pval)) %>%
-  dplyr::mutate(isDE = (abs(lfc) >= lfc_cut) & (adj_pval <= pval_cut)) %>%
-  dplyr::mutate(DEtype = if_else(!isDE, "Not significant", if_else(lfc > 0, "Up-regulated", "Down-regulated"))) %>%
-  dplyr::mutate(method = "NEBULA")
+  nebula_d <- rna_nebula %>%
+    dplyr::mutate(isDE = adj_pval <= pval_cut) %>%
+    dplyr::arrange(-isDE, -abs(lfc)) %>%
+    dplyr::mutate(nrow = row_number()) %>%
+    dplyr::mutate(isDE = ifelse(!isDE, isDE, if_else(nrow<=n_de_genes, TRUE, FALSE))) %>%
+    dplyr::mutate(DEtype = if_else(!isDE, "Not significant", if_else(lfc > 0, "Up-regulated", "Down-regulated"))) %>%
+    dplyr::mutate(method = "NEBULA")
 
-atac_d <- atac_scaDA %>%
-  dplyr::mutate(adj_pval = FDR, lfc = log2fc) %>%
-  dplyr::mutate(adj_pval = if_else(adj_pval == 0, min(atac_scaDA$FDR[atac_scaDA$FDR != 0]), adj_pval)) %>%
-  dplyr::mutate(isDE = (abs(lfc) >= lfc_cut_atac) & (adj_pval <= pval_cut)) %>%
-  dplyr::mutate(DEtype = if_else(!isDE, "Not significant", if_else(lfc > 0, "Up-regulated", "Down-regulated"))) %>%
-  dplyr::select(geneID, pval, adj_pval, lfc, isDE, DEtype) %>%
-  dplyr::mutate(method = "ATAC")
+  atac_d <- atac_scaDA %>%
+    dplyr::mutate(adj_pval = FDR, lfc = log2fc) %>%
+    dplyr::mutate(adj_pval = if_else(adj_pval == 0, min(atac_scaDA$FDR[atac_scaDA$FDR != 0]), adj_pval)) %>%
+    dplyr::mutate(isDE = adj_pval <= pval_cut) %>%
+    dplyr::arrange(-isDE, -abs(lfc)) %>%
+    dplyr::ungroup() %>%
+    dplyr::mutate(nrow = row_number()) %>%
+    dplyr::mutate(isDE = ifelse(!isDE, isDE, if_else(nrow<=n_de_genes, TRUE, FALSE))) %>%
+    dplyr::mutate(DEtype = if_else(!isDE, "Not significant", if_else(lfc > 0, "Up-regulated", "Down-regulated"))) %>%
+    dplyr::select(geneID, pval, adj_pval, lfc, isDE, DEtype, nrow) %>%
+    dplyr::mutate(method = "ATAC")
+} else {
+  lfc_cut <- 1
+  lfc_cut_atac <- 1
+
+  devil_d <- rna_devil %>%
+    dplyr::mutate(isDE = (abs(lfc) >= lfc_cut) & (adj_pval <= pval_cut)) %>%
+    dplyr::mutate(DEtype = if_else(!isDE, "Not significant", if_else(lfc > 0, "Up-regulated", "Down-regulated"))) %>%
+    dplyr::mutate(method = "devil")
+
+  glm_d <- rna_glm %>%
+    dplyr::mutate(adj_pval = if_else(adj_pval == 0, min(adj_pval[adj_pval!=0]), adj_pval)) %>%
+    dplyr::mutate(isDE = (abs(lfc) >= lfc_cut) & (adj_pval <= pval_cut)) %>%
+    dplyr::mutate(DEtype = if_else(!isDE, "Not significant", if_else(lfc > 0, "Up-regulated", "Down-regulated"))) %>%
+    dplyr::mutate(method = "glmGamPoi")
+
+  nebula_d <- rna_nebula %>%
+    dplyr::mutate(adj_pval = if_else(adj_pval == 0, min(adj_pval[adj_pval!=0]), adj_pval)) %>%
+    dplyr::mutate(isDE = (abs(lfc) >= lfc_cut) & (adj_pval <= pval_cut)) %>%
+    dplyr::mutate(DEtype = if_else(!isDE, "Not significant", if_else(lfc > 0, "Up-regulated", "Down-regulated"))) %>%
+    dplyr::mutate(method = "NEBULA")
+
+  atac_d <- atac_scaDA %>%
+    dplyr::mutate(adj_pval = FDR, lfc = log2fc) %>%
+    dplyr::mutate(adj_pval = if_else(adj_pval == 0, min(atac_scaDA$FDR[atac_scaDA$FDR != 0]), adj_pval)) %>%
+    dplyr::mutate(isDE = (abs(lfc) >= lfc_cut_atac) & (adj_pval <= pval_cut)) %>%
+    dplyr::mutate(DEtype = if_else(!isDE, "Not significant", if_else(lfc > 0, "Up-regulated", "Down-regulated"))) %>%
+    dplyr::ungroup() %>%
+    dplyr::select(geneID, pval, adj_pval, lfc, isDE, DEtype) %>%
+    dplyr::mutate(method = "ATAC")
+}
+
 
 volcanos <- rbind(devil_d, glm_d, nebula_d, atac_d) %>%
   ggplot(mapping = aes(x=lfc, y=-log10(adj_pval), col=DEtype)) +
@@ -128,18 +171,25 @@ volcanos <- rbind(devil_d, glm_d, nebula_d, atac_d) %>%
   scale_color_manual(values = de_gene_colors) +
   facet_wrap(~method, scales = "free") +
   ggplot2::labs(x = expression(Log[2] ~ FC), y = expression(-log[10] ~ Pvalue), col="") +
-  ggplot2::geom_vline(xintercept = c(-lfc_cut, lfc_cut), linetype = 'dashed') +
   ggplot2::geom_hline(yintercept = -log10(pval_cut), linetype = "dashed") +
   ggplot2::theme(legend.position = 'bottom')
+if (!use_n_genes) {volcanos <- volcanos + ggplot2::geom_vline(xintercept = c(-lfc_cut, lfc_cut), linetype = 'dashed')}
 volcanos
 
-rm(devil_d, glm_d, nebula_d, atac_d)
+#rm(devil_d, glm_d, nebula_d, atac_d)
 
 # Filter differential expressed genes ####
-atac_deg <- atac_scaDA %>% dplyr::filter(FDR < pval_cut, abs(log2fc) > lfc_cut_atac)
-rna_deg_devil <- rna_devil %>% dplyr::filter(adj_pval < pval_cut, abs(lfc) > lfc_cut)
-rna_deg_glm <- rna_glm %>% dplyr::filter(adj_pval < pval_cut, abs(lfc) > lfc_cut)
-rna_deg_nebula <- rna_nebula %>% dplyr::filter(adj_pval < pval_cut, abs(lfc) > lfc_cut)
+if (use_n_genes) {
+  atac_deg <- atac_d %>% dplyr::filter(isDE)
+  rna_deg_devil <- devil_d %>% dplyr::filter(isDE)
+  rna_deg_glm <- glm_d %>% dplyr::filter(isDE)
+  rna_deg_nebula <- nebula_d %>% dplyr::filter(isDE)
+} else {
+  atac_deg <- atac_scaDA %>% dplyr::filter(FDR < pval_cut, abs(log2fc) > lfc_cut_atac)
+  rna_deg_devil <- rna_devil %>% dplyr::filter(adj_pval < pval_cut, abs(lfc) > lfc_cut)
+  rna_deg_glm <- rna_glm %>% dplyr::filter(adj_pval < pval_cut, abs(lfc) > lfc_cut)
+  rna_deg_nebula <- rna_nebula %>% dplyr::filter(adj_pval < pval_cut, abs(lfc) > lfc_cut)
+}
 
 devil <- list(snATAC=atac_deg$geneID, snRNA=rna_deg_devil$geneID)
 glm <- list(snATAC=atac_deg$geneID, snRNA=rna_deg_glm$geneID)
@@ -161,7 +211,9 @@ DE_genes <- gene_positions <- getBM(
   values = tool_deg$geneID,
   mart = mart
 ) %>% dplyr::mutate(pos = (start_position + end_position) / 2) %>%
-  dplyr::filter(chromosome_name %in% c(1:22, 'X', 'Y'))
+  dplyr::rename(geneID = hgnc_symbol) %>%
+  dplyr::filter(chromosome_name %in% c(1:22, 'X', 'Y')) %>%
+  dplyr::left_join(tool_deg, by = 'geneID')
 
 DA_genes <- gene_positions <- getBM(
   attributes = c("hgnc_symbol", "chromosome_name", "start_position", "end_position"),
@@ -169,12 +221,14 @@ DA_genes <- gene_positions <- getBM(
   values = atac_deg$geneID,
   mart = mart
 ) %>% dplyr::mutate(pos = (start_position + end_position) / 2) %>%
-  dplyr::filter(chromosome_name %in% c(1:22, 'X', 'Y'))
+  dplyr::rename(geneID = hgnc_symbol) %>%
+  dplyr::filter(chromosome_name %in% c(1:22, 'X', 'Y')) %>%
+  dplyr::left_join(atac_deg, by = 'geneID')
 
 genes_db <- rbind(DE_genes, DA_genes) %>%
   distinct() %>%
-  dplyr::mutate(y1 = dplyr::if_else(hgnc_symbol %in% DE_genes$hgnc_symbol, "DE", "non DE")) %>%
-  dplyr::mutate(y2 = dplyr::if_else(hgnc_symbol %in% DA_genes$hgnc_symbol, "DA", "non DA")) %>%
+  dplyr::mutate(y1 = dplyr::if_else(geneID %in% DE_genes$geneID, "DE", "non DE")) %>%
+  dplyr::mutate(y2 = dplyr::if_else(geneID %in% DA_genes$geneID, "DA", "non DA")) %>%
   dplyr::mutate(chr = paste0("chr", chromosome_name)) %>%
   dplyr::group_by(chr) %>%
   dplyr::mutate(x = start_position + from[chr])
@@ -191,9 +245,17 @@ ggplot() +
   geom_vline(xintercept = coords$from, color = "darkslategray", linetype = "dashed") +
   geom_vline(xintercept = coords$to, color = "darkslategray", linetype = "dashed") +
   geom_line(dd, mapping = aes(x = from, y=class, col=class)) +
-  scale_x_continuous(breaks = coords$centromerStart, labels = str_replace_all(coords$chr, pattern = "chr", "")) +
+  scale_x_continuous(breaks = coords$centromerStart, labels = stringr::str_replace_all(coords$chr, pattern = "chr", "")) +
   theme_bw() +
   theme(legend.position = 'none')
+
+ggplot() +
+  geom_point(genes_db, mapping=aes(x=x, y=-log10(adj_pval), col=paste(y1, y2, sep = " - "))) +
+  geom_vline(xintercept = coords$from, color = "darkslategray", linetype = "dashed") +
+  geom_vline(xintercept = coords$to, color = "darkslategray", linetype = "dashed") +
+  #geom_line(dd, mapping = aes(x = from, y=class, col=class)) +
+  scale_x_continuous(breaks = coords$centromerStart, labels = stringr::str_replace_all(coords$chr, pattern = "chr", "")) +
+  theme_bw()
 
 genes_db %>%
   group_by(y1, y2) %>%
@@ -396,6 +458,8 @@ LLLLLL
 LLLLLL
 LLLLLL
 "
+
+saveRDS()
 
 main_fig <- wrap_plots(
   A=umaps,
