@@ -51,7 +51,6 @@ rm(d_atac, metadata_atac, d_omics, d_rna, metadata_rna)
 # read results ####
 grange_path <- "results/grange_annot_edgeR.rds"
 grange <- readRDS(grange_path)
-
 edgeR_test <- readRDS("results/edgeR_test.rds")
 edgeR_res <- dplyr::tibble(pval=edgeR_test$table$PValue, lfc = edgeR_test$table$logFC)
 edgeR_res$FDR = edgeR_res$pval
@@ -164,7 +163,8 @@ if (use_n_genes) {
 }
 
 
-volcanos <- rbind(devil_d, glm_d, nebula_d, atac_d) %>%
+
+volcanos <- rbind(devil_d, glm_d, nebula_d, atac_d[,2:ncol(atac_d)]) %>%
   ggplot(mapping = aes(x=lfc, y=-log10(adj_pval), col=DEtype)) +
   geom_point(size=.8) +
   theme_bw() +
@@ -203,7 +203,7 @@ coords <- CNAqc::chr_coordinates_GRCh38
 from = coords$from
 names(from) = coords$chr
 mart <- useEnsembl(biomart = "ensembl", dataset = "hsapiens_gene_ensembl")
-tool_deg <- rna_deg_devil
+tool_deg <- rna_deg_nebula
 
 DE_genes <- gene_positions <- getBM(
   attributes = c("hgnc_symbol", "chromosome_name", "start_position", "end_position"),
