@@ -1,6 +1,6 @@
 ### Results downstream analysis ###
 
-setwd("/Users/katsiarynadavydzenka/Documents/PhD_AI/devilCaseStudies/multiomics_analysis/")
+setwd("/Users/katsiarynadavydzenka/Documents/PhD_AI/devilCaseStudies/")
 #setwd("~/GitHub/devilCaseStudies")
 #rm(list = ls())
 pkgs <- c("ggplot2", "dplyr","tidyr","tibble", "viridis", "smplot2", "Seurat", "VennDiagram", "gridExtra",
@@ -60,7 +60,7 @@ atac_nodup$log2fc_arr <- abs(atac_nodup$log2fc)
 atac_nodup <- atac_nodup[order(atac_nodup$log2fc_arr, decreasing = TRUE),] 
 atac_nodup <- atac_nodup[!duplicated(atac_nodup$geneID), ]
 
-saveRDS(atac_nodup, file = "results/atac_nodup_scaDA.RDS")
+saveRDS(atac_nodup, file = "multiomics_analysis/results/atac_nodup_scaDA.RDS")
 
 # Gene selection based on LFC & pvalue cutoff #
 quantile <- .5
@@ -115,9 +115,15 @@ pdf("multiomics_analysis/plot/upset.pdf", width = 10, height = 5)
 upset_plot %>% print()
 dev.off()
 
+#method_colors = c(
+  #"glmGamPoi" = "#EAB578",
+  #"NEBULA" =  "#E4A6A7",
+  #"devil" = "#099668"
+#)
+
 method_colors = c(
   "glmGamPoi" = "#EAB578",
-  "NEBULA" =  "#E4A6A7",
+  "NEBULA" =  "steelblue2",
   "devil" = "#099668"
 )
 

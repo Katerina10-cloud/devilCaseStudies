@@ -4,15 +4,11 @@ pkgs <- c("ggplot2", "dplyr","tidyr","tibble", "viridis", "smplot2", "Seurat", "
           "ggpubr", "ggrepel", "ggvenn", "ggpointdensity", "edgeR", "patchwork")
 sapply(pkgs, require, character.only = TRUE)
 
-#cell_group_colors = c(
-  #"old" = "darkorange",
-  #"young" = "steelblue"
-#)
-
 cell_group_colors = c(
-  "old" = "#0072B2",
+  "old" = "royalblue4",
   "young" = "pink"
 )
+
 
 # input UMAPs ####
 load("results/metadata_rna_umap.Rdata")
@@ -21,21 +17,30 @@ load("results/metadata_atac_umap.Rdata")
 d_atac <- metadata_atac %>%
   `rownames<-`(1:nrow(metadata_atac)) %>%
   dplyr::filter(cell_type %in% c("Myonuclei TI", "Myonuclei TII")) %>%
-  #dplyr::sample_n(5000) %>%
   dplyr::select(UMAP_1, UMAP_2, cell_type, group) %>%
   dplyr::mutate(idx = row_number()) %>%
   dplyr::filter(UMAP_1 >= -1, UMAP_2 >= -6, UMAP_2 <= 7.5)
 
 d_rna <- metadata_rna %>%
   dplyr::filter(cell_type %in% c("Myonuclei TI", "Myonuclei TII")) %>%
-  #dplyr::sample_n(5000) %>%
   dplyr::mutate(group = if_else(age_pop == "young_pop", "young", "old")) %>%
   dplyr::select(umap_1, umap_2, cell_type, group) %>%
   dplyr::mutate(idx = row_number()) %>%
   dplyr::filter(umap_1 >= -5, umap_2 >= 0, umap_2 <= 11, umap_1 <= 1)
 
+conditions <- c("Myonuclei TI", "Myonuclei TII")
+replacement_values <- c("Myonuclei TI/TII", "Myonuclei TI/TII")
+
+d_atac$cell_type <- as.character(d_atac$cell_type)
+d_atac$cell_type <- replace(d_atac$cell_type, d_atac$cell_type %in% conditions, replacement_values)
+
+d_rna$cell_type <- as.character(d_rna$cell_type)
+d_rna$cell_type <- replace(d_rna$cell_type, d_rna$cell_type %in% conditions, replacement_values)
+
 colnames(d_atac) <- colnames(d_rna)
 d_omics <- rbind(d_atac %>% dplyr::mutate(tech = "ATAC"), d_rna %>% dplyr::mutate(tech = "RNA"))
+d_omics$cell_type <- as.factor(d_omics$cell_type)
+
 #umaps <- ggplot() +
   #geom_point(d_omics %>% dplyr::select(!cell_type), mapping = aes(x=umap_1, y=umap_2), size = .2, col="gainsboro", alpha = .3) +
   #geom_point(d_omics, mapping = aes(x=umap_1, y=umap_2, col=group), size = .2, alpha = 1) +
@@ -55,13 +60,13 @@ umaps <- ggplot(d_omics, aes(x = umap_1, y = umap_2, color = group))+
        color = "Sample age") +
   theme(plot.title=element_text(hjust=0.5, vjust=0.5))+
   theme_bw() +
-  facet_wrap(~tech, nrow=2) +
+  facet_wrap(~tech, nrow=2, scale = "free") +
   guides(color = guide_legend(override.aes = list(size=2))) +
   scale_color_manual(values = cell_group_colors) +
   theme(legend.position = 'bottom')
 
 umaps <- Seurat::LabelClusters(plot = umaps, id = 'cell_type', color="black", 
-                               repel = T, position = "nearest", box = F)
+                               repel = T, position = "median", box = T)
 umaps
 
 ggsave("plot/umaps.pdf", plot = umaps, dpi = 300, width = 10, height = 5)
@@ -86,14 +91,14 @@ rna_glm <- readRDS(rna_glm) %>% dplyr::rename(geneID=name)
 rna_nebula <- "results/MuscleRNA/nebula_rna.RDS"
 rna_nebula <- readRDS(rna_nebula) %>% dplyr::rename(geneID=name) %>% dplyr::mutate(lfc = lfc / log(2))
 
-rna_glm <- rna_glm[ rna_glm$geneID %in% rna_devil$geneID,]
-rna_nebula <- rna_nebula[ rna_nebula$geneID %in% rna_devil$geneID,]
-rna_devil <- rna_devil[ rna_devil$geneID %in% rna_glm$geneID,]
+#rna_glm <- rna_glm[ rna_glm$geneID %in% rna_devil$geneID,]
+#rna_nebula <- rna_nebula[ rna_nebula$geneID %in% rna_devil$geneID,]
+#rna_devil <- rna_devil[ rna_devil$geneID %in% rna_glm$geneID,]
 
 # Volcano plots ####
 lfc_cut <- 0.5
 lfc_cut_atac <- 0.5
-pval_cut <- .05
+pval_cut <- .01
 de_gene_colors <- c("Not significant" = "gainsboro", "Down-regulated" = "steelblue", "Up-regulated"="indianred")
 
 devil_d <- rna_devil %>%
@@ -123,8 +128,8 @@ atac_d <- atac_scaDA %>%
 
 #Remove outliers
 row.remove.neb <- c("C21orf91", "AL137246.2")
-#row.remove.devil <- c("CASP4", "KCTD1")
-row.remove.devil <- c("SAA1", "CHI3L1")
+row.remove.devil <- c("CASP4", "KCTD1")
+#row.remove.devil <- c("SAA1", "CHI3L1")
 devil_d <- devil_d[!(devil_d$geneID %in% row.remove.devil), ]
 nebula_d <- nebula_d[!(nebula_d$geneID %in% row.remove.neb), ]
 
@@ -187,8 +192,8 @@ upset_plot %>% print()
 dev.off()
 
 method_colors = c(
-  "glmGamPoi" = "#E69F00",
-  "NEBULA" =  "#CC79A7",
+  "glmGamPoi" = "#EAB578",
+  "NEBULA" =  "steelblue2",
   "devil" = "#099668"
 )
 
@@ -205,17 +210,26 @@ venns <- patchwork::wrap_plots(venn_plots, ncol = 3)
 ggsave("plot/venns.pdf", plot = venns, dpi = 300, width = 10, height = 5)
 
 # Correlation plots ####
+atac_nodup <- readRDS("results/atac_nodup_scaDA.RDS")
+
+atac_deg <- atac_nodup %>%
+  #dplyr::filter(FDR < 0.05, abs(log2fc) > stats::quantile(abs(atac_nodup$log2fc), quantile))
+  dplyr::filter(FDR < pval_cut, abs(log2fc) > lfc_cut)
+
 d_corr_devil <- rna_deg_devil %>%
   dplyr::left_join(atac_deg, by="geneID") %>%
-  dplyr::filter(!is.na(log2fc)) %>% dplyr::mutate(method = 'devil')
+  dplyr::filter(!is.na(log2fc)) %>% dplyr::filter(abs(lfc) < 5) %>% 
+  dplyr::mutate(method = 'devil')
 
 d_corr_glm <- rna_deg_glm %>%
   dplyr::left_join(atac_deg, by="geneID") %>%
-  dplyr::filter(!is.na(log2fc)) %>% dplyr::mutate(method = 'glmGamPoi')
+  dplyr::filter(!is.na(log2fc)) %>% dplyr::filter(abs(lfc) < 5) %>% 
+  dplyr::mutate(method = 'glmGamPoi')
 
 d_corr_nebula <- rna_deg_nebula %>%
   dplyr::left_join(atac_deg, by="geneID") %>%
-  dplyr::filter(!is.na(log2fc)) %>% dplyr::mutate(method = 'NEBULA')
+  dplyr::filter(!is.na(log2fc)) %>% dplyr::filter(abs(lfc) < 5) %>% 
+  dplyr::mutate(method = 'NEBULA')
 
 corr_plot <- rbind(d_corr_devil, d_corr_glm, d_corr_nebula) %>%
   ggplot2::ggplot(mapping = aes(x = lfc, y = log2fc)) +
@@ -229,7 +243,7 @@ corr_plot <- rbind(d_corr_devil, d_corr_glm, d_corr_nebula) %>%
   geom_vline(xintercept = c(0.0), col = "gray", linetype = 'dashed') +
   geom_hline(yintercept = c(0.0), col = "gray", linetype = 'dashed') +
   theme_bw() +
-  facet_wrap(. ~ method)
+  facet_wrap(. ~ method, nrow=3)
 corr_plot
 ggsave("plot/corr_plot.pdf", dpi = 300, width = 16, height = 8, plot = corr_plot)
 
@@ -280,11 +294,6 @@ plots <- lapply(names(deg_list), function(n) {
                                      keys = my_symbols,
                                      columns = c("ENTREZID", "SYMBOL"),
                                      keytype = "SYMBOL")
-
-  # gene_list <- na.omit(gene_list)
-  # gene_list <- gene_list[!duplicated(gene_list$SYMBOL),]
-  # gene_list <- gene_list[!is.na(gene_list$SYMBOL),]
-  # gene_list <- gene_list[gene_list$SYMBOL %in% overlap_genes$geneID,]
   gene_list_rank <- as.vector(overlap_genes$lfc_snRNA)
   names(gene_list_rank) <- gene_list$SYMBOL
   gene_list_rank <- sort(gene_list_rank, decreasing = TRUE)
@@ -359,8 +368,10 @@ pbar <- ggplot(res_gse, aes(x = log_padjust, y = Description, fill=method)) +
   labs(x = "-Log10(pvalue)", y = "GO Pathways", fill="") +
   theme_bw() +
   scale_fill_manual(values = method_colors) +
-  theme(text = element_text(size = 10)) +
-  theme(legend.position = 'bottom')
+  theme(text = element_text(size = 9)) +
+  theme(legend.position = 'bottom', legend.box = "horizontal")
+
+ggsave("plot/pbar.pdf", dpi = 300, width = 16, height = 8, plot = corr_plot)
 
 # Main figure ####
 design <- "
@@ -369,13 +380,12 @@ AABBBB
 AABBBB
 AABBBB
 AABBBB
-CCCCCC
-CCCCCC
-CCCCCC
-LLLLLL
-LLLLLL
-LLLLLL
-LLLLLL
+CCLLLL
+CCLLLL
+CCLLLL
+CCLLLL
+CCLLLL
+CCLLLL
 "
 
 main_fig <- wrap_plots(
@@ -387,5 +397,5 @@ main_fig <- wrap_plots(
   design = design
 ) +
   plot_annotation(tag_levels = "A") &
-  theme(text = element_text(size = 10))
+  theme(text = element_text(size = 12))
 ggsave("plot/main_fig.png", dpi = 400, width = 8.3, height = 11.7, plot = main_fig)
