@@ -5,7 +5,7 @@ pkgs <- c("ggplot2", "dplyr","tidyr","tibble", "viridis", "smplot2", "Seurat", "
 sapply(pkgs, require, character.only = TRUE)
 
 cell_group_colors = c(
-  "old" = "#9999CC",
+  "old" = "skyblue3",
   "young" = "#FF9999"
 )
 
@@ -73,14 +73,29 @@ ggsave("plot/umaps.pdf", plot = umaps, dpi = 300, width = 3, height = 6)
 
 rm(d_atac, metadata_atac, d_omics, d_rna, metadata_rna)
 
-#### read results ####
-#grange_path <- "multiomics_analysis/results/grange_annot.RDS"
+#### Read results ####
 grange_path <- "results/grange_annot_scADA.RDS"
-grange <- readRDS(grange_path)
+#grange_path <- "multiomics_analysis/results/grange_annot.RDS"
 
-#atac_scaDA_path <- "results/MuscleATAC/scADA_res.RDS"
-atac_scaDA_path <- "results/atac_nodup_scaDA.RDS"
+grange <- readRDS(grange_path)
+atac_scaDA_path <- "results/MuscleATAC/scADA_res.RDS"
 atac_scaDA <- readRDS(atac_scaDA_path)
+atac_scaDA <- cbind(grange, atac_scaDA)
+atac_scaDA$adj_pval = p.adjust(atac_scaDA$pval, "BH")
+
+atac_scaDA$annotation %>% unique()
+atac_scaDA <- atac_scaDA %>%
+  dplyr::filter(annotation != 'Promoter (2-3kb)') %>%
+  #dplyr::filter(annotation == 'Promoter (<=1kb)') %>%
+  dplyr::group_by(SYMBOL) %>%
+  dplyr::filter(abs(log2fc) == max(abs(log2fc)))
+#dplyr::filter(abs(distanceToTSS) == min(abs(distanceToTSS)))
+# dplyr::mutate(log2fc = mean(log2fc), pval = mean(pval), FDR = mean(FDR)) %>%
+#dplyr::distinct(SYMBOL, log2fc, pval, FDR)
+# atac_scaDA <- atac_scaDA %>%
+#   dplyr::filter(distanceToTSS <= 100, distanceToTSS >= -1000)
+atac_scaDA$log2fc <- (-1 * atac_scaDA$log2fc)
+atac_scaDA$geneID = atac_scaDA$SYMBOL
 
 rna_devil <- "results/MuscleRNA/devil_rna.RDS"
 rna_devil <- readRDS(rna_devil) %>% dplyr::rename(geneID=name)
@@ -91,14 +106,11 @@ rna_glm <- readRDS(rna_glm) %>% dplyr::rename(geneID=name)
 rna_nebula <- "results/MuscleRNA/nebula_rna.RDS"
 rna_nebula <- readRDS(rna_nebula) %>% dplyr::rename(geneID=name) %>% dplyr::mutate(lfc = lfc / log(2))
 
-#rna_glm <- rna_glm[ rna_glm$geneID %in% rna_devil$geneID,]
-#rna_nebula <- rna_nebula[ rna_nebula$geneID %in% rna_devil$geneID,]
-#rna_devil <- rna_devil[ rna_devil$geneID %in% rna_glm$geneID,]
-
 # Volcano plots ####
-lfc_cut <- 0.5
-lfc_cut_atac <- 0.5
-pval_cut <- .01
+lfc_cut <- 1.0
+lfc_cut_atac <- .5
+pval_cut <- .05
+pval_cut_atac <- .05
 de_gene_colors <- c("Not significant" = "gainsboro", "Down-regulated" = "steelblue", "Up-regulated"="indianred")
 
 devil_d <- rna_devil %>%
@@ -121,8 +133,9 @@ nebula_d <- rna_nebula %>%
 atac_d <- atac_scaDA %>%
   dplyr::mutate(adj_pval = FDR, lfc = log2fc) %>%
   dplyr::mutate(adj_pval = if_else(adj_pval == 0, min(atac_scaDA$FDR[atac_scaDA$FDR != 0]), adj_pval)) %>%
-  dplyr::mutate(isDE = (abs(lfc) >= lfc_cut_atac) & (adj_pval <= pval_cut)) %>%
+  dplyr::mutate(isDE = (abs(lfc) >= lfc_cut_atac) & (adj_pval <= pval_cut_atac)) %>%
   dplyr::mutate(DEtype = if_else(!isDE, "Not significant", if_else(lfc > 0, "Up-regulated", "Down-regulated"))) %>%
+  dplyr::ungroup() %>% 
   dplyr::select(geneID, pval, adj_pval, lfc, isDE, DEtype) %>%
   dplyr::mutate(method = "ATAC")
 
@@ -131,7 +144,6 @@ row.remove.neb <- c("C21orf91", "AL137246.2")
 row.remove.devil <- c("CASP4", "KCTD1")
 devil_d <- devil_d[!(devil_d$geneID %in% row.remove.devil), ]
 nebula_d <- nebula_d[!(nebula_d$geneID %in% row.remove.neb), ]
-
 
 gene_sign <- c("FOSL2", "FOSB", "STAT3", "TNNT2", "ID1", "DCLK1", "SAA2-SAA4",
                "SLC2A4", "PPARA", "MYH1", "MYH2", "MYH4")
@@ -161,11 +173,11 @@ volcanos <- volcanos +
   )
 volcanos
 
-ggsave("plot/volcanos.pdf", plot = volcanos, dpi = 300, width = 10, height = 5)
+ggsave("plot/volcanos.pdf", plot = volcanos, dpi = 300, width = 8, height = 7)
 rm(devil_d, glm_d, nebula_d, atac_d)
 
 # Filter differential expressed genes ####
-atac_deg <- atac_scaDA %>% dplyr::filter(FDR < pval_cut, abs(log2fc) > lfc_cut_atac)
+atac_deg <- atac_scaDA %>% dplyr::filter(FDR < pval_cut_atac, abs(log2fc) > lfc_cut_atac)
 rna_deg_devil <- rna_devil %>% dplyr::filter(adj_pval < pval_cut, abs(lfc) > lfc_cut)
 rna_deg_glm <- rna_glm %>% dplyr::filter(adj_pval < pval_cut, abs(lfc) > lfc_cut)
 rna_deg_nebula <- rna_nebula %>% dplyr::filter(adj_pval < pval_cut, abs(lfc) > lfc_cut)
@@ -192,7 +204,7 @@ dev.off()
 
 method_colors = c(
   "glmGamPoi" = "#EAB578",
-  "NEBULA" =  "steelblue2",
+  "NEBULA" =  "steelblue",
   "devil" = "#099668"
 )
 
@@ -200,51 +212,49 @@ i <- 1
 
 venn_plots <- lapply(1:length(all_lists), function(i) {
   algo <- names(all_lists)[i]
-  ggvenn::ggvenn(all_lists[[i]], c("snATAC", "snRNA"), show_percentage = FALSE, set_name_size = 4, fill_color = unname(c("purple3", method_colors[algo])), fill_alpha = .75) #+
-    #ggplot2::labs(title=algo) 
-    #theme(plot.title=element_text(hjust=0.5, vjust=0.5))
+  ggvenn::ggvenn(all_lists[[i]], c("snATAC", "snRNA"), show_percentage = FALSE, set_name_size = 4, fill_color = unname(c("purple3", method_colors[algo])), fill_alpha = .75) +
+    ggplot2::labs(title=algo) +
+    theme(plot.title=element_text(hjust=0.5, vjust=0.5))
 })
+
+#venn_plots[[1]]
 
 venns <- patchwork::wrap_plots(venn_plots, ncol = 3)
 ggsave("plot/venns.pdf", plot = venns, dpi = 300, width = 10, height = 5)
 
 # Correlation plots ####
-atac_nodup <- readRDS("results/atac_nodup_scaDA.RDS")
-
-atac_deg <- atac_nodup %>%
-  #dplyr::filter(FDR < 0.05, abs(log2fc) > stats::quantile(abs(atac_nodup$log2fc), quantile))
-  dplyr::filter(FDR < pval_cut, abs(log2fc) > lfc_cut)
-
+# Correlation plots ####
 d_corr_devil <- rna_deg_devil %>%
   dplyr::left_join(atac_deg, by="geneID") %>%
-  dplyr::filter(!is.na(log2fc)) %>% dplyr::filter(abs(lfc) < 5) %>% 
+  dplyr::filter(!is.na(log2fc)) %>%
   dplyr::mutate(method = 'devil')
 
 d_corr_glm <- rna_deg_glm %>%
   dplyr::left_join(atac_deg, by="geneID") %>%
-  dplyr::filter(!is.na(log2fc)) %>% dplyr::filter(abs(lfc) < 5) %>% 
+  dplyr::filter(!is.na(log2fc)) %>%
   dplyr::mutate(method = 'glmGamPoi')
 
 d_corr_nebula <- rna_deg_nebula %>%
   dplyr::left_join(atac_deg, by="geneID") %>%
-  dplyr::filter(!is.na(log2fc)) %>% dplyr::filter(abs(lfc) < 5) %>% 
+  dplyr::filter(!is.na(log2fc)) %>%
   dplyr::mutate(method = 'NEBULA')
 
 corr_plot <- rbind(d_corr_devil, d_corr_glm, d_corr_nebula) %>%
   ggplot2::ggplot(mapping = aes(x = lfc, y = log2fc)) +
-  geom_point(shape = 21, fill = 'black', size = 0.4) +
+  geom_point(shape = 21, fill = 'black', size = 1) +
   xlab("snRNA log2FC") +
   ylab ("snATAC log2FC") +
   geom_smooth(method='lm',formula=y~x, color="red", fill="black", se=TRUE) +
-  smplot2::sm_statCorr(fit.params = list(color = "indianred"), separate_by = "\n") +
-  #smplot2::sm_statCorr(fit.params = list(color = "indianred"), corr_method = 'spearman', separate_by = "\n") +
+  smplot2::sm_statCorr(fit.params = list(color = "indianred"), separate_by = "\n", corr_method = 'spearman') +
   #smplot2::sm_statCorr(corr_method = "spearman", fit.params = list(color = method_colors["devil"])) +
   geom_vline(xintercept = c(0.0), col = "gray", linetype = 'dashed') +
   geom_hline(yintercept = c(0.0), col = "gray", linetype = 'dashed') +
   theme_bw() +
-  facet_wrap(. ~ method, nrow=3)
+  facet_wrap(. ~ method, scales = "free")
 corr_plot
-ggsave("plot/corr_plot.pdf", dpi = 300, width = 16, height = 8, plot = corr_plot)
+dev.off()
+
+ggsave("plot/corr_plot.pdf", dpi = 300, width = 14, height = 5, plot = corr_plot)
 
 corr_plot / venns
 
@@ -282,10 +292,16 @@ GO_pathways <- c("immune system process",
                  "actin cytoskeleton",
                  "actin filament-based process",
                  "regulation of angiogenesis",
+                 "molecular function inhibitor activity ",
                  "reactive oxygen species metabolic process",
-                 "positive regulation of programmed cell death",
                  "leukocyte activation",
-                 "negative regulation of cellular metabolic process")
+                 "negative regulation of cellular metabolic process",
+                 "negative regulation of programmed cell death",
+                 "enzyme inhibitor activity",
+                 "regulation of cytokine production",
+                 "negative regulation of cellular biosynthetic process",
+                 "defence responce")
+
 
 n <- names(deg_list)[1]
 res_gse_list <- list()
@@ -325,6 +341,7 @@ plots_data <- lapply(names(deg_list), function(n) {
 
 })
 
+
 res_gse_devil <- res_gse_list['devil']$devil %>% 
   dplyr::mutate(method = "devil") %>% 
   filter(Description %in% GO_pathways)
@@ -342,6 +359,7 @@ res_gse$method <- as.factor(res_gse$method)
 
 saveRDS(res_gse , file = "results/res_gse.RDS")
 
+
 # Barplot #
 #res_gse <- readRDS("results/res_gse.RDS")
 #res_gse$log_padjust <- -log10(res_gse$p.adjust)
@@ -351,11 +369,11 @@ pbar <- ggplot(res_gse, aes(x = log_padjust, y = Description, fill=method)) +
   labs(x = "-Log10(pvalue)", y = "GO Pathways", fill="") +
   theme_bw() +
   scale_fill_manual(values = method_colors) +
-  theme(text = element_text(size = 12)) +
+  theme(text = element_text(size = 8)) +
   theme(legend.position = 'bottom')
 pbar
 
-ggsave("plot/pbar.pdf", dpi = 300, width = 6, height = 5, plot = pbar)
+ggsave("plot/pbar.pdf", dpi = 300, width = 7, height = 5, plot = pbar)
 
 # Main figure ####
 design <- "
@@ -364,12 +382,11 @@ AABBBB
 AABBBB
 AABBBB
 AABBBB
-CCLLLL
-CCLLLL
-CCLLLL
-CCLLLL
-CCLLLL
-CCLLLL
+CCCCCC
+CCCCCC
+LLLLLL
+LLLLLL
+LLLLLL
 "
 
 main_fig <- wrap_plots(
@@ -381,5 +398,5 @@ main_fig <- wrap_plots(
   design = design
 ) +
   plot_annotation(tag_levels = "A") &
-  theme(text = element_text(size = 12))
+  theme(text = element_text(size = 10))
 ggsave("plot/main_fig.png", dpi = 400, width = 8.3, height = 11.7, plot = main_fig)

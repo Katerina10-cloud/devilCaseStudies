@@ -1,5 +1,4 @@
-setwd("/Users/katsiarynadavydzenka/Documents/PhD_AI/devilCaseStudies/multiomics_analysis/")
-#setwd("~/GitHub/devilCaseStudies/multiomics_analysis/")
+setwd("~/GitHub/devilCaseStudies/multiomics_analysis/")
 rm(list = ls())
 pkgs <- c("ggplot2", "dplyr","tidyr","tibble", "viridis", "smplot2", "Seurat", "VennDiagram", "gridExtra",
           "ggpubr", "ggrepel", "ggvenn", "ggpointdensity", "edgeR", "patchwork", "CNAqc")
@@ -85,7 +84,7 @@ rna_nebula <- "results/MuscleRNA/nebula_rna.RDS"
 rna_nebula <- readRDS(rna_nebula) %>% dplyr::rename(geneID=name) %>% dplyr::mutate(lfc = lfc / log(2))
 
 # volcano plots ####
-lfc_cut <- 1
+lfc_cut <- 1.0
 lfc_cut_atac <- .5
 pval_cut <- .05
 pval_cut_atac <- .05
@@ -145,7 +144,7 @@ volcanos <- volcanos +
   ggrepel::geom_label_repel(
     data =  data %>% filter(geneID %in% gene_sign),
     aes(label = geneID),
-    #color = "black",
+    color = "black",
     size = 1.2,
     box.padding = 0.1,
     point.padding = 0.1,
@@ -289,9 +288,9 @@ ggsave("plot/corr_plot.pdf", dpi = 300, width = 14, height = 5, plot = corr_plot
 
 corr_plot / venns
 
-saveRDS(d_corr_devil, file = "results/d_corr_devil.RDS")
-saveRDS(d_corr_glm, file = "results/d_corr_glm.RDS")
-saveRDS(d_corr_nebula, file = "results/d_corr_nebula.RDS")
+#saveRDS(d_corr_devil, file = "results/d_corr_devil.RDS")
+#saveRDS(d_corr_glm, file = "results/d_corr_glm.RDS")
+#saveRDS(d_corr_nebula, file = "results/d_corr_nebula.RDS")
 
 # Gene set Enrichement analysis ####
 pkgs <- c("ggplot2", "dplyr","tidyr","reactome.db", "fgsea", "org.Hs.eg.db", "data.table", "clusterProfiler", "enrichplot", "ggpubr")
@@ -345,6 +344,8 @@ plots <- lapply(names(deg_list), function(n) {
   
 })
 
+saveRDS(res_gse_list, file = "results/res_gse_list.RDS")
+
 #GO_pathways <- c(
 #"actin filament-based movement",
 #"actin-mediated cell contraction",
@@ -365,9 +366,9 @@ plots <- lapply(names(deg_list), function(n) {
 
 # Select enriched pathways #
 
-res_gse_list['devil']
-res_gse_list['glmGamPoi']
-res_gse_list['NEBULA']
+devil <- res_gse_list['devil'] %>% as.data.frame()
+glm <- res_gse_list['glmGamPoi'] %>% as.data.frame()
+nebula <- res_gse_list['NEBULA'] %>% as.data.frame()
 
 GO_pathways <- c("immune system process",
                  "response to oxygen-containing compound",
@@ -375,10 +376,15 @@ GO_pathways <- c("immune system process",
                  "actin cytoskeleton",
                  "actin filament-based process",
                  "regulation of angiogenesis",
+                 "molecular function inhibitor activity ",
                  "reactive oxygen species metabolic process",
-                 "positive regulation of programmed cell death",
                  "leukocyte activation",
-                 "negative regulation of cellular metabolic process")
+                 "negative regulation of cellular metabolic process",
+                 "negative regulation of programmed cell death",
+                 "enzyme inhibitor activity",
+                 "regulation of cytokine production",
+                 "negative regulation of cellular biosynthetic process",
+                 "defence responce")
 
 
 res_gse_devil <- res_gse_list['devil']$devil %>% 
