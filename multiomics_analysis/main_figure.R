@@ -1,7 +1,8 @@
-setwd("~/GitHub/devilCaseStudies/multiomics_analysis/")
+setwd("/Users/katsiarynadavydzenka/Documents/PhD_AI/devilCaseStudies/multiomics_analysis/")
+#setwd("~/GitHub/devilCaseStudies/multiomics_analysis/")
 rm(list = ls())
 pkgs <- c("ggplot2", "dplyr","tidyr","tibble", "viridis", "smplot2", "Seurat", "VennDiagram", "gridExtra",
-          "ggpubr", "ggrepel", "ggvenn", "ggpointdensity", "edgeR", "patchwork")
+          "ggpubr", "ggrepel", "ggvenn", "ggpointdensity", "edgeR", "patchwork", "CNAqc")
 sapply(pkgs, require, character.only = TRUE)
 
 cell_group_colors = c(
@@ -45,7 +46,8 @@ umaps <- ggplot() +
 #umaps
 rm(d_atac, metadata_atac, d_omics, d_rna, metadata_rna)
 
-# read results ####
+
+# Read results ####
 grange_path <- "results/grange_annot_scADA.RDS"
 #grange_path <- "multiomics_analysis/results/grange_annot.RDS"
 
@@ -115,17 +117,43 @@ atac_d <- atac_scaDA %>%
   dplyr::select(geneID, pval, adj_pval, lfc, isDE, DEtype) %>%
   dplyr::mutate(method = "ATAC")
 
-volcanos <- rbind(devil_d, glm_d, nebula_d, atac_d) %>%
+#Remove outliers
+row.remove.neb <- c("C21orf91", "AL137246.2")
+row.remove.devil <- c("CASP4", "KCTD1")
+devil_d <- devil_d[!(devil_d$geneID %in% row.remove.devil), ]
+nebula_d <- nebula_d[!(nebula_d$geneID %in% row.remove.neb), ]
+
+gene_sign <- c("FOSL2", "FOSB", "STAT3", "TNNT2", "ID1", "DCLK1", "SAA2-SAA4",
+               "SLC2A4", "PPARA", "MYH1", "MYH2", "MYH4")
+
+
+data <- rbind(devil_d, glm_d, nebula_d, atac_d)
+volcanos <-  data %>% 
   ggplot(mapping = aes(x=lfc, y=-log10(adj_pval), col=DEtype)) +
   geom_point(size=.8) +
   theme_bw() +
   scale_color_manual(values = de_gene_colors) +
-  facet_wrap(~method, scales = "free") +
+  facet_wrap(~method, scales = "free", nrow=2) +
   ggplot2::labs(x = expression(Log[2] ~ FC), y = expression(-log[10] ~ Pvalue), col="") +
   ggplot2::geom_vline(xintercept = c(-lfc_cut, lfc_cut), linetype = 'dashed') +
   ggplot2::geom_hline(yintercept = -log10(pval_cut), linetype = "dashed") +
   ggplot2::theme(legend.position = 'bottom')
 volcanos
+
+# Add labels for significant genes #
+volcanos <- volcanos +
+  ggrepel::geom_label_repel(
+    data =  data %>% filter(geneID %in% gene_sign),
+    aes(label = geneID),
+    #color = "black",
+    size = 1.2,
+    box.padding = 0.1,
+    point.padding = 0.1,
+    segment.color = 'black'
+  )
+volcanos
+
+ggsave("plot/volcanos.pdf", plot = volcanos, dpi = 300, width = 6, height = 6)
 
 rm(devil_d, glm_d, nebula_d, atac_d)
 
@@ -216,10 +244,12 @@ i <- 1
 
 venn_plots <- lapply(1:length(all_lists), function(i) {
   algo <- names(all_lists)[i]
-  ggvenn::ggvenn(all_lists[[i]], c("snATAC", "snRNA"), show_percentage = FALSE, set_name_size = 4, fill_color = unname(c("purple3", method_colors[algo])), fill_alpha = .75) #+
-    #ggplot2::labs(title=algo) +
-    #theme(plot.title=element_text(hjust=0.5, vjust=0.5))
+  ggvenn::ggvenn(all_lists[[i]], c("snATAC", "snRNA"), show_percentage = FALSE, set_name_size = 4, fill_color = unname(c("purple3", method_colors[algo])), fill_alpha = .75) +
+    ggplot2::labs(title=algo) +
+    theme(plot.title=element_text(hjust=0.5, vjust=0.5))
 })
+
+#venn_plots[[1]]
 
 venns <- patchwork::wrap_plots(venn_plots, ncol = 3)
 ggsave("plot/venns.pdf", plot = venns, dpi = 300, width = 10, height = 5)
@@ -255,9 +285,13 @@ corr_plot <- rbind(d_corr_devil, d_corr_glm, d_corr_nebula) %>%
 corr_plot
 dev.off()
 
-ggsave("plot/corr_plot.pdf", dpi = 300, width = 16, height = 8, plot = corr_plot)
+ggsave("plot/corr_plot.pdf", dpi = 300, width = 14, height = 5, plot = corr_plot)
 
 corr_plot / venns
+
+saveRDS(d_corr_devil, file = "results/d_corr_devil.RDS")
+saveRDS(d_corr_glm, file = "results/d_corr_glm.RDS")
+saveRDS(d_corr_nebula, file = "results/d_corr_nebula.RDS")
 
 # Gene set Enrichement analysis ####
 pkgs <- c("ggplot2", "dplyr","tidyr","reactome.db", "fgsea", "org.Hs.eg.db", "data.table", "clusterProfiler", "enrichplot", "ggpubr")
@@ -266,25 +300,6 @@ deg_list <- list(
   "devil" = d_corr_devil,
   "NEBULA" = d_corr_nebula,
   "glmGamPoi" = d_corr_glm
-)
-
-GO_pathways <- c(
-  "actin filament-based movement",
-  "actin-mediated cell contraction",
-  "muscle contraction",
-  "muscle system process",
-  "structural constituent of muscle",
-  "response to oxygen-containing compound",
-  "response to fibroblast growth factor",
-  "ERK1 and ERK2 cascade",
-  "response to hydrogen peroxide",
-  "striated muscle cell proliferation",
-  "cell-cell adhesion",
-  "inflammatory response",
-  "negative regulation of apoptotic process",
-  "negative regulation of cellular metabolic process",
-  "cellular oxidant detoxification"
-
 )
 
 n <- names(deg_list)[1]
@@ -321,58 +336,77 @@ plots <- lapply(names(deg_list), function(n) {
     pvalueCutoff = .05
   )
 
-  #dotplot(gseGO, split=".sign")
-
-  # Select enriched pathways #
   res_gse <- gseGO@result
   res_gse <- res_gse %>%
-    #filter(Description %in% GO_pathways) %>%
     mutate(gene_clusters = case_when(NES > 0  ~ 'up-regulated', NES < 0  ~ 'down-regulated'))
 
   res_gse$log_padjust <- -log10(res_gse$p.adjust)
   res_gse_list[[n]] <<- res_gse
-
-  ### Visualize enrichment results ###
-  plot1 <- ggpubr::ggdotchart(res_gse, x = "Description", y = "log_padjust",
-                              color = "gene_clusters",
-                              palette = c("blue", "#FC4E07"),
-                              sorting = "descending",
-                              rotate = TRUE,
-                              group = "gene_clusters",
-                              dot.size = "setSize",
-                              add = "segments",
-                              title = paste0(n),
-                              xlab = "GO Pathways",
-                              ylab = "-log10(padjust)",
-                              ggtheme = theme_pubr()
-  )
-  plot1 + theme(legend.position = "right")+
-    theme_bw()+
-    font("xy.text", size = 12, color = "black", face = "plain")+
-    font("title", size = 10, color = "black", face = "bold")+
-    font("xlab", size = 10)+
-    font("ylab", size = 10)
+  
 })
 
-plots[[1]]
-plots[[2]]
-plots[[3]]
+#GO_pathways <- c(
+#"actin filament-based movement",
+#"actin-mediated cell contraction",
+#"muscle contraction",
+#"muscle system process",
+#"structural constituent of muscle",
+#"response to oxygen-containing compound",
+#"response to fibroblast growth factor",
+#"ERK1 and ERK2 cascade",
+#"response to hydrogen peroxide",
+#"striated muscle cell proliferation",
+#"cell-cell adhesion",
+#"inflammatory response",
+#"negative regulation of apoptotic process",
+#"negative regulation of cellular metabolic process",
+#"cellular oxidant detoxification"
+#)
 
-# deg_genes <- rna_deg_devil
-# overlap_genes <- deg_genes %>%
-#   dplyr::left_join(atac_deg, by="geneID") %>%
-#   dplyr::filter(!is.na(log2fc))
+# Select enriched pathways #
 
-#res_gse_devil <- res_gse
-#res_gse_glm <- res_gse
-res_gse_devil <- res_gse_list['devil']$devil %>% dplyr::mutate(method = "devil")
-res_gse_glm <- res_gse_list['glmGamPoi']$glmGamPoi %>% dplyr::mutate(method = "glmGamPoi")
-res_gse_nebula <- res_gse_list['NEBULA']$NEBULA %>% dplyr::mutate(method = "NEBULA")
+res_gse_list['devil']
+res_gse_list['glmGamPoi']
+res_gse_list['NEBULA']
+
+GO_pathways <- c("immune system process",
+                 "response to oxygen-containing compound",
+                 "actin filament binding",
+                 "actin cytoskeleton",
+                 "actin filament-based process",
+                 "regulation of angiogenesis",
+                 "reactive oxygen species metabolic process",
+                 "positive regulation of programmed cell death",
+                 "leukocyte activation",
+                 "negative regulation of cellular metabolic process")
+
+
+res_gse_devil <- res_gse_list['devil']$devil %>% 
+  dplyr::mutate(method = "devil") %>% 
+  filter(Description %in% GO_pathways)
+
+res_gse_glm <- res_gse_list['glmGamPoi']$glmGamPoi %>% 
+  dplyr::mutate(method = "glmGamPoi") %>% 
+  filter(Description %in% GO_pathways)
+
+res_gse_nebula <- res_gse_list['NEBULA']$NEBULA %>% 
+  dplyr::mutate(method = "NEBULA") %>% 
+  filter(Description %in% GO_pathways)
+
 res_gse <- rbind(res_gse_devil, res_gse_glm, res_gse_nebula)
 res_gse$method <- as.factor(res_gse$method)
 
 # Barplot #
-pbar <- ggplot(res_gse %>% filter(Description %in% GO_pathways), aes(x = log_padjust, y = Description, fill=method)) +
+#pbar <- ggplot(res_gse %>% filter(Description %in% GO_pathways), aes(x = log_padjust, y = Description, fill=method)) +
+  #geom_bar(stat="identity", position="dodge", width = 0.50) +
+  #labs(x = "-Log10(pvalue)", y = "GO Pathways", fill="") +
+  #theme_bw() +
+  #scale_fill_manual(values = method_colors) +
+  #theme(text = element_text(size = 12)) +
+  #theme(legend.position = 'bottom')
+#pbar
+
+pbar <- ggplot(res_gse, aes(x = log_padjust, y = Description, fill=method)) +
   geom_bar(stat="identity", position="dodge", width = 0.50) +
   labs(x = "-Log10(pvalue)", y = "GO Pathways", fill="") +
   theme_bw() +
@@ -380,15 +414,6 @@ pbar <- ggplot(res_gse %>% filter(Description %in% GO_pathways), aes(x = log_pad
   theme(text = element_text(size = 12)) +
   theme(legend.position = 'bottom')
 pbar
-
-# pbar <- ggplot(res_gse, aes(x = log_padjust, y = Description, fill=method)) +
-#   geom_bar(stat="identity", position="dodge", width = 0.50) +
-#   labs(x = "-Log10(pvalue)", y = "GO Pathways", fill="") +
-#   theme_bw() +
-#   scale_fill_manual(values = method_colors) +
-#   theme(text = element_text(size = 12)) +
-#   theme(legend.position = 'bottom')
-# pbar
 
 # Main figure ####
 design <- "

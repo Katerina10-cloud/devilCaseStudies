@@ -229,38 +229,46 @@ gene_list <- AnnotationDbi::select(hs,
                                    keys = my_symbols,
                                    columns = c("ENTREZID", "SYMBOL"),
                                    keytype = "SYMBOL")
-
-gene_list <- na.omit(gene_list)
-gene_list <- gene_list[!duplicated(gene_list$SYMBOL),]
 gene_list <- gene_list[gene_list$SYMBOL %in% overlap_genes$geneID,]
-gene_list_rank <- as.vector(overlap_genes$lfc_snRNA)
+gene_list_rank <- as.vector(overlap_genes$lfc)
 names(gene_list_rank) <- gene_list$ENTREZID
 gene_list_rank <- sort(gene_list_rank, decreasing = TRUE)
 
 gseGO <- clusterProfiler::gseGO(gene_list_rank, ont = "All", OrgDb = org.Hs.eg.db,
-                                    keyType = "ENTREZID", minGSSize = 10, maxGSSize = 350, pvalueCutoff = 0.05)
+                                    keyType = "ENTREZID", minGSSize = 10, maxGSSize = 500, pvalueCutoff = 0.05)
 
 # Select enriched pathways #
 res_gse_devil <- gseGO@result %>% mutate(method = "devil")
 res_gse_glm <- gseGO@result %>% mutate(method = "glmGamPoi")
 res_gse_nebula <- gseGO@result %>% mutate(method = "NEBULA")
 
-GO_pathways <- c("regulation of cytokine production",
-              "inflammatory response",
-              "negative regulation of apoptotic process",
-              "immune system process",
-              "regulation of actin filament organization",
-              "actin polymerization or depolymerization",
-              "regulation of supramolecular fiber organization",
-              "reactive oxygen species metabolic process",
-              "response to calcium ion",
-              "regulation of interleukin-6 production",
-              "phagocytosis",
-              "response to calcium ion",
-              "response to oxidative stress",
-              "negative regulation of cellular process",
-              "regulation of angiogenesis",
-              "response to oxygen-containing compound")
+#GO_pathways <- c("regulation of cytokine production",
+              #"inflammatory response",
+              #"negative regulation of apoptotic process",
+              #"immune system process",
+              #"regulation of actin filament organization",
+              #"actin polymerization or depolymerization",
+              #"regulation of supramolecular fiber organization",
+              #"reactive oxygen species metabolic process",
+              #"response to calcium ion",
+              #"regulation of interleukin-6 production",
+              #"phagocytosis",
+              #"response to calcium ion",
+              #"response to oxidative stress",
+              #"negative regulation of cellular process",
+              #"regulation of angiogenesis",
+              #"response to oxygen-containing compound")
+
+GO_pathways <- c("immune system process",
+                 "response to oxygen-containing compound",
+                 "actin filament binding",
+                 "actin cytoskeleton",
+                 "actin filament-based process",
+                 "regulation of angiogenesis",
+                 "reactive oxygen species metabolic process",
+                 "positive regulation of programmed cell death",
+                 "leukocyte activation",
+                 "negative regulation of cellular metabolic process")
 
 res_gse_devil <- res_gse_devil %>%
   filter(Description %in% GO_pathways) %>%
@@ -283,7 +291,7 @@ res_gse_glm <- res_gse_glm %>%
 res_gse <- rbind(res_gse_devil, res_gse_glm, res_gse_nebula)
 res_gse$method <- as.factor(res_gse$method)
 
-saveRDS(res_gse, file = "results/res_gse.RDS")
+saveRDS(res_gse, file = "results/res_gse_v2.RDS")
 
 
 ### Visualize enrichment results ###

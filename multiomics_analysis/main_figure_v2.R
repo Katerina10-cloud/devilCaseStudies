@@ -1,7 +1,8 @@
-setwd("~/GitHub/devilCaseStudies/multiomics_analysis/")
+setwd("/Users/katsiarynadavydzenka/Documents/PhD_AI/devilCaseStudies/multiomics_analysis/")
+#setwd("~/GitHub/devilCaseStudies/multiomics_analysis/")
 rm(list = ls())
 pkgs <- c("ggplot2", "dplyr","tidyr","tibble", "viridis", "smplot2", "Seurat", "VennDiagram", "gridExtra",
-          "ggpubr", "ggrepel", "ggvenn", "ggpointdensity", "edgeR", "patchwork")
+          "ggpubr", "ggrepel", "ggvenn", "ggpointdensity", "edgeR", "patchwork", "CNAqc")
 sapply(pkgs, require, character.only = TRUE)
 
 cell_group_colors = c(
@@ -260,8 +261,6 @@ ggplot() +
 genes_db %>%
   group_by(y1, y2) %>%
   dplyr::summarise(n = n())
-
-
 
 # UpSet and Venn plots ####
 lt = list(

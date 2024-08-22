@@ -5,8 +5,8 @@ pkgs <- c("ggplot2", "dplyr","tidyr","tibble", "viridis", "smplot2", "Seurat", "
 sapply(pkgs, require, character.only = TRUE)
 
 cell_group_colors = c(
-  "old" = "royalblue4",
-  "young" = "pink"
+  "old" = "#9999CC",
+  "young" = "#FF9999"
 )
 
 
@@ -69,7 +69,7 @@ umaps <- Seurat::LabelClusters(plot = umaps, id = 'cell_type', color="black",
                                repel = T, position = "median", box = T)
 umaps
 
-ggsave("plot/umaps.pdf", plot = umaps, dpi = 300, width = 10, height = 5)
+ggsave("plot/umaps.pdf", plot = umaps, dpi = 300, width = 3, height = 6)
 
 rm(d_atac, metadata_atac, d_omics, d_rna, metadata_rna)
 
@@ -129,7 +129,6 @@ atac_d <- atac_scaDA %>%
 #Remove outliers
 row.remove.neb <- c("C21orf91", "AL137246.2")
 row.remove.devil <- c("CASP4", "KCTD1")
-#row.remove.devil <- c("SAA1", "CHI3L1")
 devil_d <- devil_d[!(devil_d$geneID %in% row.remove.devil), ]
 nebula_d <- nebula_d[!(nebula_d$geneID %in% row.remove.neb), ]
 
@@ -255,35 +254,43 @@ corr_plot / venns
 pkgs <- c("ggplot2", "dplyr","tidyr","reactome.db", "fgsea", "org.Hs.eg.db", "data.table", "clusterProfiler", "enrichplot", "ggpubr")
 sapply(pkgs, require, character.only = TRUE)
 
-overlap_devil <- readRDS("results/overlap_devil.RDS")
-overlap_glm <- readRDS("results/overlap_glm.RDS")
-overlap_nebula <- readRDS("results/overlap_nebula.RDS")
-
 deg_list <- list(
-  "devil" = overlap_devil,
-  "NEBULA" = overlap_nebula,
-  "glmGamPoi" = overlap_glm
+  "devil" = d_corr_devil,
+  "NEBULA" = d_corr_nebula,
+  "glmGamPoi" = d_corr_glm
 )
 
-GO_pathways <- c("regulation of cytokine production",
-              "inflammatory response",
-              "negative regulation of apoptotic process",
-              "immune system process",
-              "regulation of actin filament organization",
-              "actin polymerization or depolymerization",
-              "regulation of supramolecular fiber organization",
-              "reactive oxygen species metabolic process",
-              "response to calcium ion",
-              "regulation of interleukin-6 production",
-              "phagocytosis",
-              "response to calcium ion",
-              "response to oxidative stress",
-              "negative regulation of cellular process",
-              "regulation of angiogenesis")
+#GO_pathways <- c("regulation of cytokine production",
+              #"inflammatory response",
+              #"negative regulation of apoptotic process",
+              #"immune system process",
+              #"regulation of actin filament organization",
+              #"actin polymerization or depolymerization",
+              #"regulation of supramolecular fiber organization",
+              #"reactive oxygen species metabolic process",
+              #"response to calcium ion",
+              #"regulation of interleukin-6 production",
+              #"phagocytosis",
+              #"response to calcium ion",
+              #"response to oxidative stress",
+              #"negative regulation of cellular process",
+              #"regulation of angiogenesis")
+
+GO_pathways <- c("immune system process",
+                 "response to oxygen-containing compound",
+                 "actin filament binding",
+                 "actin cytoskeleton",
+                 "actin filament-based process",
+                 "regulation of angiogenesis",
+                 "reactive oxygen species metabolic process",
+                 "positive regulation of programmed cell death",
+                 "leukocyte activation",
+                 "negative regulation of cellular metabolic process")
 
 n <- names(deg_list)[1]
 res_gse_list <- list()
-plots <- lapply(names(deg_list), function(n) {
+
+plots_data <- lapply(names(deg_list), function(n) {
   print(n)
   overlap_genes <- deg_list[[n]]
 
@@ -294,7 +301,7 @@ plots <- lapply(names(deg_list), function(n) {
                                      keys = my_symbols,
                                      columns = c("ENTREZID", "SYMBOL"),
                                      keytype = "SYMBOL")
-  gene_list_rank <- as.vector(overlap_genes$lfc_snRNA)
+  gene_list_rank <- as.vector(overlap_genes$lfc)
   names(gene_list_rank) <- gene_list$SYMBOL
   gene_list_rank <- sort(gene_list_rank, decreasing = TRUE)
 
@@ -308,70 +315,47 @@ plots <- lapply(names(deg_list), function(n) {
     maxGSSize = 500
   )
 
-
-  #dotplot(gseGO, split=".sign")
-
   # Select enriched pathways #
   res_gse <- gseGO@result
   res_gse <- res_gse %>%
-    filter(Description %in% GO_pathways) %>%
     mutate(gene_clusters = case_when(NES > 0  ~ 'up-regulated', NES < 0  ~ 'down-regulated'))
 
   res_gse$log_padjust <- -log10(res_gse$p.adjust)
   res_gse_list[[n]] <<- res_gse
 
-  ### Visualize enrichment results ###
-  plot1 <- ggpubr::ggdotchart(res_gse, x = "Description", y = "log_padjust",
-                              color = "gene_clusters",
-                              palette = c("blue", "#FC4E07"),
-                              sorting = "descending",
-                              rotate = TRUE,
-                              group = "gene_clusters",
-                              dot.size = "setSize",
-                              add = "segments",
-                              title = paste0(n),
-                              xlab = "GO Pathways",
-                              ylab = "-log10(padjust)",
-                              ggtheme = theme_pubr()
-  )
-  plot1 + theme(legend.position = "right")+
-    theme_bw()+
-    font("xy.text", size = 12, color = "black", face = "plain")+
-    font("title", size = 10, color = "black", face = "bold")+
-    font("xlab", size = 10)+
-    font("ylab", size = 10)
 })
 
-plots[[1]]
-plots[[2]]
-plots[[3]]
+res_gse_devil <- res_gse_list['devil']$devil %>% 
+  dplyr::mutate(method = "devil") %>% 
+  filter(Description %in% GO_pathways)
 
-deg_genes <- rna_deg_devil
-overlap_genes <- deg_genes %>%
-dplyr::left_join(atac_deg, by="geneID") %>%
-dplyr::filter(!is.na(log2fc))
+res_gse_glm <- res_gse_list['glmGamPoi']$glmGamPoi %>% 
+  dplyr::mutate(method = "glmGamPoi") %>% 
+  filter(Description %in% GO_pathways)
 
-res_gse_devil <- res_gse_list['devil']$devil %>% dplyr::mutate(method = "devil")
-res_gse_glm <- res_gse_list['glmGamPoi']$glmGamPoi %>% dplyr::mutate(method = "glmGamPoi")
-res_gse_nebula <- res_gse_list['NEBULA']$NEBULA %>% dplyr::mutate(method = "NEBULA")
+res_gse_nebula <- res_gse_list['NEBULA']$NEBULA %>% 
+  dplyr::mutate(method = "NEBULA") %>% 
+  filter(Description %in% GO_pathways)
+    
 res_gse <- rbind(res_gse_devil, res_gse_glm, res_gse_nebula)
 res_gse$method <- as.factor(res_gse$method)
 
 saveRDS(res_gse , file = "results/res_gse.RDS")
 
 # Barplot #
-res_gse <- readRDS("results/res_gse.RDS")
+#res_gse <- readRDS("results/res_gse.RDS")
+#res_gse$log_padjust <- -log10(res_gse$p.adjust)
 
-res_gse$log_padjust <- -log10(res_gse$p.adjust)
 pbar <- ggplot(res_gse, aes(x = log_padjust, y = Description, fill=method)) +
-  geom_bar(stat="identity", position="dodge", width = 0.70) +
+  geom_bar(stat="identity", position="dodge", width = 0.50) +
   labs(x = "-Log10(pvalue)", y = "GO Pathways", fill="") +
   theme_bw() +
   scale_fill_manual(values = method_colors) +
-  theme(text = element_text(size = 9)) +
-  theme(legend.position = 'bottom', legend.box = "horizontal")
+  theme(text = element_text(size = 12)) +
+  theme(legend.position = 'bottom')
+pbar
 
-ggsave("plot/pbar.pdf", dpi = 300, width = 16, height = 8, plot = corr_plot)
+ggsave("plot/pbar.pdf", dpi = 300, width = 6, height = 5, plot = pbar)
 
 # Main figure ####
 design <- "
