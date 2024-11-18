@@ -6,6 +6,7 @@
 #SBATCH --partition=THIN
 #SBATCH --output=out/de_cpu.log
 #SBATCH --job-name=scaling_de_cpu
+#SBATCH -w fat001
 
 module load R
 
