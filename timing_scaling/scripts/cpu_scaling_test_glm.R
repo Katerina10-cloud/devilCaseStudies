@@ -33,7 +33,7 @@ for (p_genes in c(.1, .5)) {
     print("inference starting glm ...")
 
     b.glmGamPoi <- bench::mark(
-      glmGamPoi::glm_gp(c, d, size_factors = 'normed_sum', overdispersion = F), min_iterations = MIN_ITER, memory = T
+      glmGamPoi::glm_gp(c, d, size_factors = 'normed_sum', overdispersion = T), min_iterations = MIN_ITER, memory = T
     )
     b.glmGamPoi$result <- NULL
 
