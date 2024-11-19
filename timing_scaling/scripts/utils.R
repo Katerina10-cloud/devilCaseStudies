@@ -200,22 +200,46 @@ my_fit_devil <- function(
 
   if (CUDA & CUDA_is_available) {
     message("Messing with CUDA! Implementation still needed")
-
+    
+    remainder = ngenes %% batch_size
+    extra_genes = remainder
+    genes_batch = ngenes - extra_genes
+    
     message("Fit beta CUDA")
 
     start_time <- Sys.time()
-    res_beta_fit <- devil:::beta_fit_gpu(input_matrix, design_matrix, beta_0, offset_matrix, dispersion_init, max_iter = max_iter, eps = tolerance, batch_size = batch_size)
+    res_beta_fit <- devil:::beta_fit_gpu(
+      input_matrix[1:genes_batch,], 
+      design_matrix, 
+      beta_0[1:genes_batch,], 
+      offset_matrix[1:genes_batch,], 
+      dispersion_init[1:genes_batch], 
+      max_iter = max_iter, 
+      eps = tolerance, 
+      batch_size = batch_size
+    )
+    res_beta_fit_extra <- devil:::beta_fit_gpu(
+      input_matrix[(genes_batch):ngenes,], 
+      design_matrix, 
+      beta_0[(genes_batch):ngenes,], 
+      offset_matrix[(genes_batch):ngenes,], 
+      dispersion_init[(genes_batch):ngenes], 
+      max_iter = max_iter, 
+      eps = tolerance, 
+      batch_size = batch_size
+    )
     end_time <- Sys.time()
     message("BETA GPU RUNTIME:")
     message(as.numeric(difftime(end_time, start_time, units = "secs")))
 
     beta = res_beta_fit$mu_beta
-    beta <- beta[1:ngenes,]
+    beta_extra = res_beta_fit_extra$mu_beta
+    beta <- rbind(beta, beta_extra)
     if (is.null(dim(beta))) {
       beta = matrix(beta, ncol = 1)
     }
     
-    iterations=res_beta_fit$iter
+    iterations=c(res_beta_fit$iter, res_beta_fit_extra$iter)
 
   } else {
     start_time <- Sys.time()
@@ -281,4 +305,187 @@ make_example_dds <- function(n_genes, n_replicates, n_conditions){
   #design <- as.formula("~ condition", env = .GlobalEnv)
   object <- list(countData = countData, design = x)
   object
+}
+
+get_results <- function(results_folder) {
+  results_paths <- list.files(results_folder)
+  results_paths <- results_paths[results_paths != "fits"]
+  
+  results <- lapply(results_paths, function(p) {
+    print(p)
+    info <- unlist(strsplit(p, "_"))
+    res = readRDS(paste0(results_folder, p))
+    
+    
+    dplyr::tibble(
+      model_name = paste(info[1], info[2]),
+      p_gene = info[3],
+      p_cells = info[5],
+      n_cell_types = info[7],
+      time = as.numeric(unlist(res$time), units = "secs"),
+      memory = res$mem_alloc
+    )
+  }) %>% do.call("bind_rows", .) %>%
+    dplyr::mutate(p_cells = as.numeric(p_cells))
+}
+
+plot_time_and_memory_comparison = function(results) {
+  p1 <- results %>%
+    dplyr::group_by(p_gene, p_cells, n_cell_types, model_name) %>% 
+    dplyr::summarise(y = mean(time), sd =sd(time)) %>% 
+    ggplot(mapping = aes(x = p_cells, y = y, ymin=y-sd, ymax=y+sd, col = model_name)) +
+    geom_pointrange() +
+    geom_line() +
+    ggh4x::facet_nested(~"Gene percentage"+p_gene, scales = "free_x") +
+    theme_bw() +
+    labs(x = "Percentage of cells", y = "Time (s)", col = "Model")
+  
+  p2 <- results %>%
+    ggplot(mapping = aes(x = p_cells, y = memory * 1e-9, col=model_name)) +
+    geom_point() +
+    geom_line() +
+    ggh4x::facet_nested(~"Gene percentage"+p_gene, scales = "free_x") +
+    theme_bw() +
+    labs(x = "Cells percentage", y = "Memory (GB)", fill = "Model")
+  
+  p3 <- results %>%
+    dplyr::group_by(p_gene, p_cells, n_cell_types, model_name) %>%
+    dplyr::mutate(n = n()) %>% 
+    dplyr::group_by(p_gene, p_cells, n_cell_types) %>% 
+    dplyr::mutate(n = sum(n)) %>% 
+    #dplyr::ungroup() %>% 
+    #dplyr::filter(n == max(n)) %>% 
+    dplyr::group_by(p_gene, p_cells, n_cell_types) %>% 
+    dplyr::mutate(ratio_time = time / time[model_name == "gpu devil"]) %>%
+    dplyr::group_by(p_gene, p_cells, n_cell_types, model_name) %>% 
+    dplyr::summarise(y = mean(ratio_time), sd =sd(ratio_time)) %>% 
+    ggplot(mapping = aes(x = p_cells, y = y, ymin=y-sd, ymax=y+sd, col = model_name)) +
+    geom_pointrange() +
+    geom_line() +
+    ggh4x::facet_nested(~"Gene percentage"+p_gene, scales = "free_x") +
+    theme_bw() +
+    labs(x = "Percentage of cells", y = "Time ratio", col = "Model")
+  
+  list(time=p1, memory=p2, ratio_time=p3)
+}
+
+
+plot_correlations <- function(fits_folder) {
+  fits <- list.files(fits_folder, full.names = T)
+  
+  devil.res <- readRDS(fits[grepl("/cpu_devil_", fits)])
+  gpu.devil.res <- readRDS(fits[grepl("/gpu_devil_", fits)])
+  gpu.devilnotheta.res <- readRDS(fits[grepl("/gpu_devilnotheta_", fits)])
+  gpu.devilnoinit.res <- readRDS(fits[grepl("/gpu_noinitdevil", fits)])
+  glm.res <- readRDS(fits[grepl("/cpu_glmGam", fits)])
+  
+  p1 <- dplyr::bind_rows(
+    dplyr::tibble(
+      x = gpu.devil.res$lfc,
+      x_name = "gpu devil",
+      y = devil.res$lfc,
+      y_name = "cpu devil"
+    ),
+    dplyr::tibble(
+      x = gpu.devil.res$lfc,
+      x_name = "gpu devil",
+      y = glm.res$lfc,
+      y_name = "cpu glmGamPoi"
+    ),
+    dplyr::tibble(
+      x = gpu.devil.res$lfc,
+      x_name = "gpu devil",
+      y = gpu.devilnotheta.res$lfc,
+      y_name = "gpu no theta"
+    ),
+    dplyr::tibble(
+      x = gpu.devil.res$lfc,
+      x_name = "gpu devil",
+      y = gpu.devilnoinit.res$lfc,
+      y_name = "gpu no init"
+    )
+  ) %>% 
+    dplyr::group_by(x_name, y_name) %>% 
+    dplyr::filter(abs(x) < 10 & abs(y) < 10) %>% 
+    ggplot(mapping = aes(x=x, y=y)) +
+    geom_point() +
+    ggpubr::stat_cor() +
+    facet_grid(x_name~y_name, switch = "both") +
+    theme_bw() +
+    labs(x = bquote(LFC[1]), y=bquote(LFC[2])) +
+    ggtitle("Log fold change correlation")
+  p1
+  
+  p2 <- dplyr::bind_rows(
+    dplyr::tibble(
+      x = gpu.devil.res$theta,
+      x_name = "gpu devil",
+      y = devil.res$theta,
+      y_name = "cpu devil"
+    ),
+    dplyr::tibble(
+      x = gpu.devil.res$theta,
+      x_name = "gpu devil",
+      y = glm.res$theta,
+      y_name = "cpu glmGamPoi"
+    ),
+    dplyr::tibble(
+      x = gpu.devil.res$theta,
+      x_name = "gpu devil",
+      y = gpu.devilnotheta.res$theta,
+      y_name = "gpu no theta"
+    ),
+    dplyr::tibble(
+      x = gpu.devil.res$theta,
+      x_name = "gpu devil",
+      y = gpu.devilnoinit.res$theta,
+      y_name = "gpu no init"
+    )
+  ) %>% 
+    dplyr::group_by(x_name, y_name) %>% 
+    ggplot(mapping = aes(x=x, y=y)) +
+    geom_point() +
+    ggpubr::stat_cor() +
+    facet_grid(x_name~y_name, switch = "both") +
+    theme_bw() +
+    labs(x = bquote(theta[1]), y=bquote(theta[2])) +
+    ggtitle("Overdisperions correlation")
+  p2
+  
+  # p3 <- dplyr::bind_rows(
+  #   dplyr::tibble(
+  #     x = gpu.devil.res$pval,
+  #     x_name = "gpu devil",
+  #     y = devil.res$pval,
+  #     y_name = "cpu devil"
+  #   ),
+  #   dplyr::tibble(
+  #     x = gpu.devil.res$pval,
+  #     x_name = "gpu devil",
+  #     y = glm.res$pval,
+  #     y_name = "cpu glmGamPoi"
+  #   ),
+  #   dplyr::tibble(
+  #     x = gpu.devil.res$pval,
+  #     x_name = "gpu devil",
+  #     y = gpu.devilnotheta.res$pval,
+  #     y_name = "gpu no theta"
+  #   ),
+  #   dplyr::tibble(
+  #     x = gpu.devil.res$pval,
+  #     x_name = "gpu devil",
+  #     y = gpu.devilnoinit.res$pval,
+  #     y_name = "gpu no init"
+  #   )
+  # ) %>% 
+  #   dplyr::group_by(x_name, y_name) %>% 
+  #   ggplot(mapping = aes(x=x, y=y)) +
+  #   geom_point() +
+  #   ggpubr::stat_cor() +
+  #   facet_grid(x_name~y_name, switch = "both") +
+  #   theme_bw() +
+  #   labs(x = bquote(p[1]), y=bquote(p[2])) +
+  #   ggtitle("P-values correlation")
+  
+  list(lfc=p1, theta=p2)
 }
