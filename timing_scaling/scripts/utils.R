@@ -1,5 +1,5 @@
 
-prep_data <- function(N_CELL_TYPES, min_count_per_cell = 100, min_cell_per_gene = 100) {
+prep_MacaqueBrain_data <- function(N_CELL_TYPES, min_count_per_cell = 100, min_cell_per_gene = 100) {
   data = readRDS("datasets/macaque_brain.rds")
 
   metadata <- data@meta.data
@@ -17,34 +17,75 @@ prep_data <- function(N_CELL_TYPES, min_count_per_cell = 100, min_cell_per_gene 
 
   cell_idx <- which((colSums(cnt) > min_count_per_cell) == TRUE)
   cnt <- cnt[,cell_idx]
-  
+
   gene_idx = which((rowSums(cnt) > min_cell_per_gene) == TRUE)
   cnt <- cnt[gene_idx,]
-  
+
   metadata <- metadata[cell_idx,]
   design_matrix <- model.matrix(~cell_type, metadata)
 
   return(list(cnt = cnt, design_matrix = design_matrix))
 }
 
-filter_input <- function(cnt, design_matrix, p_genes, p_cells) {
-  n.genes <- dim(cnt)[1]
-  n.cells <- dim(cnt)[2]
-  
-  n.sub.genes <- as.integer(p_genes * n.genes)
-  n.sub.cells <- as.integer(p_cells * n.cells)
-  
+prep_HumanBlood_data <- function(N_CELL_TYPES, min_count_per_cell = 100, min_cell_per_gene = 100) {
+  data = readRDS("datasets/HumanBlood/HumanBloodData.rds")
+
+  metadata <- data$meta
+  cell_types = names(sort(table(metadata$cell_type), decreasing = TRUE))[1:N_CELL_TYPES]
+
+  print("Using the following cell types:")
+  print(cell_types)
+
+  cell_idx = which(metadata$cell_type %in% cell_types == TRUE)
+
+  metadata <- metadata[cell_idx,]
+  metadata$cell_type <- factor(metadata$cell_type, levels = unique(metadata$cell_type))
+  #cnt <- as.matrix(data@assays$RNA@counts)[,cell_idx]
+  cnt <- data$rna[,cell_idx]
+
+  cell_idx <- which((colSums(cnt) >= min_count_per_cell) == TRUE)
+  cnt <- cnt[,cell_idx]
+
+  gene_idx = which((rowSums(cnt) >= min_cell_per_gene) == TRUE)
+  cnt <- cnt[gene_idx,]
+
+  metadata <- metadata[cell_idx,]
+  design_matrix <- model.matrix(~Age + cell_type, metadata)
+
+  rownames(design_matrix) <- colnames(cnt)
+
+  return(list(cnt = cnt, design_matrix = design_matrix, clusters = metadata$Donor_id))
+}
+
+filter_input <- function(cnt, design_matrix, p_genes, p_cells, n.sub.genes = NULL, n.sub.cells = NULL, clusters = NULL) {
+  if (is.null(n.sub.genes) & is.null(n.sub.cells)) {
+    n.genes <- dim(cnt)[1]
+    n.cells <- dim(cnt)[2]
+
+    n.sub.genes <- as.integer(p_genes * n.genes)
+    n.sub.cells <- as.integer(p_cells * n.cells)
+  }
+
   # Find cells with highest expression
   cell.idxs <- order(colSums(cnt), decreasing = TRUE)[1:n.sub.cells]
   cnt <- cnt[,cell.idxs]
   design_matrix <- design_matrix[cell.idxs,]
-  
+
   # Find genes with highest expression
   gene.idxs <- order(rowSums(cnt), decreasing = TRUE)[1:n.sub.genes]
   cnt <- cnt[gene.idxs,]
-  
+
+  if (!(is.null(clusters))) {
+    clusters = clusters[cell.idxs]
+  }
+
   print(paste0("Lowest RNA counts for a gene = ", min(rowSums(cnt))))
-  list(c=cnt, d = design_matrix)
+  if (!(is.null(clusters))) {
+    list(c=cnt, d = design_matrix, clusters=clusters)
+  } else {
+    list(c=cnt, d = design_matrix)
+  }
+
 }
 
 prep_data_small <- function(min_count_per_cell = 100, min_cell_per_gene = 100) {
@@ -52,13 +93,13 @@ prep_data_small <- function(min_count_per_cell = 100, min_cell_per_gene = 100) {
   cnt <- as.matrix(data$counts)
   metadata <- data$metadata
   cell_idx <- (metadata$label %in% c("alpha", "beta"))
-  
+
   cnt <- cnt[, cell_idx]
   cnt <- cnt[rowSums(cnt > 0) > 100, ]
   metadata <- metadata[cell_idx,]
-  
+
   design_matrix <- model.matrix(~label, data = metadata)
-  
+
   return(list(cnt = cnt, design_matrix = design_matrix))
 }
 
@@ -96,10 +137,10 @@ my_fit_devil <- function(
 
   # Add epsilon to input_matrix to avoid non invertible matrices
   # start_time <- Sys.time()
-  # 
+  #
   # input_matrix <- input_matrix + eps
   # input_mat <- devil:::handle_input_matrix(input_matrix, verbose=verbose)
-  # 
+  #
   # end_time <- Sys.time()
   # message("INPUT MATRIX HANDLING:")
   # message(as.numeric(difftime(end_time, start_time, units = "secs")))
@@ -134,7 +175,7 @@ my_fit_devil <- function(
   end_time <- Sys.time()
   message("Offset matrix computing:")
   message(as.numeric(difftime(end_time, start_time, units = "secs")))
-  
+
   estimate_dispersion <- function (y, offset_matrix) {
     xim <- 1/mean(DelayedMatrixStats::colMeans2(exp(offset_matrix),
                                                 useNames = T))
@@ -157,8 +198,8 @@ my_fit_devil <- function(
 
   ngenes <- nrow(input_matrix)
   nfeatures <- ncol(design_matrix)
-  
-  
+
+
 
   start_time <- Sys.time()
   if (verbose) { message("Initialize beta estimate") }
@@ -166,7 +207,7 @@ my_fit_devil <- function(
   end_time <- Sys.time()
   message("get_groups_for_model_matrix:")
   message(as.numeric(difftime(end_time, start_time, units = "secs")))
-  
+
   init_beta <- function (y, design_matrix, offset_matrix) {
     qrx <- qr(design_matrix)
     Q <- qr.Q(qrx)[seq_len(nrow(design_matrix)), , drop = FALSE]
@@ -174,7 +215,7 @@ my_fit_devil <- function(
     norm_log_count_mat <- t(log1p((y/exp(offset_matrix[1, ]))))
     t(solve(R, as.matrix(t(Q) %*% norm_log_count_mat)))
   }
-  
+
   init_beta_groups <- function(y, groups, offset_matrix) {
     #norm_Y <- y / exp(offset_matrix)
     norm_Y <- y / exp(offset_matrix[1,])
@@ -238,8 +279,13 @@ my_fit_devil <- function(
     if (is.null(dim(beta))) {
       beta = matrix(beta, ncol = 1)
     }
+<<<<<<< HEAD
+
+    iterations=res_beta_fit$iter
+=======
     
     iterations=c(res_beta_fit$iter, res_beta_fit_extra$iter)
+>>>>>>> 21c7fb8c9b06f7258856dd1d7882f32b3a1c7156
 
   } else {
     start_time <- Sys.time()
@@ -307,6 +353,169 @@ make_example_dds <- function(n_genes, n_replicates, n_conditions){
   object
 }
 
+<<<<<<< HEAD
+
+fit_devil_gpu <- function(
+    input_matrix,
+    design_matrix,
+    overdispersion = TRUE,
+    init_overdispersion = NULL,
+    do_cox_reid_adjustment = TRUE,
+    offset=1e-6,
+    size_factors=TRUE,
+    verbose=FALSE,
+    max_iter=200,
+    tolerance=1e-3,
+    CUDA = FALSE,
+    batch_size = 1024L,
+    parallel.cores=NULL) {
+
+  # Read general info about input matrix and design matrix
+  gene_names <- rownames(input_matrix)
+  ngenes <- nrow(input_matrix)
+  nfeatures <- ncol(design_matrix)
+
+  # Detect cores to use
+  max.cores <- parallel::detectCores()
+  if (is.null(parallel.cores)) {
+    n.cores = max.cores
+  } else {
+    if (parallel.cores > max.cores) {
+      message(paste0("Requested ", parallel.cores, " cores, but only ", max.cores, " available."))
+    }
+    n.cores = min(max.cores, parallel.cores)
+  }
+
+  # Check if CUDA is available
+  CUDA_is_available <- FALSE
+  if (CUDA) {
+    message("Check CUDA availability function need to be implemented")
+    CUDA_is_available <- TRUE
+  }
+
+  # Compute size factors
+  if (size_factors) {
+    if (verbose) { message("Compute size factors") }
+    sf <- devil:::calculate_sf(input_matrix, verbose = verbose)
+  } else {
+    sf <- rep(1, nrow(design_matrix))
+  }
+
+  # Calculate offset vector
+  offset_vector = devil:::compute_offset_vector(offset, input_matrix, sf)
+  #offset_matrix = devil:::compute_offset_matrix(offset, input_matrix, sf)
+
+  # Initialize overdispersion
+  if (is.null(init_overdispersion)) {
+    dispersion_init <- c(devil:::estimate_dispersion(input_matrix, offset_vector))
+  } else {
+    dispersion_init <- rep(init_overdispersion, nrow(input_matrix))
+  }
+
+  # if (verbose) { message("Initialize beta estimate") }
+  # groups <- devil:::get_groups_for_model_matrix(design_matrix)
+
+  if (verbose) { message("Initialize beta estimate") }
+  beta_0 <- devil:::init_beta(input_matrix, design_matrix, offset_vector)
+
+  if (CUDA & CUDA_is_available) {
+    message("Messing with CUDA! Implementation still needed")
+
+    remainder = ngenes %% batch_size
+    extra_genes = remainder
+    genes_batch = ngenes - extra_genes
+
+    message("Fit beta CUDA")
+    start_time <- Sys.time()
+
+    res_beta_fit <- devil:::beta_fit_gpu(
+      input_matrix[1:genes_batch,],
+      design_matrix,
+      beta_0[1:genes_batch,],
+      offset_vector,
+      dispersion_init[1:genes_batch],
+      max_iter = max_iter,
+      eps = tolerance,
+      batch_size = batch_size
+    )
+
+    if (remainder > 0) {
+      res_beta_fit_extra <- devil:::beta_fit_gpu(
+        input_matrix[(genes_batch+1):ngenes,],
+        design_matrix,
+        beta_0[(genes_batch+1):ngenes,],
+        offset_vector,
+        dispersion_init[(genes_batch+1):ngenes],
+        max_iter = max_iter,
+        eps = tolerance,
+        batch_size = extra_genes
+      )
+    }
+
+    end_time <- Sys.time()
+    message("BETA GPU RUNTIME:")
+    message(as.numeric(difftime(end_time, start_time, units = "secs")))
+
+    beta = res_beta_fit$mu_beta
+
+    if (remainder > 0) {
+      beta_extra = res_beta_fit_extra$mu_beta
+      beta <- rbind(beta, beta_extra)
+      iterations=c(res_beta_fit$iter, res_beta_fit_extra$iter)
+    } else {
+      iterations=c(res_beta_fit$iter)
+    }
+
+    if (is.null(dim(beta))) {
+      beta = matrix(beta, ncol = 1)
+    }
+
+    bad_idx = which(rowSums(is.na(beta)) > 0)
+    tmp = lapply(bad_idx, function(i) {
+      beta[i,] <<- devil:::beta_fit(input_matrix[i,], design_matrix, beta_0[i,], offset_vector, dispersion_init[i], max_iter = max_iter, eps = tolerance)$mu_beta
+    })
+
+    rm(tmp)
+
+  } else {
+
+    if (verbose) { message("Fit beta coefficients") }
+
+    tmp <- parallel::mclapply(1:ngenes, function(i) {
+      devil:::beta_fit(input_matrix[i,], design_matrix, beta_0[i,], offset_vector, dispersion_init[i], max_iter = max_iter, eps = tolerance)
+    }, mc.cores = n.cores)
+
+    beta <- lapply(1:ngenes, function(i) { tmp[[i]]$mu_beta }) %>% do.call("rbind", .)
+    rownames(beta) <- gene_names
+    iterations <- lapply(1:ngenes, function(i) { tmp[[i]]$iter }) %>% unlist()
+
+  }
+
+  s <- Sys.time()
+  if (overdispersion) {
+    if (verbose) { message("Fit overdispersion") }
+
+    theta <- parallel::mclapply(1:ngenes, function(i) {
+      devil:::fit_dispersion(beta[i,], design_matrix, input_matrix[i,], offset_vector, tolerance = tolerance, max_iter = max_iter, do_cox_reid_adjustment = do_cox_reid_adjustment)
+    }, mc.cores = n.cores) %>% unlist()
+
+  } else {
+    theta = rep(0, ngenes)
+  }
+
+  return(list(
+    beta=beta,
+    overdispersion=theta,
+    iterations=iterations,
+    size_factors=sf,
+    offset_vector=offset_vector,
+    design_matrix=design_matrix,
+    input_matrix=input_matrix,
+    input_parameters=list(max_iter=max_iter, tolerance=tolerance, parallel.cores=n.cores)
+  )
+  )
+}
+=======
 get_results <- function(results_folder) {
   results_paths <- list.files(results_folder)
   results_paths <- results_paths[results_paths != "fits"]
@@ -489,3 +698,4 @@ plot_correlations <- function(fits_folder) {
   
   list(lfc=p1, theta=p2)
 }
+>>>>>>> 21c7fb8c9b06f7258856dd1d7882f32b3a1c7156
