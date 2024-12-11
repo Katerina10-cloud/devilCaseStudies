@@ -5,3 +5,5 @@
 .Rhistory
 *dataset*
 *.log
+*._*
+*.DS_Store
