@@ -1,4 +1,4 @@
-setwd("~/GitHub/devilCaseStudies/de_analysis/")
+
 rm(list = ls())
 require(tidyverse)
 require(patchwork)
@@ -126,7 +126,7 @@ pC
 #     text = element_text(size = 10)
 #   )
 # p
-ggsave("main_fig/example_pow_and_null.pdf", dpi=300, width = 105, height = 90, units = 'mm')
+#ggsave("main_fig/example_pow_and_null.pdf", dpi=300, width = 105, height = 90, units = 'mm')
 
 # FPR test ####
 #cell_indexes <- c(1:6)

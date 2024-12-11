@@ -5,7 +5,7 @@ require(edgeR)
 
 edger.mult <- function(count, df){
   sce.obj <- SingleCellExperiment::SingleCellExperiment(list(counts=count), colData=df)
-  sce.pb <- glmGamPoi::pseudobulk_sce(
+  sce.pb <- glmGamPoi::pseudobulk(
     sce.obj,
     group_by=vars(id, tx_cell),
     verbose=FALSE

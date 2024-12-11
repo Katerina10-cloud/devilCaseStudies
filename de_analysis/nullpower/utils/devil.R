@@ -4,7 +4,7 @@ devil.base <- function(count, df){
 
   s <- Sys.time()
   #fit <- devil::fit_devil(count, design_matrix, size_factors=T, verbose=F, parallel.cores=1, min_cells=-1, avg_counts=-1)
-  fit <- devil::fit_devil(count, design_matrix, size_factors=FALSE, verbose=F, parallel.cores=1, min_cells=-1, avg_counts=-1)
+  fit <- devil::fit_devil(count, design_matrix, size_factors=FALSE, verbose=F, parallel.cores=1)
   e <- Sys.time()
   delta_time <- difftime(e, s, units = "secs") %>% as.numeric()
   test <- devil::test_de(fit, contrast=as.array(c(0,1)))
@@ -25,8 +25,8 @@ devil.mixed <- function(count, df) {
   clusters = as.factor(df$id)
 
   s <- Sys.time()
-  fit <- devil::fit_devil(count, design_matrix, size_factors=F, verbose=T, min_cells=-1, avg_counts=-1, parallel.cores=4)
- # fit <- devil::fit_devil(count, design_matrix, size_factors=T, verbose=T, min_cells=-1, avg_counts=-1, parallel.cores=4)
+  fit <- devil::fit_devil(count, design_matrix, size_factors=FALSE, verbose=F, parallel.cores=1)
+  # fit <- devil::fit_devil(count, design_matrix, size_factors=T, verbose=T, min_cells=-1, avg_counts=-1, parallel.cores=4)
   e <- Sys.time()
   delta_time <- difftime(e, s, units = "secs") %>% as.numeric()
   test <- devil::test_de(fit, contrast=as.array(c(0,1)), clusters=clusters)
