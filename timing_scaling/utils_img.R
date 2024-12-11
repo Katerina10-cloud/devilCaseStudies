@@ -118,56 +118,101 @@ time_per_gene_comparison = function(results) {
     scale_color_manual(values = method_colors)
 }
 
-plot_time_and_memory_comparison = function(results) {
-  p1 <- results %>%
-    dplyr::group_by(n_genes, n_cells, n_cell_types, model_name) %>%
-    dplyr::summarise(y = mean(time), sd =sd(time)) %>%
-    ggplot(mapping = aes(x = n_cells, y = y, ymin=y-sd, ymax=y+sd, col = model_name)) +
-    #geom_bar(position = "dodge", stat = "identity") +
-    geom_pointrange() +
+plot_time_and_memory_comparison = function(results, n_extrapolation = 3) {
+  d <- results %>%
+    dplyr::group_by(model_name, n_genes, n_cells) %>%
+    dplyr::summarise(memory = mean(memory), time = mean(time)) %>%
+    dplyr::ungroup() %>%
+    dplyr::mutate(size = n_genes * n_cells)
+
+  # Extraolate unkwonw sizes
+  sizes = unique(d$size)
+  models <- unique(d$model_name)
+
+  d <- lapply(models, function(m) {
+    dd <- d %>% dplyr::filter(model_name == m) %>% dplyr::arrange(-size)
+
+    x = c(log10(dd$size[1:n_extrapolation]))
+    y_time = c(log10(dd$time[1:n_extrapolation]))
+    y_memory = c(log10(dd$memory[1:n_extrapolation]))
+
+    time_lm <- lm(y_time ~ x)
+    memory_lm <- lm(y_memory ~ x)
+
+    ddd = dd %>%
+      ungroup() %>%
+      dplyr::filter(size %in% sizes) %>%
+      dplyr::select(model_name, time, memory, size) %>%
+      dplyr::mutate(is_extrapolated = "FALSE")
+
+    sizes_to_extrapolate <- sizes[!(sizes %in% ddd$size)]
+    if (length(sizes_to_extrapolate) > 0) {
+      s <- sizes_to_extrapolate[1]
+
+      dd_extr <- lapply(sizes_to_extrapolate, function(s) {
+        time_pred = 10^predict(time_lm, newdata = data.frame(x = c(log10(s))))
+        mem_pred = 10^predict(memory_lm, newdata = data.frame(x = c(log10(s))))
+        dplyr::tibble(model_name = m, time = time_pred, memory = mem_pred, size = s, is_extrapolated = "TRUE")
+      }) %>% do.call("bind_rows", .)
+
+      ddd <- dplyr::bind_rows(ddd, dd_extr)
+    }
+
+    ddd
+  }) %>% do.call("bind_rows", .)
+
+  # Compute Ratios
+  d <- d %>%
+    dplyr::group_by(size) %>%
+    dplyr::mutate(time_ratio = time / time[model_name == "devil (GPU)"]) %>%
+    dplyr::mutate(memory_ratio = memory / memory[model_name == "devil (GPU)"])
+
+  p_time = d %>%
+    ggplot(mapping = aes(x = size, y= time, col = model_name)) +
+    geom_point(aes(shape = is_extrapolated), size = 3) +
     geom_line() +
-    ggh4x::facet_nested(~"N genes"+n_genes, scales = "free_x") +
+    scale_x_continuous(transform = "log10") +
+    scale_y_continuous(transform = "log10") +
+    labs(x = "N genes * N cells", y = "Time (s)", col = "Model") +
     theme_bw() +
-    labs(x = "N cells", y = "Time (s)", col = "Model")
-  p1
+    scale_color_manual(values = method_colors)
 
-  results %>%
-    dplyr::group_by(n_genes, n_cells, n_cell_types, model_name) %>%
-    dplyr::summarise(y = mean(time), sd =sd(time)) %>%
-    ggplot(mapping = aes(x = n_genes, y = y / n_genes, col = model_name)) +
-    #geom_bar(position = "dodge", stat = "identity") +
-    geom_point() +
+  p_time_ratio = d %>%
+    ggplot(mapping = aes(x = size, y= time_ratio, col = model_name)) +
+    geom_point(aes(shape = is_extrapolated), size = 3) +
     geom_line() +
-    ggh4x::facet_nested(~"N genes"+n_cells, scales = "free_x") +
+    scale_x_continuous(transform = "log10") +
+    scale_y_continuous(transform = "log10") +
+    labs(x = "N genes * N cells", y = "Time ratio", col = "Model") +
     theme_bw() +
-    labs(x = "N cells", y = "Time (s)", col = "Model")
+    scale_color_manual(values = method_colors)
 
-  p1
-
-  p2 <- results %>%
-    dplyr::mutate(memory = as.numeric(memory) * 1e-9) %>%
-    ggplot(mapping = aes(x = as.factor(n_cells), y = memory, fill = model_name)) +
-    geom_bar(stat = "identity", position = "dodge", col = "black") +
-    ggh4x::facet_nested(~"N genes"+n_genes, scales = "free_x") +
-    theme_bw() +
-    labs(x = "N cells", y = "Memory (GB)", fill = "Model")
-  p2
-
-  p3 <- results %>%
-    dplyr::group_by(n_genes, n_cells, n_cell_types, model_name) %>%
-    dplyr::summarise(y = mean(time / n_genes)) %>%
-    #dplyr::group_by(n_genes, n_cells, n_cell_types) %>%
-    #dplyr::mutate(ratio_time = time / time[model_name == "devil (GPU)"]) %>%
-    #dplyr::group_by(n_genes, n_cells, n_cell_types, model_name) %>%
-    #dplyr::summarise(y = mean(ratio_time), sd =sd(ratio_time)) %>%
-    ggplot(mapping = aes(x = n_cells, y = y, col = model_name)) +
-    geom_point() +
+  p_mem <- d %>%
+    ggplot(mapping = aes(x = size, y= memory, col = model_name)) +
+    geom_point(aes(shape = is_extrapolated), size = 3) +
     geom_line() +
-    ggh4x::facet_nested(~"N genes"+n_genes, scales = "free_x") +
+    scale_x_continuous(transform = "log10") +
+    scale_y_continuous(transform = "log10") +
+    labs(x = "N genes * N cells", y = "Memory (GB)", col = "Model") +
     theme_bw() +
-    labs(x = "N cells", y = "Time per gene (s)", col = "Model")
+    scale_color_manual(values = method_colors)
 
-  list(time=p1, memory=p2, ratio_time=p3)
+  p_mem_ratio <- d %>%
+    ggplot(mapping = aes(x=size, y= memory_ratio, col = model_name)) +
+    geom_point(aes(shape = is_extrapolated), size = 3) +
+    geom_line() +
+    scale_x_continuous(transform = "log10") +
+    scale_y_continuous(transform = "log10") +
+    labs(x = "N genes * N cells", y = "Memory ratio", col = "Model") +
+    theme_bw() +
+    scale_color_manual(values = method_colors)
+
+  list(
+    p_time=p_time,
+    p_time_ratio=p_time_ratio,
+    p_mem=p_mem,
+    p_mem_ratio=p_mem_ratio
+  )
 }
 
 

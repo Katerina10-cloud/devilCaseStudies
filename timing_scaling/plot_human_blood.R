@@ -9,6 +9,13 @@ fits_folder = "results/HumanBlood/fits/"
 results = get_results(results_folder)
 
 # Comparisons ####
+plots <- plot_time_and_memory_comparison(results, n_extrapolation = 3)
+plots$p_time
+plots$p_time_ratio
+plots$p_mem
+plots$p_mem_ratio
+
+
 pA <- time_comparison(results) + ggtitle("Time comparison")
 pB <- memory_comparison(results) + ggtitle("Memory comparison")
 pC <- time_per_gene_comparison(results) + ggtitle("Time per gene comparison")

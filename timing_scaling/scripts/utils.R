@@ -50,6 +50,7 @@ prep_HumanBlood_data <- function(N_CELL_TYPES, min_count_per_cell = 100, min_cel
   cnt <- cnt[gene_idx,]
 
   metadata <- metadata[cell_idx,]
+  metadata$Age <- (metadata$Age - mean(metadata$Age)) / sd(metadata$Age)
   design_matrix <- model.matrix(~Age + cell_type, metadata)
 
   rownames(design_matrix) <- colnames(cnt)
