@@ -275,19 +275,31 @@ plot_correlations <- function(fits_folder) {
   list(lfc=p1, theta=p2)
 }
 
+fits_folder <- "results/baronPancreas/fits/"
+pval_cut <- .05
+lfc_cut <- 1
 plot_upset <- function(fits_folder, lfc_cut, pval_cut) {
   fits <- list.files(fits_folder, full.names = T)
 
   l = list()
-  for (f in fits) {
+  f <- fits[1]
+  res <- lapply(fits, function(f) {
     info = unlist(strsplit(unlist(strsplit(f, "fits//"))[2], "_"))
     name = paste(info[1], info[2])
     de_genes = readRDS(f) %>%
       dplyr::mutate(name = paste0("Gene ", row_number())) %>%
       dplyr::filter(abs(lfc) >= lfc_cut, adj_pval <= pval_cut) %>%
       dplyr::pull(name)
-    l[[name]] = de_genes
-  }
+    dplyr::tibble(algorithm = name, de_genes = de_genes)
+  }) %>% do.call("bind_rows", .)
 
-  UpSetR::upset(UpSetR::fromList(l), order.by = "freq")
+  res %>%
+    group_by(de_genes) %>%
+    summarize(algorithm = list(algorithm)) %>%
+    ggplot(aes(x = algorithm)) +
+    geom_bar() +
+    geom_text(stat='count', aes(label=after_stat(count)), vjust=-1) +
+    scale_y_continuous(breaks = NULL, lim = c(0, nrow(res) / length(fits)), name = "") +
+    scale_x_upset() +
+    theme_bw()
 }

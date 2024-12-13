@@ -9,7 +9,6 @@ results_folder <- "results/baronPancreas/"
 fits_folder = "results/baronPancreas/fits/"
 results = get_results(results_folder)
 
-
 results <- results %>% dplyr::filter(n_genes * n_cells != 100 * 500)
 
 # Comparisons ####
