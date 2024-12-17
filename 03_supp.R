@@ -1,4 +1,4 @@
-
+setwd("~/GitHub/devilCaseStudies/de_analysis")
 rm(list = ls())
 require(tidyverse)
 require(patchwork)
@@ -23,7 +23,8 @@ for (author_name in c("bca", "yazar", "kumar", "hsc")) {
   pA <- null_plots_cellwise %>%
     #sample_n(1000) %>%
     ggplot(mapping = aes(x=x, y=observed_p_value, col=name)) +
-    geom_point(size = .5) +
+    #geom_point(size = .5) +
+    geom_line() +
     scale_color_manual(values = method_colors) +
     #facet_grid(ytype+n.genes~xtype, scales = "free") +
     ggh4x::facet_nested(paste(n.samples, " P")+paste(n.genes, " G")~xtype, scales = "free") +

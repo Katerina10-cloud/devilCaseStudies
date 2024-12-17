@@ -1,4 +1,4 @@
-
+setwd("~/GitHub/devilCaseStudies/de_analysis")
 rm(list = ls())
 require(tidyverse)
 require(patchwork)
