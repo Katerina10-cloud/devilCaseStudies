@@ -64,6 +64,7 @@ rna_join <- rna_join %>%
 
 de_colors <- c("Down-reg" = "steelblue", "Up-reg" = "indianred", "n.s." = "grey")
 
+
 gene_markers <- c("TNNT1", "MYH7", "MYH7B", "TNNT2", "PDE4B", "JUN", "FOSB",
                   "ID1", "MDM2", "TNNT3", "MYH2", "MYH1", "ENOX1", "SAA2", "SAA1",
                   "DCLK1", "ADGRB3", "NCAM1", "COL22A1", "PHLDB2", "CHRNE")
@@ -149,12 +150,10 @@ gseGO_nebula <- enrichmentGO(rna_deg_nebula)
 # Remove redundant terms #
 
 remove_redundant_terms <- function(data, enrichment_col = "enrichmentScore", core_col = "core_enrichment", desc_col = "Description", threshold = 0.5) {
-  # Step 1: Filter data based on enrichment score
   filtered_data <- data %>%
     dplyr::filter(!!sym(enrichment_col) < -0.3 | !!sym(enrichment_col) > 0.4) %>%
     mutate(genes = strsplit(!!sym(core_col), "/"))
   
-  # Step 2: Compute the overlap matrix
   n_terms <- nrow(filtered_data)
   overlap_matrix <- matrix(0, nrow = n_terms, ncol = n_terms,
                            dimnames = list(filtered_data[[desc_col]], filtered_data[[desc_col]]))
@@ -192,7 +191,7 @@ filtered_devil_nonRed <- remove_redundant_terms(gseGO_devil,
                                                        core_col = "core_enrichment", 
                                                        desc_col = "Description")
 
-filtered_glmGamPoi_nonRed <- remove_redundant_terms(gseGO_glmGamPoi, 
+filtered_glm_nonRed <- remove_redundant_terms(gseGO_glmGamPoi, 
                                                        enrichment_col = "enrichmentScore", 
                                                        core_col = "core_enrichment", 
                                                        desc_col = "Description")
@@ -204,5 +203,75 @@ filtered_nebula_nonRed <- remove_redundant_terms(gseGO_nebula,
 
 
 saveRDS(filtered_devil_nonRed, file = "results/gsea_GO/gseGO_devil.RDS")
-saveRDS(filtered_glmGamPoi_nonRed, file = "results/gsea_GO/gseGO_glmGamPoi.RDS")
+saveRDS(filtered_glm_nonRed, file = "results/gsea_GO/gseGO_glmGamPoi.RDS")
 saveRDS(filtered_nebula_nonRed, file = "results/gsea_GO/gseGO_nebula.RDS")
+
+
+# Enrichment plot #
+
+filtered_devil_nonRed <- readRDS("results/gsea_GO/gseGO_devil.RDS")
+filtered_glm_nonRed <- readRDS("results/gsea_GO/gseGO_glmGamPoi.RDS")
+filtered_nebula_nonRed <- readRDS("results/gsea_GO/gseGO_nebula.RDS")
+
+filtered_devil_nonRed$DE_type <- ifelse(filtered_devil_nonRed$enrichmentScore > 0, "Up-regulated", "Down-regulated")
+filtered_glm_nonRed$DE_type <- ifelse(filtered_glm_nonRed$enrichmentScore > 0, "Up-regulated", "Down-regulated")
+filtered_nebula_nonRed$DE_type <- ifelse(filtered_nebula_nonRed$enrichmentScore > 0, "Up-regulated", "Down-regulated")
+
+filtered_devil_nonRed <- filtered_devil_nonRed %>% 
+  dplyr::mutate(method = "devil")
+
+filtered_glm_nonRed <- filtered_glm_nonRed %>% 
+  dplyr::mutate(method = "glmGamPoi")
+
+filtered_nebula_nonRed <- filtered_nebula_nonRed %>% 
+  dplyr::mutate(method = "nebula")
+
+
+# Select pathways to plot
+
+terms_devil <- c("myofibril assembly", "actin-mediated cell contraction", "muscle cell development",
+                 "muscle contraction", "acute-phase response", "regulation of cell division", "cell surface pattern recognition receptor signaling pathway", "homophilic cell adhesion via plasma membrane adhesion molecules",
+                 "regulation of G2/M transition of mitotic cell cycle", "positive regulation of ERK1 and ERK2 cascade",
+                 "immune response-activating cell surface receptor signaling pathway",
+                 "tRNA metabolic process", "positive regulation of cytokine production", "epithelial cell proliferation",
+                 "regulation of leukocyte activation", "regulation of MAPK cascade", "defense response")
+
+terms_glm <- c("myofibril assembly", "actin filament-based movement", "muscle cell development", "muscle contraction",
+               "acute-phase response", "homophilic cell adhesion via plasma membrane adhesion molecules", "regulation of cell division",
+               "positive regulation of ERK1 and ERK2 cascade", "immune response-activating cell surface receptor signaling pathway",
+               "tRNA metabolic process", "positive regulation of cytokine production", "epithelial cell proliferation", "defense response")
+
+filtered_devil_nonRed <- filtered_devil_nonRed %>% 
+  dplyr::filter(Description %in% terms_devil)
+
+filtered_glm_nonRed <- filtered_glm_nonRed %>% 
+  dplyr::filter(Description %in% terms_glm)
+
+data_join <- rbind(filtered_devil_nonRed, filtered_glm_nonRed, filtered_nebula_nonRed)
+
+plot_GO <- ggplot(data_join, aes(x = method, y = Description)) +
+  geom_point(aes(size = setSize, color = p.adjust)) +
+  facet_wrap(~factor(DE_type, levels = c("Up-regulated", "Down-regulated")), scales = "free", ncol = 2) +
+  scale_color_gradient(low = "cornflowerblue", high = "coral", name = "p.adjust)") +
+  theme_bw() +
+  theme(
+    panel.spacing = unit(1, "lines"),
+    axis.text.x = element_text(size = 16, color = "black", angle = 45, hjust = 1),  
+    axis.text.y = element_text(size = 16, color = "black"),
+    legend.key.size = unit(0.6, "cm"), 
+    legend.text = element_text(size = 12, color = "black"),
+    legend.title = element_text(size = 14, color = "black"),
+    legend.spacing.y = unit(0.2, 'cm'),
+    strip.text = element_text(size = 18, face = "plain", color = "black"),
+    axis.text = element_text(size = 14, color = "black"),
+    axis.title = element_text(size = 16)
+  ) +
+  labs(
+    title = "",
+    x = "",
+    y = "Biological Process GO term",
+    size = "Gene Count"
+  )
+plot_GO
+
+ggsave("plot/enrichment_dotplot.pdf", dpi = 400, width = 20.0, height = 7.0, plot = plot_GO)
