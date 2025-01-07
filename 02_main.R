@@ -2,6 +2,7 @@
 rm(list = ls())
 require(tidyverse)
 require(patchwork)
+library(ggupset)
 library(devil)
 source("timing_scaling/utils_img.R")
 
