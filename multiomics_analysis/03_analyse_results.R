@@ -112,135 +112,97 @@ ggsave("plot/volcano_all_methods.pdf", dpi = 400, width = 16.0, height = 5.5, pl
 
 
 
-# Gene set Enrichement analysis devil ####
+### Gene set Enrichement analysis ###
 
 pkgs <- c("ggplot2", "dplyr","tidyr","reactome.db", "fgsea", "org.Hs.eg.db", "data.table", "clusterProfiler", "enrichplot", "ggpubr")
 sapply(pkgs, require, character.only = TRUE)
 
-de_res <- rna_deg_devil
-de_res$RankMetric <- -log10(de_res$adj_pval) * sign(de_res$lfc)
-de_res <- de_res %>% arrange(-RankMetric)
 
-genes <- de_res$RankMetric
-names(genes) <- de_res$geneID
-
-hs <- org.Hs.eg.db
-
-gseGO <- clusterProfiler::gseGO(
-  genes,
-  ont = "BP",
-  OrgDb = org.Hs.eg.db,
-  minGSSize = 10,
-  maxGSSize = 350,
-  keyType = "SYMBOL",
-  pvalueCutoff = 0.05,
-  verbose = TRUE
-)
-
-gseGO_devil <- gseGO@result %>% as.data.frame()
-
-saveRDS(gseGO_devil, file = "results/gsea_GO/gseGO_devil.RDS")
-
+enrichmentGO <- function(rna_deg_data) {
+  # RankMetric Calculation
+  rna_deg_data$RankMetric <- -log10(rna_deg_data$adj_pval) * sign(rna_deg_data$lfc)
+  rna_deg_data <- rna_deg_data %>% arrange(-RankMetric)
+  
+  genes <- rna_deg_data$RankMetric
+  names(genes) <- rna_deg_data$geneID
+  
+  gseGO <- clusterProfiler::gseGO(
+    genes,
+    ont = "BP",
+    OrgDb = org.Hs.eg.db,
+    minGSSize = 10,
+    maxGSSize = 350,
+    keyType = "SYMBOL",
+    pvalueCutoff = 0.05,
+    verbose = TRUE
+  )
+  
+  return(gseGO@result %>% as.data.frame())
+}
 
 
-# Gene set Enrichement analysis glmGamPoi ####
-
-de_res <- rna_deg_glmGamPoi
-de_res$RankMetric <- -log10(de_res$adj_pval) * sign(de_res$lfc)
-de_res <- de_res %>% arrange(-RankMetric)
-
-genes <- de_res$RankMetric
-names(genes) <- de_res$geneID
-
-hs <- org.Hs.eg.db
-
-gseGO <- clusterProfiler::gseGO(
-  genes,
-  ont = "BP",
-  OrgDb = org.Hs.eg.db,
-  minGSSize = 10,
-  maxGSSize = 350,
-  keyType = "SYMBOL",
-  pvalueCutoff = 0.05,
-  verbose = TRUE
-)
-
-gseGO_glmGamPoi <- gseGO@result %>% as.data.frame()
-
-saveRDS(gseGO_glmGamPoi, file = "results/gsea_GO/gseGO_glmGamPoi.RDS")
-
-
-# Gene set Enrichement analysis nebula ####
-de_res <- rna_deg_nebula
-de_res$RankMetric <- -log10(de_res$adj_pval) * sign(de_res$lfc)
-de_res <- de_res %>% arrange(-RankMetric)
-
-genes <- de_res$RankMetric
-names(genes) <- de_res$geneID
-
-hs <- org.Hs.eg.db
-
-gseGO <- clusterProfiler::gseGO(
-  genes,
-  ont = "BP",
-  OrgDb = org.Hs.eg.db,
-  minGSSize = 10,
-  maxGSSize = 350,
-  keyType = "SYMBOL",
-  pvalueCutoff = 0.05,
-  verbose = TRUE
-)
-
-gseGO_nebula <- gseGO@result %>% as.data.frame()
-
-saveRDS(gseGO_nebula, file = "results/gsea_GO/gseGO_nebula.RDS")
-
-
-# Enrichment results preprocessing #
-
-filtered_devil <- gseGO_devil %>%
-  dplyr::filter(enrichmentScore < -0.3 | enrichmentScore > 0.4)
-
-filtered_glmGamPoi <- gseGO_glmGamPoi %>%
-  dplyr::filter(enrichmentScore < -0.3 | enrichmentScore > 0.4)
-
-filtered_nebula <- gseGO_nebula %>%
-  dplyr::filter(enrichmentScore < -0.3 | enrichmentScore > 0.4)
+gseGO_devil <- enrichmentGO(rna_deg_devil)
+gseGO_glmGamPoi <- enrichmentGO(rna_deg_glm)
+gseGO_nebula <- enrichmentGO(rna_deg_nebula)
 
 
 # Remove redundant terms #
 
-filtered_devil <- filtered_devil %>%
-  mutate(genes = strsplit(core_enrichment, "/"))
-
-
-n_terms <- nrow(filtered_devil)
-overlap_matrix <- matrix(0, nrow = n_terms, ncol = n_terms,
-                         dimnames = list(filtered_devil$Description, filtered_devil$Description))
-
-for (i in 1:n_terms) {
-  for (j in i:n_terms) {
-    shared_genes <- length(intersect(filtered_devil$genes[[i]], filtered_devil$genes[[j]]))
-    total_genes <- length(union(filtered_devil$genes[[i]], filtered_devil$genes[[j]]))
-    jaccard_index <- shared_genes / total_genes
-    
-    # Fill overlap matrix with Jaccard index
-    overlap_matrix[i, j] <- jaccard_index
-    overlap_matrix[j, i] <- jaccard_index
-  }
-}
-
-
-redundant_terms <- c()
-threshold <- 0.5
-
-for (i in 1:(n_terms - 1)) {
-  for (j in (i + 1):n_terms) {
-    if (overlap_matrix[i, j] > threshold) {
-      redundant_terms <- c(redundant_terms, filtered_devil$Description[j])
+remove_redundant_terms <- function(data, enrichment_col = "enrichmentScore", core_col = "core_enrichment", desc_col = "Description", threshold = 0.5) {
+  # Step 1: Filter data based on enrichment score
+  filtered_data <- data %>%
+    dplyr::filter(!!sym(enrichment_col) < -0.3 | !!sym(enrichment_col) > 0.4) %>%
+    mutate(genes = strsplit(!!sym(core_col), "/"))
+  
+  # Step 2: Compute the overlap matrix
+  n_terms <- nrow(filtered_data)
+  overlap_matrix <- matrix(0, nrow = n_terms, ncol = n_terms,
+                           dimnames = list(filtered_data[[desc_col]], filtered_data[[desc_col]]))
+  
+  for (i in 1:n_terms) {
+    for (j in i:n_terms) {
+      shared_genes <- length(intersect(filtered_data$genes[[i]], filtered_data$genes[[j]]))
+      total_genes <- length(union(filtered_data$genes[[i]], filtered_data$genes[[j]]))
+      jaccard_index <- shared_genes / total_genes
+      
+      # Fill overlap matrix with Jaccard index
+      overlap_matrix[i, j] <- jaccard_index
+      overlap_matrix[j, i] <- jaccard_index
     }
   }
+  redundant_terms <- c()
+  for (i in 1:(n_terms - 1)) {
+    for (j in (i + 1):n_terms) {
+      if (overlap_matrix[i, j] > threshold) {
+        redundant_terms <- c(redundant_terms, filtered_data[[desc_col]][j])
+      }
+    }
+  }
+  non_redundant_data <- filtered_data %>%
+    filter(!(!!sym(desc_col) %in% redundant_terms))
+  
+  return(non_redundant_data)
 }
 
-non_redundant_terms <- filtered_devil %>%
-  filter(!Description %in% redundant_terms)
+  
+
+
+filtered_devil_nonRed <- remove_redundant_terms(gseGO_devil, 
+                                                       enrichment_col = "enrichmentScore", 
+                                                       core_col = "core_enrichment", 
+                                                       desc_col = "Description")
+
+filtered_glmGamPoi_nonRed <- remove_redundant_terms(gseGO_glmGamPoi, 
+                                                       enrichment_col = "enrichmentScore", 
+                                                       core_col = "core_enrichment", 
+                                                       desc_col = "Description")
+
+filtered_nebula_nonRed <- remove_redundant_terms(gseGO_nebula, 
+                                                    enrichment_col = "enrichmentScore", 
+                                                    core_col = "core_enrichment", 
+                                                    desc_col = "Description")
+
+
+saveRDS(filtered_devil_nonRed, file = "results/gsea_GO/gseGO_devil.RDS")
+saveRDS(filtered_glmGamPoi_nonRed, file = "results/gsea_GO/gseGO_glmGamPoi.RDS")
+saveRDS(filtered_nebula_nonRed, file = "results/gsea_GO/gseGO_nebula.RDS")
