@@ -44,7 +44,7 @@ x <- list(
   nebula = rna_deg_nebula$geneID
 )
 
-venn_plot <- ggVennDiagram::ggVennDiagram(x, color = 1, lwd = 0.7) +
+venn_plot <- ggVennDiagram::ggVennDiagram(x, color = 1, lwd = 0.8) +
   scale_fill_gradient(low = "#F4FAFE", high = "#4981BF") +
   theme(legend.position = "none")
 venn_plot
@@ -68,6 +68,8 @@ de_colors <- c("Down-reg" = "steelblue", "Up-reg" = "indianred", "n.s." = "grey"
 gene_markers <- c("TNNT1", "MYH7", "MYH7B", "TNNT2", "PDE4B", "JUN", "FOSB",
                   "ID1", "MDM2", "TNNT3", "MYH2", "MYH1", "ENOX1", "SAA2", "SAA1",
                   "DCLK1", "ADGRB3", "NCAM1", "COL22A1", "PHLDB2", "CHRNE")
+
+saveRDS(gene_markers, file = "results/gsea_GO/gene_markers_BRelevant.RDS")
 
 p_volcanos <- rna_join %>%
   ggplot(mapping = aes(x = lfc, y = -log10(adj_pval))) +
@@ -99,17 +101,17 @@ p_volcanos <- rna_join %>%
   geom_vline(xintercept = c(-lfc_cut, lfc_cut), linetype = 'dashed') +
   geom_hline(yintercept = -log10(pval_cut), linetype = "dashed") +
   ggplot2::theme(
-    legend.position = '',  # Hide legend (can be adjusted if needed)
-    legend.text = element_text(size = 14, color = "black"),
-    legend.title = element_text(size = 16, color = "black"),  
-    strip.text = element_text(size = 16, face = "plain", color = "black"),
-    axis.text = element_text(size = 14, color = "black"),
-    axis.title = element_text(size = 16)
+    legend.position = 'bottom',  # Hide legend (can be adjusted if needed)
+    legend.text = element_text(size = 16, color = "black"),
+    legend.title = element_text(size = 18, color = "black"),  
+    strip.text = element_text(size = 18, face = "plain", color = "black"),
+    axis.text = element_text(size = 16, color = "black"),
+    axis.title = element_text(size = 18)
   ) +
   guides(color = guide_legend(override.aes = list(size = 2, alpha = 1)))
 p_volcanos
 
-ggsave("plot/volcano_all_methods.pdf", dpi = 400, width = 16.0, height = 5.5, plot = p_volcanos)
+ggsave("plot/volcano_all_methods.png", dpi = 400, width = 16.0, height = 5.5, plot = p_volcanos)
 
 
 
@@ -256,7 +258,7 @@ plot_GO <- ggplot(data_join, aes(x = method, y = Description)) +
   theme_bw() +
   theme(
     panel.spacing = unit(1, "lines"),
-    axis.text.x = element_text(size = 16, color = "black", angle = 45, hjust = 1),  
+    axis.text.x = element_text(size = 16, color = "black", angle = 30, hjust = 1),  
     axis.text.y = element_text(size = 16, color = "black"),
     legend.key.size = unit(0.6, "cm"), 
     legend.text = element_text(size = 12, color = "black"),
@@ -274,4 +276,4 @@ plot_GO <- ggplot(data_join, aes(x = method, y = Description)) +
   )
 plot_GO
 
-ggsave("plot/enrichment_dotplot.pdf", dpi = 400, width = 20.0, height = 7.0, plot = plot_GO)
+ggsave("plot/enrichment_dotplot.png", dpi = 400, width = 18.0, height = 8.0, plot = plot_GO)
