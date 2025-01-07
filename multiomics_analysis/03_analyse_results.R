@@ -70,7 +70,7 @@ gene_markers <- c("TNNT1", "MYH7", "MYH7B", "TNNT2", "PDE4B", "JUN", "FOSB",
 
 p_volcanos <- rna_join %>%
   ggplot(mapping = aes(x = lfc, y = -log10(adj_pval))) +
-  geom_point(aes(col = DEtype), size = 2.0, alpha = 0.1) + 
+  geom_point(aes(col = DEtype), size = 2.0, alpha = 0.2) + 
   scale_color_manual(values = de_colors) + 
   geom_label_repel(
     data = rna_join %>% filter(geneID %in% gene_markers),  
@@ -110,3 +110,137 @@ p_volcanos
 
 ggsave("plot/volcano_all_methods.pdf", dpi = 400, width = 16.0, height = 5.5, plot = p_volcanos)
 
+
+
+# Gene set Enrichement analysis devil ####
+
+pkgs <- c("ggplot2", "dplyr","tidyr","reactome.db", "fgsea", "org.Hs.eg.db", "data.table", "clusterProfiler", "enrichplot", "ggpubr")
+sapply(pkgs, require, character.only = TRUE)
+
+de_res <- rna_deg_devil
+de_res$RankMetric <- -log10(de_res$adj_pval) * sign(de_res$lfc)
+de_res <- de_res %>% arrange(-RankMetric)
+
+genes <- de_res$RankMetric
+names(genes) <- de_res$geneID
+
+hs <- org.Hs.eg.db
+
+gseGO <- clusterProfiler::gseGO(
+  genes,
+  ont = "BP",
+  OrgDb = org.Hs.eg.db,
+  minGSSize = 10,
+  maxGSSize = 350,
+  keyType = "SYMBOL",
+  pvalueCutoff = 0.05,
+  verbose = TRUE
+)
+
+gseGO_devil <- gseGO@result %>% as.data.frame()
+
+saveRDS(gseGO_devil, file = "results/gsea_GO/gseGO_devil.RDS")
+
+
+
+# Gene set Enrichement analysis glmGamPoi ####
+
+de_res <- rna_deg_glmGamPoi
+de_res$RankMetric <- -log10(de_res$adj_pval) * sign(de_res$lfc)
+de_res <- de_res %>% arrange(-RankMetric)
+
+genes <- de_res$RankMetric
+names(genes) <- de_res$geneID
+
+hs <- org.Hs.eg.db
+
+gseGO <- clusterProfiler::gseGO(
+  genes,
+  ont = "BP",
+  OrgDb = org.Hs.eg.db,
+  minGSSize = 10,
+  maxGSSize = 350,
+  keyType = "SYMBOL",
+  pvalueCutoff = 0.05,
+  verbose = TRUE
+)
+
+gseGO_glmGamPoi <- gseGO@result %>% as.data.frame()
+
+saveRDS(gseGO_glmGamPoi, file = "results/gsea_GO/gseGO_glmGamPoi.RDS")
+
+
+# Gene set Enrichement analysis nebula ####
+de_res <- rna_deg_nebula
+de_res$RankMetric <- -log10(de_res$adj_pval) * sign(de_res$lfc)
+de_res <- de_res %>% arrange(-RankMetric)
+
+genes <- de_res$RankMetric
+names(genes) <- de_res$geneID
+
+hs <- org.Hs.eg.db
+
+gseGO <- clusterProfiler::gseGO(
+  genes,
+  ont = "BP",
+  OrgDb = org.Hs.eg.db,
+  minGSSize = 10,
+  maxGSSize = 350,
+  keyType = "SYMBOL",
+  pvalueCutoff = 0.05,
+  verbose = TRUE
+)
+
+gseGO_nebula <- gseGO@result %>% as.data.frame()
+
+saveRDS(gseGO_nebula, file = "results/gsea_GO/gseGO_nebula.RDS")
+
+
+# Enrichment results preprocessing #
+
+filtered_devil <- gseGO_devil %>%
+  dplyr::filter(enrichmentScore < -0.3 | enrichmentScore > 0.4)
+
+filtered_glmGamPoi <- gseGO_glmGamPoi %>%
+  dplyr::filter(enrichmentScore < -0.3 | enrichmentScore > 0.4)
+
+filtered_nebula <- gseGO_nebula %>%
+  dplyr::filter(enrichmentScore < -0.3 | enrichmentScore > 0.4)
+
+
+# Remove redundant terms #
+
+filtered_devil <- filtered_devil %>%
+  mutate(genes = strsplit(core_enrichment, "/"))
+
+
+n_terms <- nrow(filtered_devil)
+overlap_matrix <- matrix(0, nrow = n_terms, ncol = n_terms,
+                         dimnames = list(filtered_devil$Description, filtered_devil$Description))
+
+for (i in 1:n_terms) {
+  for (j in i:n_terms) {
+    shared_genes <- length(intersect(filtered_devil$genes[[i]], filtered_devil$genes[[j]]))
+    total_genes <- length(union(filtered_devil$genes[[i]], filtered_devil$genes[[j]]))
+    jaccard_index <- shared_genes / total_genes
+    
+    # Fill overlap matrix with Jaccard index
+    overlap_matrix[i, j] <- jaccard_index
+    overlap_matrix[j, i] <- jaccard_index
+  }
+}
+
+
+redundant_terms <- c()
+threshold <- 0.5
+
+for (i in 1:(n_terms - 1)) {
+  for (j in (i + 1):n_terms) {
+    if (overlap_matrix[i, j] > threshold) {
+      redundant_terms <- c(redundant_terms, filtered_devil$Description[j])
+    }
+  }
+}
+
+non_redundant_terms <- filtered_devil %>%
+  filter(!Description %in% redundant_terms)
