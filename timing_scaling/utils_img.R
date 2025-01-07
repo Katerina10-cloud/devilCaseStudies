@@ -158,6 +158,12 @@ plot_time_and_memory_comparison = function(results, n_extrapolation = 3) {
       ddd <- dplyr::bind_rows(ddd, dd_extr)
     }
 
+    if (any(ddd$is_extrapolated == "TRUE")) {
+      fake_row = ddd %>% dplyr::filter(is_extrapolated == "FALSE") %>% dplyr::filter(size == max(size))
+      fake_row$is_extrapolated <- "TRUE"
+      ddd <- dplyr::bind_rows(ddd, fake_row)
+    }
+
     ddd
   }) %>% do.call("bind_rows", .)
 
@@ -165,45 +171,51 @@ plot_time_and_memory_comparison = function(results, n_extrapolation = 3) {
   d <- d %>%
     dplyr::group_by(size) %>%
     dplyr::mutate(time_ratio = time / time[model_name == "devil (GPU)"]) %>%
-    dplyr::mutate(memory_ratio = memory / memory[model_name == "devil (GPU)"])
+    dplyr::mutate(memory_ratio = memory / memory[model_name == "devil (GPU)"]) %>%
+    dplyr::mutate(is_extrapolated = ifelse(is_extrapolated == "FALSE", "Observed", "Extrapolated")) %>%
+    dplyr::mutate(is_extrapolated = factor(is_extrapolated, levels = c("Observed", "Extrapolated")))
 
   p_time = d %>%
-    ggplot(mapping = aes(x = size, y= time, col = model_name)) +
+    ggplot(mapping = aes(x = size, y= time, col = model_name, linetype = is_extrapolated)) +
     geom_point(aes(shape = is_extrapolated), size = 3) +
     geom_line() +
     scale_x_continuous(transform = "log10") +
     scale_y_continuous(transform = "log10") +
-    labs(x = "N genes * N cells", y = "Time (s)", col = "Model") +
+    labs(x = "Dataset size", y = "Time (s)", col = "Model", shape="Measurement", linetype="Measurement") +
+    scale_size_continuous(guide = "none") +
     theme_bw() +
     scale_color_manual(values = method_colors)
 
   p_time_ratio = d %>%
-    ggplot(mapping = aes(x = size, y= time_ratio, col = model_name)) +
+    ggplot(mapping = aes(x = size, y= time_ratio, col = model_name, linetype = is_extrapolated)) +
     geom_point(aes(shape = is_extrapolated), size = 3) +
     geom_line() +
     scale_x_continuous(transform = "log10") +
     scale_y_continuous(transform = "log10") +
-    labs(x = "N genes * N cells", y = "Time ratio", col = "Model") +
+    labs(x = "Dataset size", y = "Time ratio", col = "Model", shape="Measurement", linetype="Measurement") +
+    scale_size_continuous(guide = "none") +
     theme_bw() +
     scale_color_manual(values = method_colors)
 
   p_mem <- d %>%
-    ggplot(mapping = aes(x = size, y= memory, col = model_name)) +
+    ggplot(mapping = aes(x = size, y= memory * 1e-9, col = model_name, linetype = is_extrapolated)) +
     geom_point(aes(shape = is_extrapolated), size = 3) +
     geom_line() +
     scale_x_continuous(transform = "log10") +
     scale_y_continuous(transform = "log10") +
-    labs(x = "N genes * N cells", y = "Memory (GB)", col = "Model") +
+    labs(x = "Dataset size", y = "Memory (GB)", col = "Model", shape="Measurement", linetype="Measurement") +
+    scale_size_continuous(guide = "none") +
     theme_bw() +
     scale_color_manual(values = method_colors)
 
   p_mem_ratio <- d %>%
-    ggplot(mapping = aes(x=size, y= memory_ratio, col = model_name)) +
+    ggplot(mapping = aes(x=size, y= memory_ratio, col = model_name, linetype = is_extrapolated)) +
     geom_point(aes(shape = is_extrapolated), size = 3) +
     geom_line() +
     scale_x_continuous(transform = "log10") +
     scale_y_continuous(transform = "log10") +
-    labs(x = "N genes * N cells", y = "Memory ratio", col = "Model") +
+    labs(x = "Dataset size", y = "Memory ratio", col = "Model", shape="Measurement", linetype="Measurement") +
+    scale_size_continuous(guide = "none") +
     theme_bw() +
     scale_color_manual(values = method_colors)
 
