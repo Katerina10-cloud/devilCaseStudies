@@ -55,6 +55,7 @@ saveRDS(venn_plot, "plot/venn_plot.rds")
 # Volcano plot
 rna_deg_devil <- rna_deg_devil %>% dplyr::filter(adj_pval > 4.467475e-90 ,)
 rna_deg_nebula <- rna_deg_nebula %>% dplyr::filter(adj_pval > 4.787713e-22 ,)
+rna_deg_glm$adj_pval[rna_deg_glm$adj_pval == 0] <- min(rna_deg_glm$adj_pval[rna_deg_glm$adj_pval != 0])
 
 rna_join <- rbind(rna_deg_devil, rna_deg_glm, rna_deg_nebula)
 rna_join <- rna_join %>% 
@@ -111,7 +112,7 @@ p_volcanos <- rna_join %>%
   guides(color = guide_legend(override.aes = list(size = 2, alpha = 1)))
 p_volcanos
 
-ggsave("plot/volcano_all_methods.png", dpi = 400, width = 16.0, height = 5.5, plot = p_volcanos)
+ggsave("plot/volcano_all_methods.pdf", dpi = 400, width = 16.0, height = 5.5, plot = p_volcanos)
 
 
 
@@ -119,7 +120,6 @@ ggsave("plot/volcano_all_methods.png", dpi = 400, width = 16.0, height = 5.5, pl
 
 pkgs <- c("ggplot2", "dplyr","tidyr","reactome.db", "fgsea", "org.Hs.eg.db", "data.table", "clusterProfiler", "enrichplot", "ggpubr")
 sapply(pkgs, require, character.only = TRUE)
-
 
 enrichmentGO <- function(rna_deg_data) {
   # RankMetric Calculation
@@ -131,7 +131,7 @@ enrichmentGO <- function(rna_deg_data) {
   
   gseGO <- clusterProfiler::gseGO(
     genes,
-    ont = "BP",
+    ont = "BP",  # use BP for dotplot, 'All' to perfom gene classification
     OrgDb = org.Hs.eg.db,
     minGSSize = 10,
     maxGSSize = 350,
@@ -144,8 +144,10 @@ enrichmentGO <- function(rna_deg_data) {
 }
 
 
+rna_deg_glm$adj_pval[rna_deg_glm$adj_pval == 0] <- min(rna_deg_glm$adj_pval[rna_deg_glm$adj_pval != 0])
+
 gseGO_devil <- enrichmentGO(rna_deg_devil)
-gseGO_glmGamPoi <- enrichmentGO(rna_deg_glm)
+gseGO_glm <- enrichmentGO(rna_deg_glm)
 gseGO_nebula <- enrichmentGO(rna_deg_nebula)
 
 
@@ -153,7 +155,7 @@ gseGO_nebula <- enrichmentGO(rna_deg_nebula)
 
 remove_redundant_terms <- function(data, enrichment_col = "enrichmentScore", core_col = "core_enrichment", desc_col = "Description", threshold = 0.5) {
   filtered_data <- data %>%
-    dplyr::filter(!!sym(enrichment_col) < -0.3 | !!sym(enrichment_col) > 0.4) %>%
+    #dplyr::filter(!!sym(enrichment_col) < -0.3 | !!sym(enrichment_col) > 0.4) %>%
     mutate(genes = strsplit(!!sym(core_col), "/"))
   
   n_terms <- nrow(filtered_data)
@@ -186,14 +188,12 @@ remove_redundant_terms <- function(data, enrichment_col = "enrichmentScore", cor
 }
 
   
-
-
 filtered_devil_nonRed <- remove_redundant_terms(gseGO_devil, 
                                                        enrichment_col = "enrichmentScore", 
                                                        core_col = "core_enrichment", 
                                                        desc_col = "Description")
 
-filtered_glm_nonRed <- remove_redundant_terms(gseGO_glmGamPoi, 
+filtered_glm_nonRed <- remove_redundant_terms(gseGO_glm, 
                                                        enrichment_col = "enrichmentScore", 
                                                        core_col = "core_enrichment", 
                                                        desc_col = "Description")
@@ -277,3 +277,101 @@ plot_GO <- ggplot(data_join, aes(x = method, y = Description)) +
 plot_GO
 
 ggsave("plot/enrichment_dotplot.png", dpi = 400, width = 18.0, height = 8.0, plot = plot_GO)
+
+
+
+### Categorize the DE genes based on their presence in core_enrichment as 
+### Biologically significant and Less biologically significant
+
+library(stringr)
+
+classify_genes <- function(de_genes, enrichment_data, core_col = "core_enrichment") {
+  core_enrichment_genes <- enrichment_data %>%
+    pull(!!sym(core_col)) %>% 
+    strsplit("/") %>%        
+    unlist() %>%             
+    unique()                 
+  
+  # Classify DE genes
+  classified_genes <- de_genes %>%
+    mutate(
+      BiolSignificance = ifelse(gene %in% core_enrichment_genes, 
+                                      "Biologically significant", 
+                                      "Less Biologically significant")
+    )
+  
+  return(classified_genes)
+}
+
+
+perform_classification <- function(de_genes, filtered_genes, method_name) {
+  classified <- classify_genes(de_genes, filtered_genes)
+  
+  # Separate biologically significant and less significant genes
+  biol_sign <- classified %>%
+    dplyr::filter(BiolSignificance == "Biologically significant") %>%
+    pull(gene)
+  
+  less_biol_sign <- classified %>%
+    dplyr::filter(BiolSignificance == "Less Biologically significant") %>%
+    pull(gene)
+  
+  classification_list <- list(
+    method = method_name,
+    biol_significant_genes = biol_sign,
+    less_biol_significant_genes = less_biol_sign
+  )
+  
+  return(classification_list)
+}
+
+all_results <- list()
+
+methods <- list(
+  devil = list(de_genes = rna_deg_devil$geneID, filtered = filtered_devil_nonRed$core_enrichment),
+  glmGamPoi = list(de_genes = rna_deg_glm$geneID, filtered = filtered_glm_nonRed$core_enrichment),
+  nebula = list(de_genes = rna_deg_nebula$geneID, filtered = filtered_nebula_nonRed$core_enrichment)
+)
+
+
+for (method in names(methods)) {
+  de_genes <- data.frame(gene = methods[[method]]$de_genes)
+  filtered <- data.frame(core_enrichment = methods[[method]]$filtered)
+  result <- perform_classification(de_genes, filtered, method)
+  all_results[[method]] <- result
+}
+
+saveRDS(all_results, file = "results/gsea_GO/gene_classification_allRes.RDS")
+
+
+
+### Pathways categorization ###
+
+gseGO_devil <- readRDS("results/gsea_GO/gseGO_devil.RDS")
+gseGO_glm <- readRDS("results/gsea_GO/gseGO_glmGamPoi.RDS")
+gseGO_nebula <- readRDS("results/gsea_GO/gseGO_nebula.RDS")
+
+immune_system <- c("defense response", "acute-phase response", "positive regulation of cytokine production",
+                   "inflammatory response", "hemopoiesis", "cellular response to cytokine stimulus", "leukocyte migration",
+                   "cytokine production")
+
+cellular_processes <- c("homophilic cell adhesion via plasma membrane adhesion molecules", "epithelial cell proliferation",
+                        "regulation of leukocyte activation", "cell-cell adhesion", "leukocyte cell-cell adhesion")
+
+cell_cycle_related_processes <- c("positive regulation of cell division", "regulation of G2/M transition of mitotic cell cycle",
+                                  "regulation of cell division", "cell division", "regulation of cell cycle process")
+
+muscle_system_process <- c("myofibril assembly", "actin-mediated cell contraction", "muscle cell development",
+                           "muscle contraction", "actin filament-based movement")
+
+signal_transduction <- c("cell surface pattern recognition receptor signaling pathway", "positive regulation of ERK1 and ERK2 cascade",
+                         "immune response-activating cell surface receptor signaling pathway", "regulation of MAPK cascade",
+                         "regulation of response to external stimulus", "positive regulation of developmental process", "positive regulation of multicellular organismal process",
+                         "positive regulation of intracellular signal transduction", "positive regulation of gene expression",
+                         "apoptotic signaling pathway")
+
+metabolism <- c("tRNA metabolic process", "ncRNA metabolic process")
+
+system_pathways <- c("skeletal system development", "skeletal system morphogenesis")
+
+genetic_information_processing <- c("ncRNA processing")
