@@ -82,7 +82,7 @@ prepare_atac_input <- function(input_data) {
   return(list(counts=counts, metadata=metadata, grange=grange_annot, tissue=tissue))
 }
 
-prepare_rna_input <- function(input_data,metadata_atac) {
+prepare_rna_input <- function(input_data) {
   metadata <- input_data$metadata
   metadata <- metadata[ (metadata$tech %in% c("snRNA") & metadata$Annotation %in% c("Type I", "Type II")) , ]
   #metadata <- metadata[ metadata$sample %in% metadata_atac$patient,]

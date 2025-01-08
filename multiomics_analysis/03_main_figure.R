@@ -1,13 +1,118 @@
 
 rm(list = ls())
 pkgs <- c("ggplot2", "dplyr","tidyr","tibble", "viridis", "smplot2", "Seurat", "gridExtra",
-          "ggpubr", "ggrepel", "ggvenn", "ggpointdensity", "edgeR", "patchwork")
+          "ggpubr", "ggrepel", "ggvenn", "ggpointdensity", "patchwork", "ComplexHeatmap")
 sapply(pkgs, require, character.only = TRUE)
 
 cell_group_colors = c(
   "old" = "darkorange",
   "young" = "steelblue"
 )
+
+# input HEATMAP ####
+source("utils_multiomics.R")
+dataset_name <- "MuscleRNA"
+data_path <- "/orfeo/LTS/CDSLab/LT_storage/kdavydzenka/sc_devil/data/multiomics/rna/seurat_counts_rna.RDS"
+input_data <- read_data(dataset_name, data_path)
+input_data <- prepare_rna_input(input_data)
+
+# get markers 
+de_res <- readRDS("results/MuscleRNA/devil_rna.RDS")
+de_res <- de_res %>% 
+  dplyr::filter(abs(lfc) >= 1, adj_pval <= .05)
+
+de_res_top = de_res %>% 
+  dplyr::arrange(-abs(lfc)) %>% 
+  dplyr::slice_head(n = 50)
+
+N_subsample <- 10000
+sample_idx = sample(1:ncol(input_data$counts), N_subsample, replace = FALSE)
+
+mat <- input_data$counts[de_res_top$name,sample_idx] %>% as.matrix()
+meta <- input_data$metadata[sample_idx,] 
+
+meta = meta %>% 
+  dplyr::mutate(Annotation = ifelse(Annotation == "Type II", 'Myonuclei TII', 'Myonuclei TI')) %>% 
+  dplyr::mutate(age_pop = ifelse(age_pop == 'old_pop', "Old", "Young"))
+
+# reorder by samples
+ordered_indices = order(meta$sample)
+
+mat <- mat[,ordered_indices]
+meta = meta[ordered_indices,]
+
+mat.scaled = t(apply(mat, 1, scale))
+
+age_cluster = meta$age_pop
+cell_type_cluster = meta$Annotation
+patient_cluster = meta$sample
+
+col_fun = circlize::colorRamp2(c(-.5, 0, 4), c("#FF00FF", "gray20", "#FFFF00"))
+
+## Young pop ####
+anno = as.data.frame(meta$age_pop)
+colnames(anno) = "Age"
+anno$Sample = meta$sample
+anno$`Cell Type` = meta$Annotation
+
+ha = HeatmapAnnotation(
+  df = anno[,c(1:3)],
+  annotation_height = unit(c(0.5,0.5, 0.5), "cm"),
+  show_annotation_name = TRUE,
+  annotation_name_offset = unit(2, "mm"),
+  annotation_name_rot = c(0, 0, 0),
+  col = list(
+    Age = c("Old"="goldenrod3", "Young"="#483D8B"),
+    `Cell Type` = c("Myonuclei TII"="#880", "Myonuclei TI"="maroon"),
+    Sample = c(
+      "OM1" = '#1f77b4',
+      'OM2' = '#aec7e8',
+      'OM3' = '#ff7f0e',
+      'OM5' = '#ffbb78',
+      'OM6' = '#2ca02c',
+      'OM7' = '#98df8a',
+      'OM8' = '#d62728',
+      'OM9' = '#ff9896',
+      'P17' = '#9467bd',
+      'P21' = '#c5b0d5',
+      'P23' = '#8c564b',
+      'P27' = '#c49c94',
+      'P29' = '#e377c2',
+      'P3' = '#f7b6d2',
+      'P5' = '#7f7f7f',
+      'YM1' = '#c7c7c7',
+      'YM2' = '#bcbd22',
+      'YM3' = '#dbdb8d',
+      'YM4' = '#17becf'
+    )
+  )
+)
+
+
+hm <- Heatmap(
+  mat.scaled,
+  name = "Z-score", 
+  km = 1,
+  column_split = factor(meta$age_pop),
+  #row_split = factor(de_res_top$lfc >= 0),
+  cluster_columns = FALSE,
+  show_column_dend = FALSE,
+  column_title = NULL,
+  cluster_column_slices = FALSE,
+  column_title_gp = gpar(fontsize = 5),
+  column_gap = unit(0.5, "mm"),
+  cluster_rows = TRUE,
+  show_row_dend = FALSE,
+  col = col_fun,
+  row_names_gp = gpar(fontsize = 5),
+  column_title_rot = 90,
+  show_column_names = FALSE,
+  use_raster = FALSE,
+  raster_quality = TRUE,
+  top_annotation = ha
+)
+hm <- ggplotify::as.ggplot(hm)
+hm
 
 # input UMAPs ####
 load("results/metadata_rna_umap.Rdata")
@@ -38,11 +143,13 @@ umap_cell_types <- metadata_rna %>%
   ggplot(mapping = aes(x=umap_1, y=umap_2, col=cell_type)) +
   geom_point(alpha = .5, size = .5) +
   geom_rect(mapping = aes(xmin=x_lims[1], ymin=y_lims[1], xmax=x_lims[2], ymax=y_lims[2]), col="black", fill = alpha("white", 0)) +
-  scale_color_manual(values = c("Myonuclei TI" = "maroon", "Myonuclei TII"="#880", "Other" = "gray90")) +
+  scale_color_manual(values = c("Myonuclei TI" = "maroon", "Myonuclei TII"="#008080", "Other" = "gray90")) +
   theme_bw() +
   labs(x = "UMAP 1", y = "UMAP 2", col="Cell type")
-umap_cell_types
 
+umap_cell_types <- umap_cell_types +
+  theme_void() +
+  theme(legend.position = "none")
 
 umap_ages <- metadata_rna %>%
   #`rownames<-`(1:nrow(metadata_atac)) %>%
@@ -65,5 +172,5 @@ umap_ages
 diff(x_lims)
 diff(y_lims)
 
-ggsave("plot/umap_cell_types.pdf", plot = umap_cell_types, width = 10, height = 10, units = "in", dpi = 600)
-ggsave("plot/umap_ages.pdf", plot = umap_ages, width = diff(x_lims), height = diff(y_lims), units = "in", dpi = 600)
+ggsave("plot/umap_cell_types.png", plot = umap_cell_types, width = 10, height = 10, units = "in", dpi = 1200)
+ggsave("plot/umap_ages.png", plot = umap_ages, width = diff(x_lims), height = diff(y_lims), units = "in", dpi = 1200)
