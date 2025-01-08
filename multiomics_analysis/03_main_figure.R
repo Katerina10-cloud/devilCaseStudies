@@ -114,6 +114,9 @@ hm <- Heatmap(
 hm <- ggplotify::as.ggplot(hm)
 hm
 
+ggsave("plot/hm.pdf", width = 10, height = 6, units = "in", dpi = 700)
+saveRDS(hm, "plot/hm.rds")
+
 # input UMAPs ####
 load("results/metadata_rna_umap.Rdata")
 
@@ -173,4 +176,4 @@ diff(x_lims)
 diff(y_lims)
 
 ggsave("plot/umap_cell_types.png", plot = umap_cell_types, width = 10, height = 10, units = "in", dpi = 1200)
-ggsave("plot/umap_ages.png", plot = umap_ages, width = diff(x_lims), height = diff(y_lims), units = "in", dpi = 1200)
+ggsave("plot/umap_ages.png", plot = umap_ages, width = diff(x_lims) / 2, height = diff(y_lims) / 2, units = "in", dpi = 1200)
