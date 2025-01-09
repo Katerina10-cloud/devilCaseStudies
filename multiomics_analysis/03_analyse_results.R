@@ -74,21 +74,23 @@ p_volcanos <- rna_join %>%
   ggplot(mapping = aes(x = lfc, y = -log10(adj_pval))) +
   geom_point(aes(col = DEtype), size = 2.0, alpha = 0.2) +
   scale_color_manual(values = de_colors) +
+  geom_vline(xintercept = c(-lfc_cut, lfc_cut), linetype = 'dashed') +
+  geom_hline(yintercept = -log10(pval_cut), linetype = "dashed") +
   geom_label_repel(
     data = rna_join %>% filter(geneID %in% gene_markers),
     aes(label = geneID),
-    size = 4.0,
-    fontface = "bold",
+    #size = 4.0,
+    #fontface = "bold",
     color = "black",
     fill = "white",
-    box.padding = 0.8,
-    point.padding = 0.5,
-    max.overlaps = Inf,
-    segment.color = "black",
-    segment.size = 0.5,
-    label.padding = unit(0.15, "lines"),
-    label.r = unit(0.4, "lines"),
-    min.segment.length = 0
+    # box.padding = 0.8,
+    # point.padding = 0.5,
+    max.overlaps = Inf
+    # segment.color = "black",
+    # segment.size = 0.5,
+    # label.padding = unit(0.15, "lines"),
+    # label.r = unit(0.4, "lines"),
+    # min.segment.length = 0
   ) +
   theme_bw() +
   scale_x_continuous(breaks = seq(floor(min(rna_join$lfc)),
@@ -97,8 +99,6 @@ p_volcanos <- rna_join %>%
   labs(x = expression(Log[2] ~ FC),
        y = expression(-log[10] ~ Pvalue),
        col = "DE type") +
-  geom_vline(xintercept = c(-lfc_cut, lfc_cut), linetype = 'dashed') +
-  geom_hline(yintercept = -log10(pval_cut), linetype = "dashed") +
   guides(color = guide_legend(override.aes = list(alpha = 1)))
 p_volcanos
 
