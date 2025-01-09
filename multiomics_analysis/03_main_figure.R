@@ -1,7 +1,7 @@
 
 rm(list = ls())
 pkgs <- c("ggplot2", "dplyr","tidyr","tibble", "viridis", "smplot2", "Seurat", "gridExtra",
-          "ggpubr", "ggrepel", "ggvenn", "ggpointdensity", "patchwork", "ComplexHeatmap")
+          "ggpubr", "ggrepel", "ggvenn", "ggpointdensity", "patchwork", "ComplexHeatmap", "magick")
 sapply(pkgs, require, character.only = TRUE)
 
 cell_group_colors = c(
@@ -109,15 +109,25 @@ hm <- Heatmap(
   row_names_gp = gpar(fontsize = 8),
   column_title_rot = 90,
   show_column_names = FALSE,
-  use_raster = FALSE,
-  raster_quality = TRUE,
+  use_raster = TRUE,
+  raster_quality = 10,
   top_annotation = ha
 )
+hm
+
+saveRDS(hm, "plot/hm.rds")
+saveRDS(mat.scaled, "plot/mat.scaled.rds")
+saveRDS(meta, "plot/meta.rds")
+
+pdf("plot/hm_complexHeatmp.pdf", width = 10, height = 6)
+draw(hm)
+dev.off()
+
 hm <- ggplotify::as.ggplot(hm)
 hm
 
 ggsave("plot/hm.pdf", width = 10, height = 6, units = "in", dpi = 700)
-saveRDS(hm, "plot/hm.rds")
+
 
 # input UMAPs ####
 load("results/metadata_rna_umap.Rdata")
