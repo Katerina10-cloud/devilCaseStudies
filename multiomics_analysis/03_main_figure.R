@@ -47,7 +47,9 @@ age_cluster = meta$age_pop
 cell_type_cluster = meta$Annotation
 patient_cluster = meta$sample
 
-col_fun = circlize::colorRamp2(c(-.5, 0, 4), c("#FF00FF", "gray20", "#FFFF00"))
+stats::quantile(mat.scaled, c(0.01, 0.95))
+
+col_fun = circlize::colorRamp2(c(-.5, 0, .5), c("#FF00FF", "gray20", "#FFFF00"))
 
 ## Young pop ####
 anno = as.data.frame(meta$age_pop)
@@ -63,7 +65,7 @@ ha = HeatmapAnnotation(
   annotation_name_rot = c(0, 0, 0),
   col = list(
     Age = c("Old"="goldenrod3", "Young"="#483D8B"),
-    `Cell Type` = c("Myonuclei TII"="#880", "Myonuclei TI"="maroon"),
+    `Cell Type` = c("Myonuclei TII"="#008080", "Myonuclei TI"="maroon"),
     Sample = c(
       "OM1" = '#1f77b4',
       'OM2' = '#aec7e8',
@@ -94,7 +96,7 @@ hm <- Heatmap(
   name = "Z-score", 
   km = 1,
   column_split = factor(meta$age_pop),
-  #row_split = factor(de_res_top$lfc >= 0),
+  row_split = factor(de_res_top$lfc >= 0),
   cluster_columns = FALSE,
   show_column_dend = FALSE,
   column_title = NULL,
@@ -104,7 +106,7 @@ hm <- Heatmap(
   cluster_rows = TRUE,
   show_row_dend = FALSE,
   col = col_fun,
-  row_names_gp = gpar(fontsize = 5),
+  row_names_gp = gpar(fontsize = 8),
   column_title_rot = 90,
   show_column_names = FALSE,
   use_raster = FALSE,
