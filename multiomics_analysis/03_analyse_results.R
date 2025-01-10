@@ -376,28 +376,49 @@ gseGO_devil <- readRDS("results/gsea_GO/gseGO_devil.RDS")
 gseGO_glm <- readRDS("results/gsea_GO/gseGO_glmGamPoi.RDS")
 gseGO_nebula <- readRDS("results/gsea_GO/gseGO_nebula.RDS")
 
-immune_system <- c("defense response", "acute-phase response", "positive regulation of cytokine production",
-                   "inflammatory response", "hemopoiesis", "cellular response to cytokine stimulus", "leukocyte migration",
+immune_system <- c("defense response", 
+                   "acute-phase response", 
+                   "positive regulation of cytokine production",
+                   "inflammatory response", 
+                   "hemopoiesis", 
+                   "cellular response to cytokine stimulus", 
+                   "leukocyte migration",
                    "cytokine production")
 
-cellular_processes <- c("homophilic cell adhesion via plasma membrane adhesion molecules", "epithelial cell proliferation",
-                        "regulation of leukocyte activation", "cell-cell adhesion", "leukocyte cell-cell adhesion")
+cellular_processes <- c("homophilic cell adhesion via plasma membrane adhesion molecules", 
+                        "epithelial cell proliferation",
+                        "regulation of leukocyte activation", 
+                        "cell-cell adhesion", 
+                        "leukocyte cell-cell adhesion")
 
-cell_cycle_related_processes <- c("positive regulation of cell division", "regulation of G2/M transition of mitotic cell cycle",
-                                  "regulation of cell division", "cell division", "regulation of cell cycle process")
+cell_cycle_related_processes <- c("positive regulation of cell division", 
+                                  "regulation of G2/M transition of mitotic cell cycle",
+                                  "regulation of cell division", 
+                                  "cell division", 
+                                  "regulation of cell cycle process")
 
-muscle_system_process <- c("myofibril assembly", "actin-mediated cell contraction", "muscle cell development",
-                           "muscle contraction", "actin filament-based movement")
+muscle_system_process <- c("myofibril assembly", 
+                           "actin-mediated cell contraction", 
+                           "muscle cell development",
+                           "muscle contraction", 
+                           "actin filament-based movement")
 
-signal_transduction <- c("cell surface pattern recognition receptor signaling pathway", "positive regulation of ERK1 and ERK2 cascade",
-                         "immune response-activating cell surface receptor signaling pathway", "regulation of MAPK cascade",
-                         "regulation of response to external stimulus", "positive regulation of developmental process", "positive regulation of multicellular organismal process",
-                         "positive regulation of intracellular signal transduction", "positive regulation of gene expression",
+signal_transduction <- c("cell surface pattern recognition receptor signaling pathway", 
+                         "positive regulation of ERK1 and ERK2 cascade",
+                         "immune response-activating cell surface receptor signaling pathway", 
+                         "regulation of MAPK cascade",
+                         "regulation of response to external stimulus", 
+                         "positive regulation of developmental process", 
+                         "positive regulation of multicellular organismal process",
+                         "positive regulation of intracellular signal transduction", 
+                         "positive regulation of gene expression",
                          "apoptotic signaling pathway")
 
-metabolism <- c("tRNA metabolic process", "ncRNA metabolic process")
+metabolism <- c("tRNA metabolic process", 
+                "ncRNA metabolic process")
 
-system_pathways <- c("skeletal system development", "skeletal system morphogenesis")
+system_pathways <- c("skeletal system development", 
+                     "skeletal system morphogenesis")
 
 genetic_information_processing <- c("ncRNA processing",
                                     "nucleosome organization", 
