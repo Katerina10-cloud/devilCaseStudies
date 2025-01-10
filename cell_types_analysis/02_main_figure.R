@@ -1,3 +1,4 @@
+
 rm(list=ls())
 pkgs <- c("patchwork", "ggpubr","ggplot2", "dplyr","tidyr","tibble","reshape2", "stringr", "AnnotationDbi", "scMayoMap", "Seurat", "org.Hs.eg.db")
 sapply(pkgs, require, character.only = TRUE)
@@ -101,34 +102,7 @@ pA <- ggplot() +
   geom_label(data_avg_umap, mapping=aes(x=umap1, y = umap2, label = cluster)) +
   theme(text=element_text(size=12))
 pA
-# umap_plot_labels <- Seurat::DimPlot(
-#   seurat_obj,
-#   reduction = "umap",
-#   group.by = "cell_type",
-#   label = T,
-#   repel = T) +
-#   ggtitle("") +
-#   scale_color_manual(values = my_large_palette) +
-#   theme(axis.line=element_blank(),axis.text.x=element_blank(),
-#         axis.text.y=element_blank(),axis.ticks=element_blank(),
-#         axis.title.x=element_blank(),
-#         axis.title.y=element_blank(),legend.position="none",
-#         panel.background=element_blank(),panel.border=element_blank(),panel.grid.major=element_blank(),
-#         panel.grid.minor=element_blank(),plot.background=element_blank())
 
-#ggsave(filename = paste0(img_folder, "umap_cluster.pdf"), dpi=400, plot = umap_plot_seurat, width = 8, height = 8)
-#if (save_svg) { ggsave(filename = paste0(img_folder, "umap_cluster.svg"), dpi=400, plot = umap_plot_seurat, width = 8, height = 8) }
-#ggsave(filename = paste0("plot_figure/umap_labels.svg"), dpi=400, plot = umap_plot_labels, width = 8, height = 8)
-
-# anno <- scMayoMap::scMayoMapDatabase
-# anno <- lapply(colnames(anno[2:ncol(anno)]), function(ct) {
-#   dplyr::tibble(Type=ct, Marker = anno$gene[anno[,ct] == 1])
-# }) %>% do.call('bind_rows', .)
-# anno <- anno %>%
-#   dplyr::filter(grepl(tissue, Type)) %>%
-#   dplyr::mutate(Type = str_replace_all(Type, paste0(tissue, ":"), "")) %>%
-#   dplyr::mutate(Type = str_replace_all(Type, paste0(" cell"), ""))
-# anno$Type %>% unique()
 counts <- as.matrix(seurat_obj@assays$RNA$counts)
 percentage_tibble <- lapply(unique(seurat_obj$seurat_clusters), function(c) {
   print(c)
@@ -175,23 +149,23 @@ for (m in c("devil", "nebula", "glmGamPoi")) {
     print(n_markers)
     for (pval_cut in c(.05, .01, 1e-10, 1e-20)) {
       print(pval_cut)
-      
+
       cluster_values <- de_res$cluster %>% unique()
       remove_genes <- is.na(de_res$name)
       de_res <- de_res[!remove_genes, ]
-      
+
       top_genes <- de_res %>%
         dplyr::group_by(cluster) %>%
         dplyr::filter(lfc > lfc_cut, adj_pval <= pval_cut) %>%
         dplyr::arrange(-lfc) %>%
         dplyr::slice(1:n_markers)
-      
+
       if (nrow(top_genes) > 0) {
-        
+
         scMayoInput <- lapply(unique(top_genes$cluster), function(c) {
           top_genes %>%
             dplyr::filter(cluster == c) %>% pull(name) %>% table() %>% max()
-          
+
           top_genes %>%
             dplyr::filter(cluster == c) %>%
             dplyr::left_join(percentage_tibble %>% dplyr::filter(cluster == c) %>% dplyr::select(!cluster), by='name') %>%
@@ -200,7 +174,7 @@ for (m in c("devil", "nebula", "glmGamPoi")) {
             dplyr::rename(p_val_adj = adj_pval, gene=name, avg_log2FC=lfc) %>%
             dplyr::mutate(avg_log2FC = if_else(avg_log2FC >= 50, 50, avg_log2FC))
         }) %>% do.call('bind_rows', .)
-        
+
         db <- scMayoMap::scMayoMapDatabase
         db <- cbind(db[,1:2], db[,grepl(tissue, colnames(db))])
         scMayoRes <- scMayoMap::scMayoMap(scMayoInput, db, tissue = tissue)
@@ -213,7 +187,7 @@ for (m in c("devil", "nebula", "glmGamPoi")) {
           v <- scTypeMapper %>% dplyr::filter(from == ct) %>% dplyr::distinct() %>% dplyr::pull(to) %>% unique()
           unique(v)
         }) %>% unlist()
-        
+
         rez <- rez %>%
           dplyr::select(cluster, score, true_cell_type, pred) %>%
           dplyr::group_by(cluster, pred) %>%
@@ -223,12 +197,12 @@ for (m in c("devil", "nebula", "glmGamPoi")) {
           dplyr::group_by(cluster) %>%
           dplyr::filter(score == max(score)) %>%
           dplyr::mutate(true_score = ifelse(true_cell_type == pred, score, 0))
-        
+
         n_max <- length(unique(seurat_obj$seurat_clusters))
-        
+
         acc = sum(rez$true_score) / n_max
         acc_1 = sum(rez$true_score > 0) / n_max
-        
+
         comparison_tibble <- dplyr::bind_rows(
           comparison_tibble,
           dplyr::tibble(model=m, acc=acc, acc_1 =acc_1, n_markers=n_markers, pval_cut=pval_cut)
@@ -237,20 +211,6 @@ for (m in c("devil", "nebula", "glmGamPoi")) {
     }
   }
 }
-
-comparison_tibble %>%
-  ggplot(mapping = aes(x=n_markers, y=acc, col=model)) +
-  geom_point() +
-  geom_line() +
-  theme_bw() +
-  facet_wrap(~pval_cut) +
-  scale_color_manual(values=method_colors) +
-  scale_x_continuous(trans = 'log10') +
-  labs(x = "N markers", y = "Classification score", col="Algorithm", fill="Algorithm") +
-  theme(
-    text=element_text(size=12),
-    legend.position = 'right'
-  )
 
 pB <- comparison_tibble %>%
   dplyr::filter(pval_cut %in% c(.05, .01, 1e-10, 1e-20)) %>%
@@ -271,7 +231,6 @@ pB <- comparison_tibble %>%
 pB
 
 ggsave(filename = paste0(img_folder, "assigment_score.pdf"), plot = last_plot(), dpi=300, width = 150, height = 60, units = "mm")
-ggsave(filename = paste0(img_folder, "assigment_score.svg"), plot = last_plot(), dpi=300, width = 150, height = 60, units = "mm")
 
 # Volcano plot ####
 c <- 11
@@ -483,6 +442,7 @@ ggsave(filename = paste0(img_folder, "heatmap.svg"), dpi=300, width = 140, heigh
 # dev.off()
 
 # Gene overlap ####
+lfc_cut <- 1
 pval_cut <- .01
 de_genes_called <- lapply(c("devil", "nebula", "glmGamPoi"), function(m) {
   de_res <- de_res_total <- readRDS(paste0('results/', dataset_name, '/', m, '.RDS')) %>% na.omit()
@@ -497,16 +457,12 @@ de_genes_called <- lapply(c("devil", "nebula", "glmGamPoi"), function(m) {
     dplyr::mutate(model = m)
 }) %>% do.call('bind_rows', .)
 
-
 pF <- de_genes_called %>%
-  dplyr::mutate(model = dplyr::if_else(model == "nebula", "NEBULA", model)) %>%
-  ggplot(mapping = aes(x = as.numeric(cluster), y=n, fill=model, col=model)) +
-  geom_point() +
-  geom_line() +
+  ggplot(mapping = aes(x = factor(cluster, levels = sort(as.numeric(unique(cluster)))), y=n, fill=model)) +
+  geom_bar(position = "dodge", stat = 'identity') +
   theme_bw() +
-  labs(x = "Cluster", y = "Up-regulated genes", col="", fill="") +
-  scale_color_manual(values = method_colors) +
-  scale_y_continuous(transform = "log10") +
+  labs(x = "Cluster", y = "Up-regulated genes", col="Algorithm", fill="Algorithm") +
+  scale_fill_manual(values = method_colors) +
   theme(legend.position = "bottom")
 pF
 # pF <- de_genes_called %>%
@@ -519,7 +475,6 @@ pF
 # pF
 
 ggsave(filename = paste0(img_folder, "genes_called.pdf"), dpi=300, width = 75, height = 60, units = 'mm')
-ggsave(filename = paste0(img_folder, "genes_called.svg"), dpi=300, width = 75, height = 60, units = 'mm')
 
 # Timing plot ####
 timings <- lapply(c("devil", "nebula", "glmGamPoi"), function(m) {
@@ -546,7 +501,6 @@ pD <- timings %>%
 pD
 
 ggsave(filename = paste0(img_folder, "timing.pdf"), dpi=300, width = 75, height = 60, units = 'mm')
-ggsave(filename = paste0(img_folder, "timing.svg"), dpi=300, width = 75, height = 60, units = 'mm')
 
 unlink("Rplots.pdf")
 

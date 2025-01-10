@@ -12,8 +12,6 @@ dataset_name <- args[1]
 tissue <- args[2]
 #save_svg <- as.logical(args[3])
 
-#dataset_name <- "liver"
-#tissue <- "liver"
 #save_svg <- F
 
 # img_folder <- paste0("plot_figure/", dataset_name, "/")
@@ -182,10 +180,15 @@ for (m in c("devil", "nebula", "glmGamPoi")) {
       remove_genes <- is.na(de_res$name)
       de_res <- de_res[!remove_genes, ]
 
+      min_pval = min(de_res$adj_pval[de_res$adj_pval != 0])
+
       top_genes <- de_res %>%
         dplyr::group_by(cluster) %>%
+        dplyr::mutate(adj_pval = if_else(adj_pval == 0, min_pval, adj_pval)) %>%
         dplyr::filter(lfc > lfc_cut, adj_pval <= pval_cut) %>%
+        dplyr::mutate(rank = -log10(adj_pval) * lfc) %>%
         dplyr::arrange(-lfc) %>%
+        #dplyr::arrange(-rank) %>%
         dplyr::slice(1:n_markers)
 
       if (nrow(top_genes) > 0) {
@@ -199,8 +202,8 @@ for (m in c("devil", "nebula", "glmGamPoi")) {
             dplyr::left_join(percentage_tibble %>% dplyr::filter(cluster == c) %>% dplyr::select(!cluster), by='name') %>%
             dplyr::ungroup() %>%
             dplyr::select(name, pval, adj_pval, lfc, pct.1, pct.2, cluster) %>%
-            dplyr::rename(p_val_adj = adj_pval, gene=name, avg_log2FC=lfc) %>%
-            dplyr::mutate(avg_log2FC = if_else(avg_log2FC >= 50, 50, avg_log2FC))
+            dplyr::rename(p_val_adj = adj_pval, gene=name, avg_log2FC=lfc) # %>%
+            # dplyr::mutate(avg_log2FC = if_else(avg_log2FC >= 50, 50, avg_log2FC))
         }) %>% do.call('bind_rows', .)
 
         db <- scMayoMap::scMayoMapDatabase
@@ -239,20 +242,6 @@ for (m in c("devil", "nebula", "glmGamPoi")) {
     }
   }
 }
-
-comparison_tibble %>%
-  ggplot(mapping = aes(x=n_markers, y=acc, col=model)) +
-  geom_point() +
-  geom_line() +
-  theme_bw() +
-  facet_wrap(~pval_cut) +
-  scale_color_manual(values=method_colors) +
-  scale_x_continuous(trans = 'log10') +
-  labs(x = "N markers", y = "Classification score", col="Algorithm", fill="Algorithm") +
-  theme(
-    text=element_text(size=12),
-    legend.position = 'right'
-  )
 
 pB <- comparison_tibble %>%
   dplyr::filter(pval_cut %in% c(.05, .01, 1e-10, 1e-20)) %>%

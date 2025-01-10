@@ -242,24 +242,69 @@ filtered_glm_nonRed <- filtered_glm_nonRed %>%
 
 data_join <- rbind(filtered_devil_nonRed, filtered_glm_nonRed, filtered_nebula_nonRed)
 
-plot_GO <- ggplot(data_join, aes(x = method, y = Description)) +
+biological_processes <- list(
+  immune_response_and_defense = c(
+    "defense response",
+    "acute-phase response",
+    "cell surface pattern recognition receptor signaling pathway",
+    "response to stress",
+    "cellular response to chemical stimulus",
+    "cellular response to cytokine stimulus",
+    "cytokine production",
+    "positive regulation of cytokine production"
+  ),
+  cellular_processes_and_regulation = c(
+    "regulation of cell division",
+    "positive regulation of gene expression",
+    "negative regulation of biosynthetic process",
+    "positive regulation of response to stimulus",
+    "regulation of MAPK cascade",
+    "positive regulation of ERK1 and ERK2 cascade",
+    "apoptotic signaling pathway",
+    "DNA metabolic process"
+  ),
+  cellular_adhesion_and_movement = c(
+    "homophilic cell adhesion via plasma membrane adhesion molecules",
+    "leukocyte cell-cell adhesion",
+    "leukocyte migration"
+  ),
+  transport = c(
+    "nitrogen compound transport"
+  ),
+  development_and_differentiation = c(
+    "positive regulation of developmental process",
+    "tube development",
+    "epithelial cell proliferation",
+    "cell population proliferation",
+    "muscle cell development"
+  ),
+  muscle_function = c(
+    "muscle contraction",
+    "actin-mediated cell contraction",
+    "myofibril assembly"
+  )
+)
 
-  geom_point(aes(size = setSize, color = p.adjust)) +
-  facet_wrap(~factor(DE_type, levels = c("Up-regulated", "Down-regulated")), scales = "free", ncol = 2) +
+go_terms_levels <- unname(unlist(biological_processes))
+
+data_join$Biological_process = lapply(data_join$Description, function(desc) {
+  true_bp <- lapply(names(biological_processes), function(bp) {
+    if (desc %in% biological_processes[[bp]]) {
+      return(bp)
+    }
+  }) %>% unlist()
+  true_bp
+})
+
+plot_GO = data_join %>%
+  dplyr::mutate(Description = factor(Description, levels = go_terms_levels)) %>%
+  dplyr::mutate(DE_type = factor(DE_type, levels = c("Up-regulated", "Down-regulated"))) %>%
+  ggplot(aes(x = method, y = Description, size = setSize, color = p.adjust)) +
+  geom_point() +
+  facet_grid(~DE_type, space = "free", scales = "free") +
+  #facet_wrap(~factor(DE_type, levels = c("Up-regulated", "Down-regulated")), scales = "free_y", ncol = 2, shrink = F) +
   scale_color_gradient(low = "cornflowerblue", high = "coral", name = "p.adjust)") +
   theme_bw() +
-  # theme(
-  #   #panel.spacing = unit(1, "lines"),
-  #   #axis.text.x = element_text(size = 16, color = "black", angle = 30, hjust = 1),
-  #   #axis.text.y = element_text(size = 16, color = "black"),
-  #   #legend.key.size = unit(0.6, "cm"),
-  #   #legend.text = element_text(size = 12, color = "black"),
-  #   #legend.title = element_text(size = 14, color = "black"),
-  #   #legend.spacing.y = unit(0.2, 'cm'),
-  #   #strip.text = element_text(size = 18, face = "plain", color = "black"),
-  #   #axis.text = element_text(size = 14, color = "black"),
-  #   #axis.title = element_text(size = 16)
-  # ) +
   labs(
     title = "",
     x = "",
@@ -367,3 +412,5 @@ metabolism <- c("tRNA metabolic process", "ncRNA metabolic process")
 system_pathways <- c("skeletal system development", "skeletal system morphogenesis")
 
 genetic_information_processing <- c("ncRNA processing")
+
+
