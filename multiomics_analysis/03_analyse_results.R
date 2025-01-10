@@ -366,4 +366,30 @@ metabolism <- c("tRNA metabolic process", "ncRNA metabolic process")
 
 system_pathways <- c("skeletal system development", "skeletal system morphogenesis")
 
-genetic_information_processing <- c("ncRNA processing")
+genetic_information_processing <- c("ncRNA processing",
+                                    "nucleosome organization", 
+                                    "heterochromatin formation")
+
+unrelated_pathways <- c("cellular response to radiation", 
+                        "animal organ morphogenesis", 
+                        "embryo development",
+                        "cellular response to gamma radiation", 
+                        "regulation of cardiac muscle contraction by calcium ion signaling",
+                        "regulation of neurotransmitter secretion", 
+                        "cardiac atrium development", 
+                        "retina morphogenesis in camera-type eye", 
+                        "pancreas development",
+                        "response to estrogen", 
+                        "neural nucleus development", 
+                        "neutral amino acid transport", 
+                        "regulation of viral process",
+                        "cellular response to tumor necrosis factor") 
+
+pathways_categories <- list(immune_system, cellular_processes, cell_cycle_related_processes, muscle_system_process, signal_transduction,
+                            metabolism, system_pathways, genetic_information_processing, unrelated_pathways)
+
+names(pathways_categories) <- c("immune system", "cellular processes", "cell cycle related processes", "muscle system process", "signal transduction",
+                                "metabolism", "system pathways", "genetic information processing", "unrelated pathways")
+
+saveRDS(pathways_categories, file = "results/gsea_GO/pathway_categories.RDS")
+
