@@ -5,7 +5,7 @@ rm(list = ls())
 #setwd("/Users/katsiarynadavydzenka/Documents/PhD_AI/devilCaseStudies/multiomics_analysis")
 
 pkgs <- c("ggplot2", "dplyr","tidyr","tibble", "viridis", "smplot2", "Seurat", "gridExtra",
-          "ggpubr", "ggrepel", "ggvenn", "ggpointdensity", "edgeR", "patchwork", 'ggVennDiagram')
+          "ggpubr", "ggrepel", "ggvenn", "ggpointdensity", "edgeR", "patchwork", 'ggVennDiagram', 'stringr')
 sapply(pkgs, require, character.only = TRUE)
 
 rna_devil <- "results/MuscleRNA/devil_rna.RDS"
@@ -222,17 +222,42 @@ filtered_nebula_nonRed <- filtered_nebula_nonRed %>%
 
 # Select pathways to plot
 
-terms_devil <- c("myofibril assembly", "actin-mediated cell contraction", "muscle cell development",
-                 "muscle contraction", "acute-phase response", "regulation of cell division", "cell surface pattern recognition receptor signaling pathway", "homophilic cell adhesion via plasma membrane adhesion molecules",
-                 "regulation of G2/M transition of mitotic cell cycle", "positive regulation of ERK1 and ERK2 cascade",
-                 "immune response-activating cell surface receptor signaling pathway",
-                 "tRNA metabolic process", "positive regulation of cytokine production", "epithelial cell proliferation",
-                 "regulation of leukocyte activation", "regulation of MAPK cascade", "defense response")
+terms_devil <- c("actin-mediated cell contraction", 
+                 "myofibril assembly", 
+                 "muscle cell development", 
+                 "muscle contraction",
+                 "acute-phase response",
+                 "regulation of cell division",
+                 "cell surface pattern recognition receptor signaling pathway",
+                 "homophilic cell adhesion via plasma membrane adhesion molecules",
+                 "positive regulation of ERK1 and ERK2 cascade",
+                 "immune response-regulating cell surface receptor signaling pathway",
+                 "positive regulation of cytokine production",
+                 "epithelial cell proliferation",
+                 "ncRNA processing",
+                 "defense response",
+                 "regulation of MAPK cascade",
+                 "defense response")
 
-terms_glm <- c("myofibril assembly", "actin filament-based movement", "muscle cell development", "muscle contraction",
-               "acute-phase response", "homophilic cell adhesion via plasma membrane adhesion molecules", "regulation of cell division",
-               "positive regulation of ERK1 and ERK2 cascade", "immune response-activating cell surface receptor signaling pathway",
-               "tRNA metabolic process", "positive regulation of cytokine production", "epithelial cell proliferation", "defense response")
+terms_glm <- c("nucleosome organization",
+               "striated muscle adaptation",
+               "muscle cell development",
+               "striated muscle contraction",
+               "muscle system process",
+               "actin filament-based process",
+               "cell-cell adhesion via plasma-membrane adhesion molecules",
+               "regulation of cell division",
+               "regulation of cytokine production",
+               "apoptotic signaling pathway",
+               "epithelial cell proliferation",
+               "positive regulation of immune system process",
+               "defense response to other organism",
+               "positive regulation of cell population proliferation",
+               "regulation of transferase activity",
+               "leukocyte migration",
+               "MAPK cascade")
+
+filtered_nebula_nonRed <- filtered_nebula_nonRed %>% dplyr::filter(enrichmentScore < -0.3 | enrichmentScore > 0.4)
 
 filtered_devil_nonRed <- filtered_devil_nonRed %>%
   dplyr::filter(Description %in% terms_devil)
@@ -241,6 +266,14 @@ filtered_glm_nonRed <- filtered_glm_nonRed %>%
   dplyr::filter(Description %in% terms_glm)
 
 data_join <- rbind(filtered_devil_nonRed, filtered_glm_nonRed, filtered_nebula_nonRed)
+
+data_join <- data_join %>%
+  mutate(Description = str_replace_all(Description, c(
+    "regulation of MAPK cascade" = "MAPK cascade",
+    "regulation of cytokine production" = "cytokine production",
+    "positive cytokine production" = "cytokine production",
+    "defense response to other organism" = "defense response"
+  )))
 
 plot_GO <- ggplot(data_join, aes(x = method, y = Description)) +
 
