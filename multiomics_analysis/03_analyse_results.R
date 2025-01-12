@@ -2,10 +2,10 @@
 
 rm(list = ls())
 
-#setwd("/Users/katsiarynadavydzenka/Documents/PhD_AI/devilCaseStudies/multiomics_analysis")
+setwd("/Users/katsiarynadavydzenka/Documents/PhD_AI/devilCaseStudies/multiomics_analysis")
 
 pkgs <- c("ggplot2", "dplyr","tidyr","tibble", "viridis", "smplot2", "Seurat", "gridExtra",
-          "ggpubr", "ggrepel", "ggvenn", "ggpointdensity", "edgeR", "patchwork", 'ggVennDiagram')
+          "ggpubr", "ggrepel", "ggvenn", "ggpointdensity", "edgeR", "patchwork", 'ggVennDiagram', 'stringr')
 sapply(pkgs, require, character.only = TRUE)
 
 rna_devil <- "results/MuscleRNA/devil_rna.RDS"
@@ -83,14 +83,14 @@ p_volcanos <- rna_join %>%
     #fontface = "bold",
     color = "black",
     fill = "white",
-    # box.padding = 0.8,
-    # point.padding = 0.5,
-    max.overlaps = Inf
-    # segment.color = "black",
-    # segment.size = 0.5,
-    # label.padding = unit(0.15, "lines"),
-    # label.r = unit(0.4, "lines"),
-    # min.segment.length = 0
+    #box.padding = 0.7,
+    #point.padding = 0.5,
+    max.overlaps = Inf,
+    segment.color = "black",
+    #segment.size = 0.4,
+    #label.padding = unit(0.15, "lines"),
+    #label.r = unit(0.4, "lines"),
+    min.segment.length = 0
   ) +
   theme_bw() +
   scale_x_continuous(breaks = seq(floor(min(rna_join$lfc)),
@@ -99,10 +99,16 @@ p_volcanos <- rna_join %>%
   labs(x = expression(Log[2] ~ FC),
        y = expression(-log[10] ~ Pvalue),
        col = "DE type") +
+  #ggplot2::theme(legend.position = 'right',
+                 #legend.text = element_text(size = 16, color = "black"),
+                 #legend.title = element_text(size = 18, color = "black"),  
+                 #strip.text = element_text(size = 20, face = "plain", color = "black"),
+                 #axis.text = element_text(size = 18, color = "black"),
+                 #axis.title = element_text(size = 20, color = "black"))+
   guides(color = guide_legend(override.aes = list(alpha = 1)))
 p_volcanos
 
-ggsave("plot/volcano_all_methods.pdf", dpi = 400, width = 16.0, height = 5.5, plot = p_volcanos)
+ggsave("plot/volcanos.png", dpi = 400, width = 15.0, height = 5.0, plot = p_volcanos)
 saveRDS(p_volcanos, "plot/volcanos.rds")
 
 
@@ -222,17 +228,42 @@ filtered_nebula_nonRed <- filtered_nebula_nonRed %>%
 
 # Select pathways to plot
 
-terms_devil <- c("myofibril assembly", "actin-mediated cell contraction", "muscle cell development",
-                 "muscle contraction", "acute-phase response", "regulation of cell division", "cell surface pattern recognition receptor signaling pathway", "homophilic cell adhesion via plasma membrane adhesion molecules",
-                 "regulation of G2/M transition of mitotic cell cycle", "positive regulation of ERK1 and ERK2 cascade",
-                 "immune response-activating cell surface receptor signaling pathway",
-                 "tRNA metabolic process", "positive regulation of cytokine production", "epithelial cell proliferation",
-                 "regulation of leukocyte activation", "regulation of MAPK cascade", "defense response")
+terms_devil <- c("actin-mediated cell contraction", 
+                 "myofibril assembly", 
+                 "muscle cell development", 
+                 "muscle contraction",
+                 "acute-phase response",
+                 "regulation of cell division",
+                 "cell surface pattern recognition receptor signaling pathway",
+                 "homophilic cell adhesion via plasma membrane adhesion molecules",
+                 "positive regulation of ERK1 and ERK2 cascade",
+                 "immune response-regulating cell surface receptor signaling pathway",
+                 "positive regulation of cytokine production",
+                 "epithelial cell proliferation",
+                 "ncRNA processing",
+                 "defense response",
+                 "regulation of MAPK cascade",
+                 "defense response")
 
-terms_glm <- c("myofibril assembly", "actin filament-based movement", "muscle cell development", "muscle contraction",
-               "acute-phase response", "homophilic cell adhesion via plasma membrane adhesion molecules", "regulation of cell division",
-               "positive regulation of ERK1 and ERK2 cascade", "immune response-activating cell surface receptor signaling pathway",
-               "tRNA metabolic process", "positive regulation of cytokine production", "epithelial cell proliferation", "defense response")
+terms_glm <- c("nucleosome organization",
+               "striated muscle adaptation",
+               "muscle cell development",
+               "striated muscle contraction",
+               "muscle system process",
+               "actin filament-based process",
+               "cell-cell adhesion via plasma-membrane adhesion molecules",
+               "regulation of cell division",
+               "regulation of cytokine production",
+               "apoptotic signaling pathway",
+               "epithelial cell proliferation",
+               "positive regulation of immune system process",
+               "defense response to other organism",
+               "positive regulation of cell population proliferation",
+               "regulation of transferase activity",
+               "leukocyte migration",
+               "MAPK cascade")
+
+filtered_nebula_nonRed <- filtered_nebula_nonRed %>% dplyr::filter(enrichmentScore < -0.3 | enrichmentScore > 0.4)
 
 filtered_devil_nonRed <- filtered_devil_nonRed %>%
   dplyr::filter(Description %in% terms_devil)
@@ -241,32 +272,48 @@ filtered_glm_nonRed <- filtered_glm_nonRed %>%
   dplyr::filter(Description %in% terms_glm)
 
 data_join <- rbind(filtered_devil_nonRed, filtered_glm_nonRed, filtered_nebula_nonRed)
+data_join <- data_join %>%
+  mutate(Description = str_replace_all(Description, c(
+    "regulation of MAPK cascade" = "MAPK cascade",
+    "regulation of cytokine production" = "cytokine production",
+    "positive cytokine production" = "cytokine production",
+    "defense response to other organism" = "defense response",
+    "homophilic cell adhesion via plasma membrane adhesion molecules" = "cell-cell adhesion via plasma-membrane adhesion molecules"
+  )))
+
 
 biological_processes <- list(
   immune_response_and_defense = c(
     "defense response",
     "acute-phase response",
     "cell surface pattern recognition receptor signaling pathway",
+    "immune response-regulating cell surface receptor signaling pathway",
     "response to stress",
     "cellular response to chemical stimulus",
     "cellular response to cytokine stimulus",
     "cytokine production",
-    "positive regulation of cytokine production"
+    "positive regulation of immune system process"
+    
   ),
   cellular_processes_and_regulation = c(
     "regulation of cell division",
     "positive regulation of gene expression",
     "negative regulation of biosynthetic process",
     "positive regulation of response to stimulus",
-    "regulation of MAPK cascade",
+    "MAPK cascade",
     "positive regulation of ERK1 and ERK2 cascade",
+    "DNA metabolic process",
     "apoptotic signaling pathway",
-    "DNA metabolic process"
+    "positive regulation of cell population proliferation",
+    "regulation of transferase activity",
+    "ncRNA processing",
+    "nucleosome organization"
   ),
   cellular_adhesion_and_movement = c(
     "homophilic cell adhesion via plasma membrane adhesion molecules",
     "leukocyte cell-cell adhesion",
-    "leukocyte migration"
+    "leukocyte migration",
+    "cell-cell adhesion via plasma-membrane adhesion molecules"
   ),
   transport = c(
     "nitrogen compound transport"
@@ -281,7 +328,10 @@ biological_processes <- list(
   muscle_function = c(
     "muscle contraction",
     "actin-mediated cell contraction",
-    "myofibril assembly"
+    "myofibril assembly",
+    "muscle system process",
+    "actin filament-based process",
+    "striated muscle adaptation"
   )
 )
 
@@ -316,6 +366,7 @@ plot_GO
 ggsave("plot/enrichment_dotplot.png", dpi = 400, width = 18.0, height = 8.0, plot = plot_GO)
 saveRDS(plot_GO, "plot/enrichment_dotplot.RDS")
 
+plot_data <- as.data.frame(plot_GO[["data"]])
 
 ### Categorize the DE genes based on their presence in core_enrichment as
 ### Biologically significant and Less biologically significant

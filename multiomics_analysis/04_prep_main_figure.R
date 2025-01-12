@@ -10,7 +10,7 @@ cell_group_colors = c(
 )
 
 # input HEATMAP ####
-source("utils_multiomics.R")
+source("utils.R")
 dataset_name <- "MuscleRNA"
 data_path <- "/orfeo/LTS/CDSLab/LT_storage/kdavydzenka/sc_devil/data/multiomics/rna/seurat_counts_rna.RDS"
 input_data <- read_data(dataset_name, data_path)
@@ -130,7 +130,7 @@ ggsave("plot/hm.pdf", width = 10, height = 6, units = "in", dpi = 700)
 
 
 # input UMAPs ####
-load("results/metadata_rna_umap.Rdata")
+load("results/data/metadata_rna_umap.Rdata")
 
 metadata_rna$cell_type %>% unique()
 
