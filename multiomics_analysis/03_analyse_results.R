@@ -19,7 +19,7 @@ rna_nebula <- readRDS(rna_nebula) %>% dplyr::rename(geneID=name) %>% dplyr::muta
 
 
 # Gene selection based on LFC & pvalue cutoff #
-lfc_cut <- 0.5
+lfc_cut <- 1.0
 pval_cut <- .05
 
 rna_deg_devil <- rna_devil %>%
@@ -49,7 +49,8 @@ venn_plot <- ggVennDiagram::ggVennDiagram(x, color = 1, lwd = 0.8) +
   theme(legend.position = "none")
 venn_plot
 
-saveRDS(venn_plot, "plot/venn_plot.rds")
+saveRDS(venn_plot, "plot/venn_plot_v2.rds")
+
 
 # Volcano plot
 rna_deg_devil <- rna_deg_devil %>% dplyr::filter(adj_pval > 4.467475e-90 ,)
@@ -79,18 +80,18 @@ p_volcanos <- rna_join %>%
   geom_label_repel(
     data = rna_join %>% filter(geneID %in% gene_markers),
     aes(label = geneID),
-    #size = 4.0,
+    size = 4.0,
     #fontface = "bold",
     color = "black",
     fill = "white",
-    #box.padding = 0.7,
-    #point.padding = 0.5,
+    box.padding = 0.5,
+    point.padding = 0.4,
     max.overlaps = Inf,
     segment.color = "black",
-    #segment.size = 0.4,
-    #label.padding = unit(0.15, "lines"),
-    #label.r = unit(0.4, "lines"),
-    min.segment.length = 0
+    segment.size = 0.5,
+    label.padding = unit(0.15, "lines"),
+    label.r = unit(0.4, "lines"),
+    min.segment.length = 1
   ) +
   theme_bw() +
   scale_x_continuous(breaks = seq(floor(min(rna_join$lfc)),
@@ -108,7 +109,7 @@ p_volcanos <- rna_join %>%
   guides(color = guide_legend(override.aes = list(alpha = 1)))
 p_volcanos
 
-ggsave("plot/volcanos.png", dpi = 400, width = 15.0, height = 5.0, plot = p_volcanos)
+ggsave("plot/volcanos_v2.png", dpi = 400, width = 16.0, height = 5.0, plot = p_volcanos)
 saveRDS(p_volcanos, "plot/volcanos.rds")
 
 
@@ -134,7 +135,7 @@ enrichmentGO <- function(rna_deg_data) {
     keyType = "SYMBOL",
     pvalueCutoff = 0.05,
     verbose = TRUE,
-    seed = 1234
+    #seed = 1234
   )
 
   return(gseGO@result %>% as.data.frame())
@@ -148,7 +149,9 @@ gseGO_glm <- enrichmentGO(rna_deg_glm)
 gseGO_nebula <- enrichmentGO(rna_deg_nebula)
 
 
-# Remove redundant terms #
+# Enrichment results preprocessing #
+
+# Remove redundant terms 
 
 remove_redundant_terms <- function(data, enrichment_col = "enrichmentScore", core_col = "core_enrichment", desc_col = "Description", threshold = 0.5) {
   filtered_data <- data %>%
@@ -180,37 +183,62 @@ remove_redundant_terms <- function(data, enrichment_col = "enrichmentScore", cor
   }
   non_redundant_data <- filtered_data %>%
     filter(!(!!sym(desc_col) %in% redundant_terms))
+  
+  redundant_data <- filtered_data %>%
+    filter(!!sym(desc_col) %in% redundant_terms)
 
-  return(non_redundant_data)
+  return(list(
+    non_redundant_data = non_redundant_data,
+    redundant_data = redundant_data
+  ))
 }
 
 
-filtered_devil_nonRed <- remove_redundant_terms(gseGO_devil,
-                                                       enrichment_col = "enrichmentScore",
-                                                       core_col = "core_enrichment",
-                                                       desc_col = "Description")
+filtered_devil <- remove_redundant_terms(gseGO_devil,
+                                         enrichment_col = "enrichmentScore",
+                                         core_col = "core_enrichment",
+                                         desc_col = "Description",
+                                         threshold = 0.5)
 
-filtered_glm_nonRed <- remove_redundant_terms(gseGO_glm,
-                                                       enrichment_col = "enrichmentScore",
-                                                       core_col = "core_enrichment",
-                                                       desc_col = "Description")
-
-filtered_nebula_nonRed <- remove_redundant_terms(gseGO_nebula,
-                                                    enrichment_col = "enrichmentScore",
-                                                    core_col = "core_enrichment",
-                                                    desc_col = "Description")
+redundant_devil <- as.data.frame(filtered_devil[["redundant_data"]])
+nonRed_devil <- as.data.frame(filtered_devil[["non_redundant_data"]])
 
 
-saveRDS(filtered_devil_nonRed, file = "results/gsea_GO/gseGO_devil.RDS")
-saveRDS(filtered_glm_nonRed, file = "results/gsea_GO/gseGO_glmGamPoi.RDS")
-saveRDS(filtered_nebula_nonRed, file = "results/gsea_GO/gseGO_nebula.RDS")
+filtered_glm <- remove_redundant_terms(gseGO_glm,
+                                       enrichment_col = "enrichmentScore",
+                                       core_col = "core_enrichment",
+                                       desc_col = "Description",
+                                       threshold = 0.5
+                                       )
+
+redundant_glm <- as.data.frame(filtered_glm[["redundant_data"]])
+nonRed_glm <- as.data.frame(filtered_glm[["non_redundant_data"]])
 
 
-# Enrichment plot #
+filtered_nebula <- remove_redundant_terms(gseGO_nebula,
+                                          enrichment_col = "enrichmentScore",
+                                          core_col = "core_enrichment",
+                                          desc_col = "Description",
+                                          threshold = 0.5)
 
-filtered_devil_nonRed <- readRDS("results/gsea_GO/gseGO_devil.RDS")
-filtered_glm_nonRed <- readRDS("results/gsea_GO/gseGO_glmGamPoi.RDS")
-filtered_nebula_nonRed <- readRDS("results/gsea_GO/gseGO_nebula.RDS")
+redundant_nebula <- as.data.frame(filtered_nebula[["redundant_data"]])
+nonRed_nebula <- as.data.frame(filtered_nebula[["non_redundant_data"]])
+
+
+saveRDS(filtered_devil, file = "results/gsea_GO/gseGO_devil_list.RDS")
+saveRDS(filtered_glm, file = "results/gsea_GO/gseGO_glmGamPoi_list.RDS")
+saveRDS(filtered_nebula, file = "results/gsea_GO/gseGO_nebula_list.RDS")
+
+
+# Enrichment results | Pathways selection #
+
+filtered_devil <- readRDS("results/gsea_GO/gseGO_devil_list.RDS")
+filtered_glm <- readRDS("results/gsea_GO/gseGO_glmGamPoi_list.RDS")
+filtered_nebula <- readRDS("results/gsea_GO/gseGO_nebula_list.RDS")
+
+filtered_devil_nonRed <- filtered_devil[["non_redundant_data"]]
+filtered_glm_nonRed <- filtered_glm[["non_redundant_data"]]
+filtered_nebula_nonRed <- filtered_nebula[["non_redundant_data"]]
 
 filtered_devil_nonRed$DE_type <- ifelse(filtered_devil_nonRed$enrichmentScore > 0, "Up-regulated", "Down-regulated")
 filtered_glm_nonRed$DE_type <- ifelse(filtered_glm_nonRed$enrichmentScore > 0, "Up-regulated", "Down-regulated")
@@ -226,112 +254,132 @@ filtered_nebula_nonRed <- filtered_nebula_nonRed %>%
   dplyr::mutate(method = "nebula")
 
 
-# Select pathways to plot
 
-terms_devil <- c("actin-mediated cell contraction", 
-                 "myofibril assembly", 
-                 "muscle cell development", 
-                 "muscle contraction",
-                 "acute-phase response",
-                 "regulation of cell division",
-                 "cell surface pattern recognition receptor signaling pathway",
-                 "homophilic cell adhesion via plasma membrane adhesion molecules",
-                 "positive regulation of ERK1 and ERK2 cascade",
-                 "immune response-regulating cell surface receptor signaling pathway",
-                 "positive regulation of cytokine production",
-                 "epithelial cell proliferation",
-                 "ncRNA processing",
-                 "defense response",
-                 "regulation of MAPK cascade",
-                 "defense response")
+# Select not biologically specific pathways 
 
-terms_glm <- c("nucleosome organization",
-               "striated muscle adaptation",
-               "muscle cell development",
-               "striated muscle contraction",
-               "muscle system process",
-               "actin filament-based process",
-               "cell-cell adhesion via plasma-membrane adhesion molecules",
-               "regulation of cell division",
-               "regulation of cytokine production",
-               "apoptotic signaling pathway",
-               "epithelial cell proliferation",
-               "positive regulation of immune system process",
-               "defense response to other organism",
-               "positive regulation of cell population proliferation",
-               "regulation of transferase activity",
-               "leukocyte migration",
-               "MAPK cascade")
+terms_notSpecific_devil <- c("embryo development")
 
-filtered_nebula_nonRed <- filtered_nebula_nonRed %>% dplyr::filter(enrichmentScore < -0.3 | enrichmentScore > 0.4)
+terms_notSpecific_nebula <- c("response to tumor necrosis factor", 
+                              "positive regulation of gene expression",
+                              "embryonic morphogenesis", 
+                              "tube development", 
+                              "gene expression",
+                              "regulation of biological process")
 
-filtered_devil_nonRed <- filtered_devil_nonRed %>%
-  dplyr::filter(Description %in% terms_devil)
 
-filtered_glm_nonRed <- filtered_glm_nonRed %>%
-  dplyr::filter(Description %in% terms_glm)
+terms_notSpecific_glm <- c("response to gamma radiation",
+                           "artery morphogenesis",
+                           "positive regulation of tumor necrosis factor superfamily cytokine production",
+                           "regulation of viral process",
+                           "cognition",
+                           "inner ear development",
+                           "cell fate commitment",
+                           "response to steroid hormone",
+                           "viral process",
+                           "response to tumor necrosis factor",
+                           "reproductive structure development",
+                           "kidney development",
+                           "positive regulation of gene expression",
+                           "negative regulation of gene expression",
+                           "embryonic morphogenesis",
+                           "nervous system development",
+                           "central nervous system development",
+                           "cardiac muscle hypertrophy")
 
-data_join <- rbind(filtered_devil_nonRed, filtered_glm_nonRed, filtered_nebula_nonRed)
-data_join <- data_join %>%
-  mutate(Description = str_replace_all(Description, c(
-    "regulation of MAPK cascade" = "MAPK cascade",
-    "regulation of cytokine production" = "cytokine production",
-    "positive cytokine production" = "cytokine production",
-    "defense response to other organism" = "defense response",
-    "homophilic cell adhesion via plasma membrane adhesion molecules" = "cell-cell adhesion via plasma-membrane adhesion molecules"
-  )))
+not_biol_specific_terms <- list(terms_notSpecific_devil, terms_notSpecific_glm, terms_notSpecific_nebula)
+names(not_biol_specific_terms) <- c("devil", "glmGamPoi", "nebula")
 
+saveRDS(not_biol_specific_terms, file = "results/gsea_GO/notBiolSpecific_terms.RDS")
+
+
+
+# Check glmGamPoi and nebula private genes enrichment
+
+glm_private_genes <- setdiff(rna_deg_glm$geneID, union(rna_deg_devil$geneID, rna_deg_nebula$geneID))
+
+cat("Number of private genes in GLM:", length(glm_private_genes), "\n")
+
+glm_private_data <- rna_deg_glm %>%
+  dplyr::filter(geneID %in% glm_private_genes)
+
+glm_private_data$adj_pval[glm_private_data$adj_pval == 0] <- min(glm_private_data$adj_pval[glm_private_data$adj_pval != 0])
+
+gseGO_glm_private <- enrichmentGO(glm_private_data)
+
+saveRDS(gseGO_glm_private, file = "results/gsea_GO/gseGO_glm_private.RDS")
+
+
+
+# Divide pathways into BP categories 
 
 biological_processes <- list(
   immune_response_and_defense = c(
-    "defense response",
-    "acute-phase response",
-    "cell surface pattern recognition receptor signaling pathway",
+    "innate immune response activating cell surface receptor signaling pathway",
     "immune response-regulating cell surface receptor signaling pathway",
-    "response to stress",
-    "cellular response to chemical stimulus",
+    "defense response",
+    "inflammatory response",
+    "positive regulation of immune system process",
+    "regulation of response to external stimulus",
+    "B cell activation",
     "cellular response to cytokine stimulus",
     "cytokine production",
-    "positive regulation of immune system process"
+    "negative regulation of immune system process",
+    "positive regulation of response to external stimulus",
+    "interleukin-8 production"
     
   ),
   cellular_processes_and_regulation = c(
-    "regulation of cell division",
-    "positive regulation of gene expression",
-    "negative regulation of biosynthetic process",
-    "positive regulation of response to stimulus",
-    "MAPK cascade",
-    "positive regulation of ERK1 and ERK2 cascade",
-    "DNA metabolic process",
-    "apoptotic signaling pathway",
-    "positive regulation of cell population proliferation",
-    "regulation of transferase activity",
+    "regulation of cytokinesis",
+    "positive regulation of cell cycle process",
+    "positive regulation of cytokine production",
     "ncRNA processing",
-    "nucleosome organization"
+    "cellular component assembly involved in morphogenesis",
+    "regulation of protein secretion",
+    "negative regulation of cell cycle phase transition",
+    "extrinsic apoptotic signaling pathway",
+    "extracellular matrix organization",
+    "epithelial cell proliferation",
+    "response to hydrogen peroxide",
+    "regulation of receptor-mediated endocytosis",
+    "regulation of RNA splicing",
+    "activation of protein kinase activity"
   ),
+  
+  signaling = c("DNA damage checkpoint signaling",
+                "hippo signaling"),
+  
   cellular_adhesion_and_movement = c(
     "homophilic cell adhesion via plasma membrane adhesion molecules",
-    "leukocyte cell-cell adhesion",
+    "myeloid leukocyte migration",
+    "regulation of cell adhesion",
+    "positive regulation of multicellular organismal process",
     "leukocyte migration",
-    "cell-cell adhesion via plasma-membrane adhesion molecules"
+    "leukocyte cell-cell adhesion",
+    "positive regulation of cell migration",
+    "regulation of substrate adhesion-dependent cell spreading",
+    
   ),
-  transport = c(
-    "nitrogen compound transport"
+  
+  metabolism = c("organic cyclic compound catabolic process",
+                 "proteolysis",
+                 "protein modification by small protein conjugation or removal",
+                 "negative regulation of metabolic process",
+                 "macromolecule modification"),
+  
+  transport = c("intracellular transport",
+                "iron ion transport"
   ),
+  
   development_and_differentiation = c(
-    "positive regulation of developmental process",
-    "tube development",
-    "epithelial cell proliferation",
-    "cell population proliferation",
-    "muscle cell development"
+    "osteoblast differentiation",
+    "cartilage development"
+   
   ),
   muscle_function = c(
+    "actin filament-based movement",
     "muscle contraction",
-    "actin-mediated cell contraction",
-    "myofibril assembly",
-    "muscle system process",
     "actin filament-based process",
-    "striated muscle adaptation"
+    "muscle system process"
   )
 )
 
@@ -345,6 +393,7 @@ data_join$Biological_process = lapply(data_join$Description, function(desc) {
   }) %>% unlist()
   true_bp
 })
+
 
 plot_GO = data_join %>%
   dplyr::mutate(Description = factor(Description, levels = go_terms_levels)) %>%
@@ -368,100 +417,72 @@ saveRDS(plot_GO, "plot/enrichment_dotplot.RDS")
 
 plot_data <- as.data.frame(plot_GO[["data"]])
 
+
+
 ### Categorize the DE genes based on their presence in core_enrichment as
 ### Biologically significant and Less biologically significant
 
-library(stringr)
+#library(stringr)
 
-classify_genes <- function(de_genes, enrichment_data, core_col = "core_enrichment") {
-  core_enrichment_genes <- enrichment_data %>%
-    pull(!!sym(core_col)) %>%
-    strsplit("/") %>%
-    unlist() %>%
-    unique()
+#classify_genes <- function(de_genes, enrichment_data, core_col = "core_enrichment") {
+  #core_enrichment_genes <- enrichment_data %>%
+    #pull(!!sym(core_col)) %>%
+    #strsplit("/") %>%
+    #unlist() %>%
+    #unique()
 
   # Classify DE genes
-  classified_genes <- de_genes %>%
-    mutate(
-      BiolSignificance = ifelse(gene %in% core_enrichment_genes,
-                                      "Biologically significant",
-                                      "Less Biologically significant")
-    )
+  #classified_genes <- de_genes %>%
+    #mutate(
+      #BiolSignificance = ifelse(gene %in% core_enrichment_genes,
+                                      #"Biologically significant",
+                                      #"Less Biologically significant")
+    #)
 
-  return(classified_genes)
-}
+  #return(classified_genes)
+#}
 
 
-perform_classification <- function(de_genes, filtered_genes, method_name) {
-  classified <- classify_genes(de_genes, filtered_genes)
+#perform_classification <- function(de_genes, filtered_genes, method_name) {
+  #classified <- classify_genes(de_genes, filtered_genes)
 
   # Separate biologically significant and less significant genes
-  biol_sign <- classified %>%
-    dplyr::filter(BiolSignificance == "Biologically significant") %>%
-    pull(gene)
+  #biol_sign <- classified %>%
+    #dplyr::filter(BiolSignificance == "Biologically significant") %>%
+    #pull(gene)
 
-  less_biol_sign <- classified %>%
-    dplyr::filter(BiolSignificance == "Less Biologically significant") %>%
-    pull(gene)
+  #less_biol_sign <- classified %>%
+    #dplyr::filter(BiolSignificance == "Less Biologically significant") %>%
+    #pull(gene)
 
-  classification_list <- list(
-    method = method_name,
-    biol_significant_genes = biol_sign,
-    less_biol_significant_genes = less_biol_sign
-  )
+  #classification_list <- list(
+    #method = method_name,
+    #biol_significant_genes = biol_sign,
+    #less_biol_significant_genes = less_biol_sign
+  #)
 
-  return(classification_list)
-}
+  #return(classification_list)
+#}
 
-all_results <- list()
+#all_results <- list()
 
-methods <- list(
-  devil = list(de_genes = rna_deg_devil$geneID, filtered = filtered_devil_nonRed$core_enrichment),
-  glmGamPoi = list(de_genes = rna_deg_glm$geneID, filtered = filtered_glm_nonRed$core_enrichment),
-  nebula = list(de_genes = rna_deg_nebula$geneID, filtered = filtered_nebula_nonRed$core_enrichment)
-)
-
-
-for (method in names(methods)) {
-  de_genes <- data.frame(gene = methods[[method]]$de_genes)
-  filtered <- data.frame(core_enrichment = methods[[method]]$filtered)
-  result <- perform_classification(de_genes, filtered, method)
-  all_results[[method]] <- result
-}
-
-saveRDS(all_results, file = "results/gsea_GO/gene_classification_allRes.RDS")
+#methods <- list(
+  #devil = list(de_genes = rna_deg_devil$geneID, filtered = filtered_devil_nonRed$core_enrichment),
+  #glmGamPoi = list(de_genes = rna_deg_glm$geneID, filtered = filtered_glm_nonRed$core_enrichment),
+  #nebula = list(de_genes = rna_deg_nebula$geneID, filtered = filtered_nebula_nonRed$core_enrichment)
+#)
 
 
+#for (method in names(methods)) {
+  #de_genes <- data.frame(gene = methods[[method]]$de_genes)
+  #filtered <- data.frame(core_enrichment = methods[[method]]$filtered)
+  #result <- perform_classification(de_genes, filtered, method)
+  #all_results[[method]] <- result
+#}
 
-### Pathways categorization ###
+#saveRDS(all_results, file = "results/gsea_GO/gene_classification_allRes.RDS")
 
-gseGO_devil <- readRDS("results/gsea_GO/gseGO_devil.RDS")
-gseGO_glm <- readRDS("results/gsea_GO/gseGO_glmGamPoi.RDS")
-gseGO_nebula <- readRDS("results/gsea_GO/gseGO_nebula.RDS")
 
-immune_system <- c("defense response", "acute-phase response", "positive regulation of cytokine production",
-                   "inflammatory response", "hemopoiesis", "cellular response to cytokine stimulus", "leukocyte migration",
-                   "cytokine production")
 
-cellular_processes <- c("homophilic cell adhesion via plasma membrane adhesion molecules", "epithelial cell proliferation",
-                        "regulation of leukocyte activation", "cell-cell adhesion", "leukocyte cell-cell adhesion")
-
-cell_cycle_related_processes <- c("positive regulation of cell division", "regulation of G2/M transition of mitotic cell cycle",
-                                  "regulation of cell division", "cell division", "regulation of cell cycle process")
-
-muscle_system_process <- c("myofibril assembly", "actin-mediated cell contraction", "muscle cell development",
-                           "muscle contraction", "actin filament-based movement")
-
-signal_transduction <- c("cell surface pattern recognition receptor signaling pathway", "positive regulation of ERK1 and ERK2 cascade",
-                         "immune response-activating cell surface receptor signaling pathway", "regulation of MAPK cascade",
-                         "regulation of response to external stimulus", "positive regulation of developmental process", "positive regulation of multicellular organismal process",
-                         "positive regulation of intracellular signal transduction", "positive regulation of gene expression",
-                         "apoptotic signaling pathway")
-
-metabolism <- c("tRNA metabolic process", "ncRNA metabolic process")
-
-system_pathways <- c("skeletal system development", "skeletal system morphogenesis")
-
-genetic_information_processing <- c("ncRNA processing")
 
 
