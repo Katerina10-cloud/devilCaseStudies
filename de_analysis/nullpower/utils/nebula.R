@@ -4,7 +4,7 @@ nebula.mult <- function(count, df){
 
   #data_g = nebula::group_cell(count=count,id=df$id,pred=pred)
 
-  #sf <- devil:::calculate_sf(count)
+  sf <- devil:::calculate_sf(count)
 
   s <- Sys.time()
   sid <- df$id
@@ -14,7 +14,8 @@ nebula.mult <- function(count, df){
     pred = pred,
     cpc=0,
     mincp=0,
-    ncore=1
+    ncore=1,
+    offset = sf
   )
   e <- Sys.time()
   delta_time <- difftime(e, s, units = "secs") %>% as.numeric()
