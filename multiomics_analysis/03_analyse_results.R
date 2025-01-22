@@ -208,8 +208,7 @@ filtered_glm <- remove_redundant_terms(gseGO_glm,
                                        enrichment_col = "enrichmentScore",
                                        core_col = "core_enrichment",
                                        desc_col = "Description",
-                                       threshold = 0.5
-                                       )
+                                       threshold = 0.5)
 
 redundant_glm <- as.data.frame(filtered_glm[["redundant_data"]])
 nonRed_glm <- as.data.frame(filtered_glm[["non_redundant_data"]])
@@ -292,8 +291,7 @@ names(not_biol_specific_terms) <- c("devil", "glmGamPoi", "nebula")
 saveRDS(not_biol_specific_terms, file = "results/gsea_GO/notBiolSpecific_terms.RDS")
 
 
-
-# Check glmGamPoi and nebula private genes enrichment
+# Check glmGamPoi private genes enrichment #
 
 glm_private_genes <- setdiff(rna_deg_glm$geneID, union(rna_deg_devil$geneID, rna_deg_nebula$geneID))
 
@@ -309,8 +307,7 @@ gseGO_glm_private <- enrichmentGO(glm_private_data)
 saveRDS(gseGO_glm_private, file = "results/gsea_GO/gseGO_glm_private.RDS")
 
 
-
-# Divide pathways into BP categories 
+# Divide pathways into BP categories #
 
 biological_processes <- list(
   immune_response_and_defense = c(
@@ -416,6 +413,49 @@ ggsave("plot/enrichment_dotplot.png", dpi = 400, width = 18.0, height = 8.0, plo
 saveRDS(plot_GO, "plot/enrichment_dotplot.RDS")
 
 plot_data <- as.data.frame(plot_GO[["data"]])
+
+
+### Summary of results across methods ###
+
+gse_devil <- readRDS("results/gsea_GO/gseGO_devil_list.RDS")
+gse_glm <- readRDS("results/gsea_GO/gseGO_glmGamPoi_list.RDS")
+gse_nebula <- readRDS("results/gsea_GO/gseGO_nebula_list.RDS")
+
+notSpecific_terms <- readRDS("results/gsea_GO/notBiolSpecific_terms.RDS")
+
+calculate_counts <- function(redundant_data, non_redundant_data, non_specific_terms) {
+  redundant_terms_count <- length(redundant_data)
+  non_redundant_terms_count <- length(non_redundant_data)
+  non_specific_terms_count <- length(non_specific_terms)
+  
+  return(c(redundant_terms_count, non_redundant_terms_count, non_specific_terms_count))
+}
+
+devil_counts <- calculate_counts(
+  gse_devil[["non_redundant_data"]][["Description"]],
+  gse_devil[["redundant_data"]][["Description"]],
+  notSpecific_terms[["devil"]]
+)
+
+glm_counts <- calculate_counts(
+  gse_glm[["non_redundant_data"]][["Description"]],
+  gse_glm[["redundant_data"]][["Description"]],
+  notSpecific_terms[["glmGamPoi"]]
+)
+
+nebula_counts <- calculate_counts(
+  gse_nebula[["non_redundant_data"]][["Description"]],
+  gse_nebula[["redundant_data"]][["Description"]],
+  notSpecific_terms[["nebula"]]
+)
+
+summary_table <- data.frame(
+  method = c("devil", "glmGamPoi", "nebula"),
+  redundant_terms = c(devil_counts[1], glm_counts[1], nebula_counts[1]),
+  non_redundant_terms = c(devil_counts[2], glm_counts[2], nebula_counts[2]),
+  non_specific_terms = c(devil_counts[3], glm_counts[3], nebula_counts[3])
+)
+
 
 
 
