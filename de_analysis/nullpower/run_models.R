@@ -1,4 +1,5 @@
 rm(list = ls())
+
 source("utils/utils.R")
 source("utils/edgeR.R")
 source("utils/limma.R")
@@ -67,12 +68,22 @@ ct.used <- col.data %>%
   pull(cell_type)
 
 # select donors with more than 100 cells per selected cell types
-donor.cells <- col.data %>%
-  group_by(donor_id, cell_type, .drop=FALSE) %>%
-  summarise(n=n()) %>%
-  pivot_wider(names_from=cell_type, values_from=n) %>%
-  select(ct.used) %>%
-  filter(if_all(ct.used,~.>50))
+if (author == "yazar") {
+  donor.cells <- col.data %>%
+    group_by(donor_id, cell_type, .drop=FALSE) %>%
+    summarise(n=n()) %>%
+    pivot_wider(names_from=cell_type, values_from=n) %>%
+    select(ct.used) %>%
+    filter(if_all(ct.used,~.>85))
+} else {
+  donor.cells <- col.data %>%
+    group_by(donor_id, cell_type, .drop=FALSE) %>%
+    summarise(n=n()) %>%
+    pivot_wider(names_from=cell_type, values_from=n) %>%
+    select(ct.used) %>%
+    filter(if_all(ct.used,~.>50))  
+}
+
 donor.cells$cell.sum <- rowSums(donor.cells[,2:7])
 donor.used <- donor.cells %>% arrange(-cell.sum) %>% pull(donor_id)
 
@@ -95,9 +106,13 @@ PROB.DE <- c(.005, .025, .05)
 N.SAMPLE <- c(4, 20)
 n.test <- prod(length(IS.PB), length(INT.CT), length(I.ITER), length(PROB.DE), length(N.SAMPLE))
 curr.iter <- 1
+
 for (is.pb in IS.PB) {
   for (int.ct in INT.CT) {
     for (i.iter in I.ITER) {
+      
+      s <- Sys.time()
+      
       cell.type <- ct.used[[int.ct]]
       bool.ct <- col.data.used$cell_type == cell.type
       col.data.ct <- col.data.used[bool.ct,]
@@ -177,26 +192,31 @@ for (is.pb in IS.PB) {
 
           # run tests
           message('start regression')
-          list.data <- list(
-            cnt.select,
-            cnt.select,
-            cnt.select,
-            cnt.select,
-            cnt.select,
-            cnt.select,
-            cnt.select
-          )
+          # list.data <- list(
+          #   cnt.select,
+          #   cnt.select,
+          #   cnt.select,
+          #   cnt.select,
+          #   cnt.select,
+          #   cnt.select,
+          #   cnt.select
+          # )
           list.result.method <- list()
           timings <- c()
+          cnt.input <- cnt.select %>% as.matrix()
+          
+          s <- Sys.time()
           for (int.test in 1:length(list.func)){
+            print(int.test)
             list.result.method[[int.test]] <- list.func[[int.test]](
-              list.data[[int.test]] %>% as.matrix(),
+              cnt.input, 
               col.data.select
             )[,4:5]
 
             timings <- c(timings, unique(list.result.method[[int.test]][,2]))
             list.result.method[[int.test]] <- list.result.method[[int.test]][,1]
           }
+          e <- Sys.time()
 
           timing_df <- dplyr::bind_rows(
             timing_df,

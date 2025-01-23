@@ -4,18 +4,59 @@ require(tidyverse)
 require(patchwork)
 source("plots.R")
 
-AUTHOR <- author <- "hsc"
+AUTHOR <- author <- "yazar"
 method_cellwise <- c("glmGamPoi (cell)", "Devil (base)", "limma", "Nebula")
 method_patientwise <- c("Nebula", "Devil (mixed)", "limma", "glmGamPoi (cell)")
 
-d1 <- all_null_plots(author, FALSE, algos =method_cellwise, ct.indexes = c(1), pde.values = c(.05), n_samples_vec = c(20), only_tibble=TRUE)[[1]] %>%
-  dplyr::mutate(ytype = "p-value", xtype="Cell-wise")
-d2 <- all_null_plots(author, TRUE, algos = method_patientwise, ct.indexes = c(1), pde.values = c(.05), n_samples_vec = c(20), only_tibble = T)[[1]] %>%
-  dplyr::mutate(ytype = "p-value", xtype="Patient-wise")
-d3 <- all_pow_plots(author, FALSE, algos =method_cellwise, ct.indexes = c(1), pde.values = c(.05), n_samples_vec = c(20), only_tibble = T)[[1]] %>%
-  dplyr::mutate(ytype = "-log10 p-value", xtype="Cell-wise")
-d4 <- all_pow_plots(author, TRUE, algos = method_patientwise, ct.indexes = c(1), pde.values = c(.05), n_samples_vec = c(20), only_tibble = T)[[1]] %>%
-  dplyr::mutate(ytype = "-log10 p-value", xtype="Patient-wise")
+d <- dplyr::bind_rows(
+  all_null_plots(author, FALSE, algos =method_cellwise, only_tibble=TRUE) %>% 
+    dplyr::bind_rows() %>% 
+    dplyr::mutate(is_de = FALSE, method = "Cell-wise"),
+  all_pow_plots(author, FALSE, algos =method_cellwise, only_tibble = TRUE) %>% 
+    dplyr::bind_rows() %>% 
+    dplyr::mutate(is_de = TRUE, method = "Cell-wise")
+)
+
+threshold <- 0.05
+d %>% 
+  dplyr::group_by(name, ct.index, n.genes, n.samples, method, i.iter) %>% 
+  dplyr::mutate(padj = p.adjust(observed_p_value, "BH")) %>% 
+  mutate(
+    predicted = padj <= threshold,
+    TP = as.numeric(is_de & predicted),    # True Positive
+    TN = as.numeric(!is_de & !predicted),  # True Negative
+    FP = as.numeric(!is_de & predicted),   # False Positive
+    FN = as.numeric(is_de & !predicted)    # False Negative
+  ) %>%
+  summarise(
+    TP = sum(TP),
+    TN = sum(TN),
+    FP = sum(FP),
+    FN = sum(FN),
+    numerator = (TP * TN) - (FP * FN),
+    denominator = sqrt((TP + FP) * (TP + FN) * (TN + FP) * (TN + FN)),
+    mcc = ifelse(denominator == 0, 0, numerator / denominator)
+  ) %>% 
+  ggplot(mapping = aes(x=as.factor(n.genes), y=mcc, col=name, fill=name)) +
+  geom_boxplot() +
+  facet_grid(~n.samples)
+
+dplyr::bind_rows(d1[[1]], d1[[2]]) %>% 
+  dplyr::filter(observed_p_value <= .05) %>% 
+  dplyr::group_by(name, ct.index, n.samples) %>% 
+  dplyr::summarise(n = n()) %>% 
+  ggplot(mapping = aes(x=name, y=n)) +
+  geom_col() +
+  facet_grid(n.samples ~ ct.index)
+
+
+dplyr::bind_rows(d3[[1]], d3[[2]]) %>% 
+  dplyr::filter(observed_p_value <= .05) %>% 
+  dplyr::group_by(name, ct.index, n.samples) %>% 
+  dplyr::summarise(n = n()) %>% 
+  ggplot(mapping = aes(x=name, y=n)) +
+  geom_col() +
+  facet_grid(n.samples ~ ct.index)
 
 # pB <- dplyr::bind_rows(d1, d2, d3, d4) %>%
 #   dplyr::group_by(xtype, ytype) %>%

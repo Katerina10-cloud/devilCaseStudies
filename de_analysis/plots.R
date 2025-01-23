@@ -60,7 +60,7 @@ all_null_plots <- function(author, is.pb, algos = c("glmGamPoi (Pb)", "glmGamPoi
               values = d[,c] %>% sort()
               x = seq(0,1,length = length(values))
               dplyr::tibble(x = x, observed_p_value = values, name = colnames(d)[c])
-            }) %>% do.call("bind_rows", .) %>% dplyr::mutate(ct.index = ct.index, n.genes = n_genes)
+            }) %>% do.call("bind_rows", .) %>% dplyr::mutate(ct.index = ct.index, n.genes = n_genes, i.iter=i.iter)
             return(d)
           }
         }) %>% do.call("bind_rows", .)
@@ -178,7 +178,7 @@ all_pow_plots <- function(author, is.pb, algos = c("glmGamPoi (Pb)", "glmGamPoi 
               values[values <= 1e-300] = 1e-300
               x = seq(0,1,length = length(values))
               dplyr::tibble(x = x, observed_p_value = -log10(values), name = colnames(d)[c])
-            }) %>% do.call("bind_rows", .) %>% dplyr::mutate(ct.index = ct.index, n.genes = n_genes)
+            }) %>% do.call("bind_rows", .) %>% dplyr::mutate(ct.index = ct.index, n.genes = n_genes, i.iter=i.iter)
             return(d)
           }
         }) %>% do.call("bind_rows", .)

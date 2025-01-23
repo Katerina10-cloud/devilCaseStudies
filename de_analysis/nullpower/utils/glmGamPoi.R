@@ -31,11 +31,11 @@ glmgp.cell.mult <- function(count, df){
   design_matrix <- model.matrix(~1+tx_cell, data = df)
 
   s <- Sys.time()
-  #fit <- glmGamPoi::glm_gp(count, design_matrix, on_disk=FALSE, size_factors=FALSE)
-  fit <- glmGamPoi::glm_gp(count, design_matrix, on_disk=FALSE, size_factors='normed_sum')
+  fit <- glmGamPoi::glm_gp(count, design_matrix, on_disk=FALSE, size_factors=FALSE)
+  #fit <- glmGamPoi::glm_gp(count, design_matrix, on_disk=FALSE, size_factors='normed_sum')
   e <- Sys.time()
   delta_time <- difftime(e, s, units = "secs") %>% as.numeric()
-  test <- glmGamPoi::test_de(fit, reduced_design=~1)
+  test <- glmGamPoi::test_de(fit, contrast = c(0,1))
 
   beta <- fit$Beta[,2]
   pval <- test$pval
