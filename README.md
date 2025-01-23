@@ -14,6 +14,8 @@ Case studies of scRNAseq Differential Expression analysis using devil statistica
 8) Breast dataset (~700k cells), published by [Kumar et al. (2023) Nature](https://doi.org/10.1038/s41586-023-06252-9)
 9) Human liver dataset (~8k cells), published by [MacParland et al. (2018) Nat Comm](https://doi.org/10.1038/s41467-018-06318-7)
 10) PBMC dataset (~45k cells), published by [Lee et al. (2020) Science Immunology](https://doi.org/10.1126/sciimmunol.abd1554)
+11) Macaque brain (~2.5 million cells), published by [Chiou et al. (2020) Science Advances](https://www.science.org/doi/10.1126/sciadv.adh1914)
+12) Healthy human blood (~1.9 million cells), published by [Terekhova et al. (2023) Immunity](https://www.sciencedirect.com/science/article/pii/S1074761323004533?via%3Dihub)
 
 **Dataset Table**
 
@@ -29,6 +31,8 @@ Case studies of scRNAseq Differential Expression analysis using devil statistica
 | 8. | Kumar | Breast | 714,331 | 39 | 33,145 | 126 | [CELLxGENE](https://cellxgene.cziscience.com/collections/4195ab4c-20bd-4cd3-8b3d-65601277e731) |
 | 9. | Small liver | Liver | X | X | X | X | [Original paper](https://www.nature.com/articles/s41467-018-06318-7) |
 | 10. | Small blood | Blood | 43,512 | 25 | X | 12 | [CELLxGENE](https://cellxgene.cziscience.com/e/4c4cd77c-8fee-4836-9145-16562a8782fe.cxg/) |
+| 11. | Adult macaque brain | Brain | 2,583,967 | 14 | X | 5 | [CELLxGENE](https://cellxgene.cziscience.com/collections/8c4bcf0d-b4df-45c7-888c-74fb0013e9e7) |
+| 12. | Healthy human blood | Blood | X | 9 | X | 166 | [HUman Cell Atlas](https://explore.data.humancellatlas.org/projects/896f377c-8e88-463e-82b0-b2a5409d6fe4) |
 
 
 
