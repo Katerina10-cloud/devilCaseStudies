@@ -457,8 +457,6 @@ summary_table <- data.frame(
 )
 
 
-
-
 ### Categorize the DE genes based on their presence in core_enrichment as
 ### Biologically significant and Less biologically significant
 

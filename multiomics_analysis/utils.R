@@ -193,3 +193,40 @@ perform_analysis_rna <- function(input_data, method = "devil") {
 }
 
 
+remove_redundant_terms <- function(data, enrichment_col = "enrichmentScore", core_col = "core_enrichment", desc_col = "Description", threshold = 0.5) {
+  filtered_data <- data %>%
+    mutate(genes = strsplit(!!sym(core_col), "/"))
+  n_terms <- nrow(filtered_data)
+  overlap_matrix <- matrix(0, nrow = n_terms, ncol = n_terms,
+                           dimnames = list(filtered_data[[desc_col]], filtered_data[[desc_col]]))
+  for (i in 1:n_terms) {
+    for (j in i:n_terms) {
+      shared_genes <- length(intersect(filtered_data$genes[[i]], filtered_data$genes[[j]]))
+      total_genes <- length(union(filtered_data$genes[[i]], filtered_data$genes[[j]]))
+      jaccard_index <- shared_genes / total_genes
+      
+      # Fill overlap matrix with Jaccard index
+      overlap_matrix[i, j] <- jaccard_index
+      overlap_matrix[j, i] <- jaccard_index
+    }
+  }
+  redundant_terms <- c()
+  for (i in 1:(n_terms - 1)) {
+    for (j in (i + 1):n_terms) {
+      if (overlap_matrix[i, j] > threshold) {
+        redundant_terms <- c(redundant_terms, filtered_data[[desc_col]][j])
+      }
+    }
+  }
+  non_redundant_data <- filtered_data %>%
+    filter(!(!!sym(desc_col) %in% redundant_terms))
+  
+  redundant_data <- filtered_data %>%
+    filter(!!sym(desc_col) %in% redundant_terms)
+  
+  return(list(
+    non_redundant_data = non_redundant_data,
+    redundant_data = redundant_data
+  ))
+}
+
