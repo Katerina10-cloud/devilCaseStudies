@@ -1,13 +1,12 @@
 ### Results downstream analysis ###
 
 rm(list = ls())
-
 setwd("/Users/katsiarynadavydzenka/Documents/PhD_AI/devilCaseStudies/multiomics_analysis")
-
 pkgs <- c("ggplot2", "dplyr","tidyr","tibble", "viridis", "smplot2", "Seurat", "gridExtra",
           "ggpubr", "ggrepel", "ggvenn", "ggpointdensity", "edgeR", "patchwork", 'ggVennDiagram', 'stringr')
 sapply(pkgs, require, character.only = TRUE)
 
+# Loading data #
 rna_devil <- "results/MuscleRNA/devil_rna.RDS"
 rna_devil <- readRDS(rna_devil) %>% dplyr::rename(geneID=name)
 
@@ -119,10 +118,8 @@ pkgs <- c("ggplot2", "dplyr","tidyr","reactome.db", "fgsea", "org.Hs.eg.db", "da
 sapply(pkgs, require, character.only = TRUE)
 
 enrichmentGO <- function(rna_deg_data) {
-  # RankMetric Calculation
   rna_deg_data$RankMetric <- -log10(rna_deg_data$adj_pval) * sign(rna_deg_data$lfc)
   rna_deg_data <- rna_deg_data %>% arrange(-RankMetric)
-
   genes <- rna_deg_data$RankMetric
   names(genes) <- rna_deg_data$geneID
 
@@ -137,10 +134,8 @@ enrichmentGO <- function(rna_deg_data) {
     verbose = TRUE,
     #seed = 1234
   )
-
   return(gseGO@result %>% as.data.frame())
 }
-
 
 rna_deg_glm$adj_pval[rna_deg_glm$adj_pval == 0] <- min(rna_deg_glm$adj_pval[rna_deg_glm$adj_pval != 0])
 
@@ -149,50 +144,10 @@ gseGO_glm <- enrichmentGO(rna_deg_glm)
 gseGO_nebula <- enrichmentGO(rna_deg_nebula)
 
 
-# Enrichment results preprocessing #
+# Enrichment results processing #
 
 # Remove redundant terms 
-
-remove_redundant_terms <- function(data, enrichment_col = "enrichmentScore", core_col = "core_enrichment", desc_col = "Description", threshold = 0.5) {
-  filtered_data <- data %>%
-    #dplyr::filter(!!sym(enrichment_col) < -0.3 | !!sym(enrichment_col) > 0.4) %>%
-    mutate(genes = strsplit(!!sym(core_col), "/"))
-
-  n_terms <- nrow(filtered_data)
-  overlap_matrix <- matrix(0, nrow = n_terms, ncol = n_terms,
-                           dimnames = list(filtered_data[[desc_col]], filtered_data[[desc_col]]))
-
-  for (i in 1:n_terms) {
-    for (j in i:n_terms) {
-      shared_genes <- length(intersect(filtered_data$genes[[i]], filtered_data$genes[[j]]))
-      total_genes <- length(union(filtered_data$genes[[i]], filtered_data$genes[[j]]))
-      jaccard_index <- shared_genes / total_genes
-
-      # Fill overlap matrix with Jaccard index
-      overlap_matrix[i, j] <- jaccard_index
-      overlap_matrix[j, i] <- jaccard_index
-    }
-  }
-  redundant_terms <- c()
-  for (i in 1:(n_terms - 1)) {
-    for (j in (i + 1):n_terms) {
-      if (overlap_matrix[i, j] > threshold) {
-        redundant_terms <- c(redundant_terms, filtered_data[[desc_col]][j])
-      }
-    }
-  }
-  non_redundant_data <- filtered_data %>%
-    filter(!(!!sym(desc_col) %in% redundant_terms))
-  
-  redundant_data <- filtered_data %>%
-    filter(!!sym(desc_col) %in% redundant_terms)
-
-  return(list(
-    non_redundant_data = non_redundant_data,
-    redundant_data = redundant_data
-  ))
-}
-
+source("utils.R")
 
 filtered_devil <- remove_redundant_terms(gseGO_devil,
                                          enrichment_col = "enrichmentScore",
@@ -252,6 +207,54 @@ filtered_glm_nonRed <- filtered_glm_nonRed %>%
 filtered_nebula_nonRed <- filtered_nebula_nonRed %>%
   dplyr::mutate(method = "nebula")
 
+combined_data <- bind_rows(filtered_devil_nonRed, 
+                           filtered_glm_nonRed, 
+                           filtered_nebula_nonRed)
+
+down_terms <- combined_data %>%
+  filter(DE_type == "Down-regulated")
+
+up_terms <- combined_data %>%
+  filter(DE_type == "Up-regulated") %>%
+  group_by(method) %>%
+  slice_max(order_by = abs(enrichmentScore), n = 10) %>% 
+  ungroup()
+
+filtered_terms <- bind_rows(down_terms, up_terms)
+
+# Enrichment plot
+
+plot_GO = filtered_terms %>%
+  dplyr::mutate(
+    Description = factor(
+      Description, 
+      levels = filtered_terms %>%
+        arrange(factor(method, levels = c("devil", "glmGamPoi", "nebula")), enrichmentScore) %>%
+        pull(Description) %>%
+        unique()
+    ),
+    DE_type = factor(DE_type, levels = c("Up-regulated", "Down-regulated")) # Ensure DE_type is ordered
+  ) %>%
+  ggplot(aes(x = method, y = Description, size = setSize, color = p.adjust)) +
+  geom_point() +
+  #facet_grid(~DE_type, space = "free", scales = "free") +
+  facet_wrap(~factor(DE_type, levels = c("Up-regulated", "Down-regulated")), scales = "free_y", ncol = 2, shrink = F) +
+  scale_color_gradient(low = "cornflowerblue", high = "coral", name = "p.adjust)") +
+  theme_bw() +
+  labs(title = "", x = "", y = "Biological Process GO term", size = "Gene Count")+
+  theme(
+    strip.text = element_text(face = "plain", size = 16), 
+    axis.text.x = element_text(size = 14, color = "black"), 
+    axis.text.y = element_text(size = 14, color = "black"), 
+    legend.title = element_text(size = 14), 
+    legend.text = element_text(size = 12) 
+  )
+plot_GO
+
+ggsave("plot/enrichment_dotplot.png", dpi = 400, width = 20.0, height = 9.0, plot = plot_GO)
+
+saveRDS(plot_GO, "plot/enrichment_dotplot.RDS")
+
 
 
 # Select not biologically specific pathways 
@@ -307,114 +310,6 @@ gseGO_glm_private <- enrichmentGO(glm_private_data)
 saveRDS(gseGO_glm_private, file = "results/gsea_GO/gseGO_glm_private.RDS")
 
 
-# Divide pathways into BP categories #
-
-biological_processes <- list(
-  immune_response_and_defense = c(
-    "innate immune response activating cell surface receptor signaling pathway",
-    "immune response-regulating cell surface receptor signaling pathway",
-    "defense response",
-    "inflammatory response",
-    "positive regulation of immune system process",
-    "regulation of response to external stimulus",
-    "B cell activation",
-    "cellular response to cytokine stimulus",
-    "cytokine production",
-    "negative regulation of immune system process",
-    "positive regulation of response to external stimulus",
-    "interleukin-8 production"
-    
-  ),
-  cellular_processes_and_regulation = c(
-    "regulation of cytokinesis",
-    "positive regulation of cell cycle process",
-    "positive regulation of cytokine production",
-    "ncRNA processing",
-    "cellular component assembly involved in morphogenesis",
-    "regulation of protein secretion",
-    "negative regulation of cell cycle phase transition",
-    "extrinsic apoptotic signaling pathway",
-    "extracellular matrix organization",
-    "epithelial cell proliferation",
-    "response to hydrogen peroxide",
-    "regulation of receptor-mediated endocytosis",
-    "regulation of RNA splicing",
-    "activation of protein kinase activity"
-  ),
-  
-  signaling = c("DNA damage checkpoint signaling",
-                "hippo signaling"),
-  
-  cellular_adhesion_and_movement = c(
-    "homophilic cell adhesion via plasma membrane adhesion molecules",
-    "myeloid leukocyte migration",
-    "regulation of cell adhesion",
-    "positive regulation of multicellular organismal process",
-    "leukocyte migration",
-    "leukocyte cell-cell adhesion",
-    "positive regulation of cell migration",
-    "regulation of substrate adhesion-dependent cell spreading",
-    
-  ),
-  
-  metabolism = c("organic cyclic compound catabolic process",
-                 "proteolysis",
-                 "protein modification by small protein conjugation or removal",
-                 "negative regulation of metabolic process",
-                 "macromolecule modification"),
-  
-  transport = c("intracellular transport",
-                "iron ion transport"
-  ),
-  
-  development_and_differentiation = c(
-    "osteoblast differentiation",
-    "cartilage development"
-   
-  ),
-  muscle_function = c(
-    "actin filament-based movement",
-    "muscle contraction",
-    "actin filament-based process",
-    "muscle system process"
-  )
-)
-
-go_terms_levels <- unname(unlist(biological_processes))
-
-data_join$Biological_process = lapply(data_join$Description, function(desc) {
-  true_bp <- lapply(names(biological_processes), function(bp) {
-    if (desc %in% biological_processes[[bp]]) {
-      return(bp)
-    }
-  }) %>% unlist()
-  true_bp
-})
-
-
-plot_GO = data_join %>%
-  dplyr::mutate(Description = factor(Description, levels = go_terms_levels)) %>%
-  dplyr::mutate(DE_type = factor(DE_type, levels = c("Up-regulated", "Down-regulated"))) %>%
-  ggplot(aes(x = method, y = Description, size = setSize, color = p.adjust)) +
-  geom_point() +
-  facet_grid(~DE_type, space = "free", scales = "free") +
-  #facet_wrap(~factor(DE_type, levels = c("Up-regulated", "Down-regulated")), scales = "free_y", ncol = 2, shrink = F) +
-  scale_color_gradient(low = "cornflowerblue", high = "coral", name = "p.adjust)") +
-  theme_bw() +
-  labs(
-    title = "",
-    x = "",
-    y = "Biological Process GO term",
-    size = "Gene Count"
-  )
-plot_GO
-
-ggsave("plot/enrichment_dotplot.png", dpi = 400, width = 18.0, height = 8.0, plot = plot_GO)
-saveRDS(plot_GO, "plot/enrichment_dotplot.RDS")
-
-plot_data <- as.data.frame(plot_GO[["data"]])
-
-
 ### Summary of results across methods ###
 
 gse_devil <- readRDS("results/gsea_GO/gseGO_devil_list.RDS")
@@ -451,76 +346,36 @@ nebula_counts <- calculate_counts(
 
 summary_table <- data.frame(
   method = c("devil", "glmGamPoi", "nebula"),
-  redundant_terms = c(devil_counts[1], glm_counts[1], nebula_counts[1]),
-  non_redundant_terms = c(devil_counts[2], glm_counts[2], nebula_counts[2]),
+  non_redundant_terms = c(devil_counts[1], glm_counts[1], nebula_counts[1]),
+  redundant_terms = c(devil_counts[2], glm_counts[2], nebula_counts[2]),
   non_specific_terms = c(devil_counts[3], glm_counts[3], nebula_counts[3])
 )
 
 
-### Categorize the DE genes based on their presence in core_enrichment as
-### Biologically significant and Less biologically significant
-
-#library(stringr)
-
-#classify_genes <- function(de_genes, enrichment_data, core_col = "core_enrichment") {
-  #core_enrichment_genes <- enrichment_data %>%
-    #pull(!!sym(core_col)) %>%
-    #strsplit("/") %>%
-    #unlist() %>%
-    #unique()
-
-  # Classify DE genes
-  #classified_genes <- de_genes %>%
-    #mutate(
-      #BiolSignificance = ifelse(gene %in% core_enrichment_genes,
-                                      #"Biologically significant",
-                                      #"Less Biologically significant")
-    #)
-
-  #return(classified_genes)
-#}
+summary_table_long <- summary_table %>%
+  pivot_longer(cols = -method,  
+               names_to = "term_type",  
+               values_to = "count")  
 
 
-#perform_classification <- function(de_genes, filtered_genes, method_name) {
-  #classified <- classify_genes(de_genes, filtered_genes)
+barplot <- ggplot(summary_table_long, aes(x = method, y = count, fill = term_type)) +
+  geom_bar(stat = "identity", position = "stack") +
+  geom_text(aes(label = count), 
+            position = position_stack(vjust = 0.5), # Position labels at the center of each section
+            color = "white", # Label color
+            size = 4) + # Font size
+  scale_fill_manual(values = c("redundant_terms" = "#AD002AB2", 
+                               "non_redundant_terms" = "#00468BB2", 
+                               "non_specific_terms" = "#66CC99"),
+                    labels = c("redundant_terms" = "Redundant terms", 
+                               "non_redundant_terms" = "Non-Redundant terms", 
+                               "non_specific_terms" = "Non-Specific terms")) +
+  labs(title = "",
+       x = "Method",
+       y = "Count",
+       fill = "Term type") +
+  theme_classic()
 
-  # Separate biologically significant and less significant genes
-  #biol_sign <- classified %>%
-    #dplyr::filter(BiolSignificance == "Biologically significant") %>%
-    #pull(gene)
+barplot
 
-  #less_biol_sign <- classified %>%
-    #dplyr::filter(BiolSignificance == "Less Biologically significant") %>%
-    #pull(gene)
-
-  #classification_list <- list(
-    #method = method_name,
-    #biol_significant_genes = biol_sign,
-    #less_biol_significant_genes = less_biol_sign
-  #)
-
-  #return(classification_list)
-#}
-
-#all_results <- list()
-
-#methods <- list(
-  #devil = list(de_genes = rna_deg_devil$geneID, filtered = filtered_devil_nonRed$core_enrichment),
-  #glmGamPoi = list(de_genes = rna_deg_glm$geneID, filtered = filtered_glm_nonRed$core_enrichment),
-  #nebula = list(de_genes = rna_deg_nebula$geneID, filtered = filtered_nebula_nonRed$core_enrichment)
-#)
-
-
-#for (method in names(methods)) {
-  #de_genes <- data.frame(gene = methods[[method]]$de_genes)
-  #filtered <- data.frame(core_enrichment = methods[[method]]$filtered)
-  #result <- perform_classification(de_genes, filtered, method)
-  #all_results[[method]] <- result
-#}
-
-#saveRDS(all_results, file = "results/gsea_GO/gene_classification_allRes.RDS")
-
-
-
-
-
+ggsave("plot/barplot_enrichment_summary.png", dpi = 400, width = 6.0, height = 5.0, plot = barplot)
