@@ -52,8 +52,11 @@ saveRDS(venn_plot, "plot/venn_plot_v2.rds")
 
 
 # Volcano plot
-rna_deg_devil <- rna_deg_devil %>% dplyr::filter(adj_pval > 4.467475e-90 ,)
-rna_deg_nebula <- rna_deg_nebula %>% dplyr::filter(adj_pval > 4.787713e-22 ,)
+#rna_deg_devil <- rna_deg_devil %>% dplyr::filter(adj_pval > 4.467475e-90 ,)
+#rna_deg_nebula <- rna_deg_nebula %>% dplyr::filter(adj_pval > 4.787713e-22 ,)
+
+rna_deg_devil$adj_pval[rna_deg_devil$adj_pval == 0] <- min(rna_deg_devil$adj_pval[rna_deg_devil$adj_pval != 0])
+rna_deg_nebula$adj_pval[rna_deg_nebula$adj_pval == 0] <- min(rna_deg_nebula$adj_pval[rna_deg_nebula$adj_pval != 0])
 rna_deg_glm$adj_pval[rna_deg_glm$adj_pval == 0] <- min(rna_deg_glm$adj_pval[rna_deg_glm$adj_pval != 0])
 
 rna_join <- rbind(rna_deg_devil, rna_deg_glm, rna_deg_nebula)
@@ -130,20 +133,83 @@ enrichmentGO <- function(rna_deg_data) {
     minGSSize = 10,
     maxGSSize = 350,
     keyType = "SYMBOL",
-    pvalueCutoff = 0.05,
-    verbose = TRUE,
+    pvalueCutoff = 0.05, 
+    pAdjustMethod = "BH",
+    verbose = TRUE, 
+    eps = 0
     #seed = 1234
   )
-  return(gseGO@result %>% as.data.frame())
+  return(gseGO)
+  #return(gseGO@result %>% as.data.frame())
 }
-
-rna_deg_glm$adj_pval[rna_deg_glm$adj_pval == 0] <- min(rna_deg_glm$adj_pval[rna_deg_glm$adj_pval != 0])
 
 gseGO_devil <- enrichmentGO(rna_deg_devil)
 gseGO_glm <- enrichmentGO(rna_deg_glm)
 gseGO_nebula <- enrichmentGO(rna_deg_nebula)
 
+# Plot Venn over results
+ggVennDiagram::ggVennDiagram(
+  list(
+    glmGamPoi = gseGO_glm@result$Description,
+    devil = gseGO_devil@result$Description,
+    NEBULA = gseGO_nebula@result$Description
+  ), color = 1, lwd = 0.8) +
+  scale_fill_gradient(low = "#F4FAFE", high = "#4981BF") +
+  theme(legend.position = "none")
 
+gseGO_devil_s = clusterProfiler::simplify(gseGO_devil)
+gseGO_glm_s = clusterProfiler::simplify(gseGO_glm)
+gseGO_nebula_s = clusterProfiler::simplify(gseGO_nebula)
+
+ggVennDiagram::ggVennDiagram(
+  list(
+    glmGamPoi = gseGO_glm_s@result$Description,
+    devil = gseGO_devil_s@result$Description,
+    NEBULA = gseGO_nebula_s@result$Description
+  ), color = 1, lwd = 0.8) +
+  scale_fill_gradient(low = "#F4FAFE", high = "#4981BF") +
+  theme(legend.position = "none")
+
+gseGO_devil_s@result$Description %>% unlist()
+gseGO_glm_s@result$Description %>% unlist()
+gseGO_nebula_s@result$Description %>% unlist()
+
+nrow(gseGO_devil_s@result) / nrow(gseGO_devil@result)
+nrow(gseGO_glm_s@result) / nrow(gseGO_glm@result)
+nrow(gseGO_nebula_s@result) / nrow(gseGO_nebula@result)
+
+require(rrvgo)
+
+simplify_w_rrvgo = function(go_analysis, cut=.2) {
+  simMatrix <- calculateSimMatrix(go_analysis$ID,
+                                  orgdb=org.Hs.eg.db,
+                                  ont="BP",
+                                  method="Rel")
+  
+  scores <- setNames(-log10(go_analysis$qvalue), go_analysis$ID)
+  reducedTerms <- reduceSimMatrix(simMatrix,
+                                  scores,
+                                  threshold=cut,
+                                  orgdb=org.Hs.eg.db)  
+  list(
+    simMatrix=simMatrix,
+    reducedTerms=reducedTerms
+  )
+}
+
+rrvgo_devil = simplify_w_rrvgo(gseGO_devil)
+rrvgo_glm = simplify_w_rrvgo(gseGO_glm)
+rrvgo_nebula = simplify_w_rrvgo(gseGO_nebula)
+
+heatmapPlot(rrvgo_devil$simMatrix, rrvgo_devil$reducedTerms, annotateParent = TRUE, annotationLabel = "parentTerm")
+heatmapPlot(rrvgo_glm$simMatrix, rrvgo_glm$reducedTerms, annotateParent = TRUE, annotationLabel = "parentTerm")
+
+scatterPlot(rrvgo_devil$simMatrix, rrvgo_devil$reducedTerms)
+scatterPlot(rrvgo_devil$simMatrix, rrvgo_devil$reducedTerms)
+
+unique(rrvgo_devil$reducedTerms$parentTerm)
+unique(rrvgo_glm$reducedTerms$parentTerm)
+rrvgo_glm$reducedTerms$cluster %>% unique()
 # Enrichment results processing #
 
 # Remove redundant terms 
@@ -157,7 +223,8 @@ filtered_devil <- remove_redundant_terms(gseGO_devil,
 
 redundant_devil <- as.data.frame(filtered_devil[["redundant_data"]])
 nonRed_devil <- as.data.frame(filtered_devil[["non_redundant_data"]])
-
+nrow(redundant_devil)
+nrow(nonRed_devil)
 
 filtered_glm <- remove_redundant_terms(gseGO_glm,
                                        enrichment_col = "enrichmentScore",
@@ -167,7 +234,8 @@ filtered_glm <- remove_redundant_terms(gseGO_glm,
 
 redundant_glm <- as.data.frame(filtered_glm[["redundant_data"]])
 nonRed_glm <- as.data.frame(filtered_glm[["non_redundant_data"]])
-
+nrow(redundant_glm)
+nrow(nonRed_glm)
 
 filtered_nebula <- remove_redundant_terms(gseGO_nebula,
                                           enrichment_col = "enrichmentScore",
@@ -177,7 +245,8 @@ filtered_nebula <- remove_redundant_terms(gseGO_nebula,
 
 redundant_nebula <- as.data.frame(filtered_nebula[["redundant_data"]])
 nonRed_nebula <- as.data.frame(filtered_nebula[["non_redundant_data"]])
-
+nrow(redundant_nebula)
+nrow(nonRed_nebula)
 
 saveRDS(filtered_devil, file = "results/gsea_GO/gseGO_devil_list.RDS")
 saveRDS(filtered_glm, file = "results/gsea_GO/gseGO_glmGamPoi_list.RDS")
