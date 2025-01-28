@@ -17,7 +17,7 @@ read_data <- function(dataset_name, data_path) {
   }  else {
     stop("Dataset name not recognized")
   }
-  
+
   return(list(counts=counts, metadata=metadata, tissue=tissue))
 }
 
@@ -53,11 +53,11 @@ prepare_atac_input <- function(input_data) {
   metadata <- input_data$metadata
   grange <- input_data$grange_annot
   metadata <- metadata[ (metadata$group %in% c("young", "old") & metadata$cell_type %in% c("Type I", "Type II")),]
-  metadata <- metadata %>% 
+  metadata <- metadata %>%
     mutate(age_cluster = case_when(
       group == "old"  ~ '1',
       group == "young" ~ '0'
-    ))  
+    ))
   peak_counts <- input_data$counts
   peak_counts <- peak_counts[ ,colnames(peak_counts) %in% rownames(metadata) ]
   grange_annot <- grange_annot[ (grange_annot$annotation %in% c("Promoter (<=1kb)", "Promoter (1-2kb)", "Promoter (2-3kb)")), ]
@@ -65,16 +65,16 @@ prepare_atac_input <- function(input_data) {
   peak_counts <- peak_counts[ rownames(peak_counts) %in% grange_annot$ranges , ]
   total_counts <- colSums(peak_counts)
   total_features <- colSums(peak_counts > 0)
-  
+
   mad5_filter <- total_counts > median(total_counts) + 5 * mad(total_counts)
   feat1000_filter <- total_features < 1000
   feat_mad_filter <- total_features > 5 * mad(total_features)
-  
-  cell_outliers_filter <- mad5_filter | feat1000_filter | feat_mad_filter 
-  
+
+  cell_outliers_filter <- mad5_filter | feat1000_filter | feat_mad_filter
+
   peak_counts <- peak_counts[, !cell_outliers_filter]
   metadata <- metadata[!cell_outliers_filter, ]
-  
+
   non_expressed_genes <- rowMeans(peak_counts) <= 0.01
   peak_counts <- peak_counts[!non_expressed_genes, ]
   peak_counts <- peak_counts[,colnames(peak_counts) %in% rownames(metadata)]
@@ -94,14 +94,14 @@ prepare_rna_input <- function(input_data) {
   metadata$age_cluster <- as.factor(metadata$age_cluster)
   counts <- input_data$counts
   counts <- counts[,colnames(counts) %in% rownames(metadata)]
-  
+
   total_counts <- colSums(counts)
   total_features <- colSums(counts > 0)
-  
+
   mad5_filter <- total_counts > median(total_counts) + 5 * mad(total_counts)
   feat100_filter <- total_features < 100
   feat_mad_filter <- total_features > 5 * mad(total_features)
-  
+
   mitocondrial_genes <- grepl("^MT-", rownames(counts))
   mitocondiral_prop <- colSums(counts[mitocondrial_genes, ]) / colSums(counts)
   mit_prop_filter <- mitocondiral_prop > .1
@@ -109,18 +109,18 @@ prepare_rna_input <- function(input_data) {
 
   counts <- counts[, !cell_outliers_filter]
   metadata <- metadata[!cell_outliers_filter, ]
-  
+
   non_expressed_genes <- rowMeans(counts) <= 0.01
   counts <- counts[!non_expressed_genes, ]
   counts <- counts[,colnames(counts) %in% rownames(metadata)]
   tissue = "muscle"
   return(list(counts=counts, metadata=metadata, tissue=tissue))
 }
-  
+
 
 perform_analysis_atac <- function(input_data, method = "devil") {
   if (!(method %in% c('devil', "glmGamPoi", 'nebula'))) {stop('method not recognized')}
-  
+
   if (method == 'devil') {
     metadata <- input_data$metadata
     peak_counts <- as.matrix(input_data$counts)
@@ -128,7 +128,7 @@ perform_analysis_atac <- function(input_data, method = "devil") {
     fit <- devil::fit_devil(peak_counts, design_matrix, verbose = F, size_factors = T)
     clusters <- as.numeric(as.factor(metadata$patient))
     res <- devil::test_de(fit, contrast = c(0,1), clusters = clusters, max_lfc = Inf)
-    
+
   } else if (method == "glmGamPoi") {
     metadata <- input_data$metadata
     peak_counts <- as.matrix(input_data$counts)
@@ -136,7 +136,7 @@ perform_analysis_atac <- function(input_data, method = "devil") {
     fit <- glmGamPoi::glm_gp(peak_counts, design_matrix, size_factors = F, verbose = T)
     res <- glmGamPoi::test_de(fit, contrast = c(0,1))
     res <- res %>% select(name, pval, adj_pval, lfc)
-    
+
   } else if (method == 'nebula') {
     metadata <- input_data$metadata
     peak_counts <- as.matrix(input_data$counts)
@@ -157,15 +157,15 @@ perform_analysis_atac <- function(input_data, method = "devil") {
 
 perform_analysis_rna <- function(input_data, method = "devil") {
   if (!(method %in% c('devil', "glmGamPoi", 'nebula'))) {stop('method not recognized')}
-  
+
   if (method == 'devil') {
     metadata <- input_data$metadata
     counts <- as.matrix(input_data$counts)
     design_matrix <- model.matrix(~age_cluster, metadata)
     fit <- devil::fit_devil(counts, design_matrix, verbose = T, size_factors = T)
-    clusters <- as.numeric(as.factor(metadata$sample)) 
+    clusters <- as.numeric(as.factor(metadata$sample))
     res <- devil::test_de(fit, contrast = c(0,1), clusters = clusters, max_lfc = Inf)
-    
+
   } else if (method == "glmGamPoi") {
     metadata <- input_data$metadata
     counts <- as.matrix(input_data$counts)
@@ -173,7 +173,7 @@ perform_analysis_rna <- function(input_data, method = "devil") {
     fit <- glmGamPoi::glm_gp(counts, design_matrix, size_factors = T, verbose = T)
     res <- glmGamPoi::test_de(fit, contrast = c(0,1))
     res <- res %>% select(name, pval, adj_pval, lfc)
-    
+
   } else if (method == 'nebula') {
     metadata <- input_data$metadata
     counts <- as.matrix(input_data$counts)
@@ -192,41 +192,4 @@ perform_analysis_rna <- function(input_data, method = "devil") {
   res
 }
 
-
-remove_redundant_terms <- function(data, enrichment_col = "enrichmentScore", core_col = "core_enrichment", desc_col = "Description", threshold = 0.5) {
-  filtered_data <- data %>%
-    mutate(genes = strsplit(!!sym(core_col), "/"))
-  n_terms <- nrow(filtered_data)
-  overlap_matrix <- matrix(0, nrow = n_terms, ncol = n_terms,
-                           dimnames = list(filtered_data[[desc_col]], filtered_data[[desc_col]]))
-  for (i in 1:n_terms) {
-    for (j in i:n_terms) {
-      shared_genes <- length(intersect(filtered_data$genes[[i]], filtered_data$genes[[j]]))
-      total_genes <- length(union(filtered_data$genes[[i]], filtered_data$genes[[j]]))
-      jaccard_index <- shared_genes / total_genes
-      
-      # Fill overlap matrix with Jaccard index
-      overlap_matrix[i, j] <- jaccard_index
-      overlap_matrix[j, i] <- jaccard_index
-    }
-  }
-  redundant_terms <- c()
-  for (i in 1:(n_terms - 1)) {
-    for (j in (i + 1):n_terms) {
-      if (overlap_matrix[i, j] > threshold) {
-        redundant_terms <- c(redundant_terms, filtered_data[[desc_col]][j])
-      }
-    }
-  }
-  non_redundant_data <- filtered_data %>%
-    filter(!(!!sym(desc_col) %in% redundant_terms))
-  
-  redundant_data <- filtered_data %>%
-    filter(!!sym(desc_col) %in% redundant_terms)
-  
-  return(list(
-    non_redundant_data = non_redundant_data,
-    redundant_data = redundant_data
-  ))
-}
 
