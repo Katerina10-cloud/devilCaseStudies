@@ -18,17 +18,25 @@ input_data <- prepare_rna_input(input_data)
 
 # get markers 
 de_res <- readRDS("results/MuscleRNA/devil_rna.RDS")
-de_res <- de_res %>% 
-  dplyr::filter(abs(lfc) >= 1, adj_pval <= .05)
+#de_res <- de_res %>% 
+#  dplyr::filter(abs(lfc) >= 1, adj_pval <= .05)
+
+gene_markers <- c("TNNT1", "MYH7", "MYH7B", "TNNT2", "PDE4B", "JUN", "FOSB",
+                  "ID1", "MDM2", "TNNT3", "MYH2", "MYH1", "ENOX1", "SAA2", "SAA1",
+                  "DCLK1", "ADGRB3", "NCAM1", "COL22A1", "PHLDB2", "CHRNE")
 
 de_res_top = de_res %>% 
-  dplyr::arrange(-abs(lfc)) %>% 
-  dplyr::slice_head(n = 50)
+  dplyr::filter(name %in% gene_markers)
+  # dplyr::arrange(-abs(lfc)) %>% 
+  # dplyr::slice_head(n = 50) %>% 
+  # dplyr::pull(name)
+
 
 N_subsample <- 10000
 sample_idx = sample(1:ncol(input_data$counts), N_subsample, replace = FALSE)
 
-mat <- input_data$counts[de_res_top$name,sample_idx] %>% as.matrix()
+rownames(input_data$counts)
+mat <- input_data$counts[de_res_top,sample_idx] %>% as.matrix()
 meta <- input_data$metadata[sample_idx,] 
 
 meta = meta %>% 
@@ -96,7 +104,7 @@ hm <- Heatmap(
   name = "Z-score", 
   km = 1,
   column_split = factor(meta$age_pop),
-  row_split = factor(de_res_top$lfc >= 0),
+  #row_split = factor(de_res_top$lfc >= 0),
   cluster_columns = FALSE,
   show_column_dend = FALSE,
   column_title = NULL,
