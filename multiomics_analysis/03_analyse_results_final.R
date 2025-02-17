@@ -8,6 +8,12 @@ sapply(pkgs, require, character.only = TRUE)
 set.seed(1234)
 source("utils_analysis.R")
 
+method_colors = c(
+  "glmGamPoi" = "#EAB578",
+  "NEBULA" =  'steelblue', #"#B0C4DE",
+  "devil" = "#099668"
+)
+
 # Loading data #
 rna_devil <- "results/MuscleRNA/devil_rna.RDS"
 rna_devil <- readRDS(rna_devil) %>% dplyr::rename(geneID=name)
@@ -96,16 +102,11 @@ p_volcanos <- rna_join %>%
   theme_bw() +
   scale_x_continuous(breaks = seq(floor(min(rna_join$lfc)),
                                   ceiling(max(rna_join$lfc)), by = 2)) +
-  facet_wrap(~factor(method, levels = c("devil", "glmGamPoi", "nebula")), nrow = 1, scales = "free") +
+  #facet_wrap(~factor(method, levels = c("devil", "glmGamPoi", "nebula")), nrow = 1, scales = "free") +
+  facet_wrap(~factor(method, levels = c("devil", "glmGamPoi", "nebula")), nrow = 3, scales = "free") +
   labs(x = expression(Log[2] ~ FC),
        y = expression(-log[10] ~ Pvalue),
        col = "DE type") +
-  #ggplot2::theme(legend.position = 'right',
-                 #legend.text = element_text(size = 16, color = "black"),
-                 #legend.title = element_text(size = 18, color = "black"),
-                 #strip.text = element_text(size = 20, face = "plain", color = "black"),
-                 #axis.text = element_text(size = 18, color = "black"),
-                 #axis.title = element_text(size = 20, color = "black"))+
   guides(color = guide_legend(override.aes = list(alpha = 1)))
 p_volcanos
 
@@ -135,11 +136,13 @@ simp_plot <- df_simp %>%
   dplyr::select(model, n_simplified, f, c) %>%
   tidyr::pivot_longer(c(f, n_simplified)) %>%
   dplyr::mutate(name = ifelse(name=="f", "Fraction simplified", "N simplified")) %>%
+  dplyr::filter(name == "Fraction simplified") %>%
   ggplot(mapping = aes(x=c, y=value, col=model)) +
   geom_point() +
   geom_line() +
   theme_bw() +
   facet_wrap(~name, scales = "free", ncol = 1,strip.position = "top") +
+  scale_color_manual(values = method_colors) +
   labs(y = "Value", x="Clustering cutoff", col="")
 simp_plot
 saveRDS(simp_plot, file = "plot/simp_plot.rds")

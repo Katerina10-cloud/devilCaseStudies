@@ -4,7 +4,7 @@ pkgs <- c("ggplot2", "dplyr","tidyr","tibble", "viridis", "smplot2", "Seurat", "
           "ggpubr", "ggrepel", "ggvenn", "ggpointdensity", "patchwork", "ComplexHeatmap")
 sapply(pkgs, require, character.only = TRUE)
 
-venn <- readRDS("plot/venn_plot.rds")
+venn <- readRDS("plot/venn_plot_v2.rds")
 volcanos <- readRDS("plot/volcanos.rds")
 go_plots <- readRDS("plot/enrichment_dotplot.RDS")
 simp_plot <- readRDS("plot/simp_plot.rds")
@@ -25,6 +25,13 @@ DDEEEEEE
 DDEEEEEE
 DDEEEEEE"
 
+design <- "
+BBEEE
+BBEEE
+BBEEE
+CDEEE
+"
+
 final_plot <- free(volcanos) +
   free(venn) +
   free(simp_plot + theme(legend.position = "bottom")) +
@@ -33,7 +40,8 @@ final_plot <- free(volcanos) +
   plot_annotation(tag_levels = list(c("C", 'D', "E", "F"))) &
   theme(
     text = element_text(size = 12),
-    plot.tag = element_text(face = 'bold')
+    plot.tag = element_text(face = 'bold'),
+    legend.position = "bottom"
   )
 final_plot
 
