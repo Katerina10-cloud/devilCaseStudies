@@ -29,10 +29,10 @@ Case studies of scRNAseq Differential Expression analysis using devil statistica
 | 6. | Hsc | Multiple | 589,390 | 47 | 33,145 | 25 | [CELLxGENE](https://cellxgene.cziscience.com/collections/b1a879f6-5638-48d3-8f64-f6592c1b1561) |
 | 7. | Yazar | Blood | 1,248,980 | 29 | 36,571 | 981 | [CELLxGENE](https://cellxgene.cziscience.com/collections/dde06e0f-ab3b-46be-96a2-a8082383c4a1) |
 | 8. | Kumar | Breast | 714,331 | 39 | 33,145 | 126 | [CELLxGENE](https://cellxgene.cziscience.com/collections/4195ab4c-20bd-4cd3-8b3d-65601277e731) |
-| 9. | Small liver | Liver | X | X | X | X | [Original paper](https://www.nature.com/articles/s41467-018-06318-7) |
-| 10. | Small blood | Blood | 43,512 | 25 | X | 12 | [CELLxGENE](https://cellxgene.cziscience.com/e/4c4cd77c-8fee-4836-9145-16562a8782fe.cxg/) |
-| 11. | Adult macaque brain | Brain | 2,583,967 | 14 | X | 5 | [CELLxGENE](https://cellxgene.cziscience.com/collections/8c4bcf0d-b4df-45c7-888c-74fb0013e9e7) |
-| 12. | Healthy human blood | Blood | X | 9 | X | 166 | [HUman Cell Atlas](https://explore.data.humancellatlas.org/projects/896f377c-8e88-463e-82b0-b2a5409d6fe4) |
+| 9. | Small liver | Liver | 8,444 | 15 | 32,839 | 5 | [Original paper](https://www.nature.com/articles/s41467-018-06318-7) |
+| 10. | Small blood | Blood | 43,512 | 25 | 21,966 | 12 | [CELLxGENE](https://cellxgene.cziscience.com/e/4c4cd77c-8fee-4836-9145-16562a8782fe.cxg/) |
+| 11. | Adult macaque brain | Brain | 2,583,967 | 14 | 19,147 | 5 | [CELLxGENE](https://cellxgene.cziscience.com/collections/8c4bcf0d-b4df-45c7-888c-74fb0013e9e7) |
+| 12. | Healthy human blood | Blood | 1,003,209 | 9 | 36,601 | 166 | [HUman Cell Atlas](https://explore.data.humancellatlas.org/projects/896f377c-8e88-463e-82b0-b2a5409d6fe4) |
 
 
 
