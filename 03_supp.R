@@ -11,18 +11,18 @@ method_cellwise <- c("glmGamPoi (cell)", "Devil (base)", "limma", "Nebula")
 method_patientwise <- c("Nebula", "Devil (mixed)", "limma", "glmGamPoi (cell)")
 
 # P-values Cell-wise ####
+
 plots <- lapply(c("bca", "yazar", "kumar", "hsc"), function(author_name) {
   print(author_name)
   author <- AUTHOR <- author_name
 
-
   is.pb <- F
   method_wise <- ifelse(is.pb==T, "Patient-wise", "Cell-wise")
 
-  nulls <- all_null_plots(author, FALSE, algos = method_cellwise, only_tibble = T) %>%
+  nulls <- all_null_plots(author, is.pb, algos = method_cellwise, only_tibble = T) %>%
     do.call("rbind", .) %>% dplyr::mutate(ytype = "p-value", xtype="Cell-wise")
 
-  pows <- all_pow_plots(author, FALSE, algos = method_cellwise, only_tibble = T) %>%
+  pows <- all_pow_plots(author, is.pb, algos = method_cellwise, only_tibble = T) %>%
     do.call("rbind", .) %>% dplyr::mutate(ytype = "p-value", xtype="Cell-wise")
 
 
@@ -81,13 +81,13 @@ plots <- lapply(c("bca", "yazar", "kumar", "hsc"), function(author_name) {
   method_cellwise <- c("glmGamPoi (cell)", "Devil (base)", "limma", "Nebula")
   method_patientwise <- c("Nebula", "Devil (mixed)", "limma", "glmGamPoi (cell)")
 
-  is.pb <- F
+  is.pb <- T
   method_wise <- ifelse(is.pb==T, "Patient-wise", "Cell-wise")
 
-  nulls <- all_null_plots(author, FALSE, algos = method_patientwise, only_tibble = T) %>%
+  nulls <- all_null_plots(author, is.pb, algos = method_patientwise, only_tibble = T) %>%
     do.call("rbind", .) %>% dplyr::mutate(ytype = "p-value", xtype="Cell-wise")
 
-  pows <- all_pow_plots(author, FALSE, algos = method_patientwise, only_tibble = T) %>%
+  pows <- all_pow_plots(author, is.pb, algos = method_patientwise, only_tibble = T) %>%
     do.call("rbind", .) %>% dplyr::mutate(ytype = "p-value", xtype="Cell-wise")
 
 
