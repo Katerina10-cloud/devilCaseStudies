@@ -17,7 +17,7 @@ results = get_results(results_folder)
 results <- results %>% dplyr::filter(n_genes * n_cells != 100 * 500)
 
 # Comparisons ####
-p <- plot_time_and_memory_comparison(results, n_extrapolation = 3, ncols = 4) + 
+p <- plot_time_and_memory_comparison(results, n_extrapolation = 3, ncols = 4) +
   theme(
     legend.position = "bottom", legend.box = "vertical", legend.spacing = unit(-10, "pt"),
     axis.title.y = element_blank()
@@ -70,7 +70,7 @@ main <- free(p) +
     plot.tag = element_text(face = 'bold')
   )
 main
-ggsave("figures/supp_02_a.pdf", plot = main, width = 10, height = 12, units = 'in')
+ggsave("figures/supp_02_a.pdf", plot = main, width = 12, height = 8, units = 'in')
 
 
 # Human blood ####
@@ -131,4 +131,4 @@ main <- free(p) +
     plot.tag = element_text(face = 'bold')
   )
 main
-ggsave("figures/supp_02_b.pdf", plot = main, width = 10, height = 12, units = 'in')
+ggsave("figures/supp_02_b.pdf", plot = main, width = 12, height = 8, units = 'in')

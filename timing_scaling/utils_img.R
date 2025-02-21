@@ -1,4 +1,6 @@
 
+require(ggupset)
+
 method_colors = c(
   "glmGamPoi" = "#EAB578",
   "nebula" =  "steelblue",
@@ -173,12 +175,12 @@ plot_time_and_memory_comparison = function(results, n_extrapolation = 3, ncols=2
     dplyr::mutate(memory_ratio = memory / memory[model_name == "devil (GPU)"]) %>%
     dplyr::mutate(is_extrapolated = ifelse(is_extrapolated == "FALSE", "Observed", "Extrapolated")) %>%
     dplyr::mutate(is_extrapolated = factor(is_extrapolated, levels = c("Observed", "Extrapolated")))
-  
-  
+
+
   p = d %>%
-    `colnames<-`(c("model_name", "Time (s)", "Memory(GB)", "size", "is_extrapolated", "Speed ratio", "Memory consumption ratio")) %>% 
-    tidyr::pivot_longer(!c(model_name, is_extrapolated, size)) %>% 
-    dplyr::mutate(name = factor(name, levels = c("Time (s)", "Memory(GB)", "Speed ratio", "Memory consumption ratio"))) %>% 
+    `colnames<-`(c("model_name", "Time (s)", "Memory(GB)", "size", "is_extrapolated", "Speed ratio", "Memory consumption ratio")) %>%
+    tidyr::pivot_longer(!c(model_name, is_extrapolated, size)) %>%
+    dplyr::mutate(name = factor(name, levels = c("Time (s)", "Memory(GB)", "Speed ratio", "Memory consumption ratio"))) %>%
     ggplot(mapping = aes(x = size, y= value, col = model_name, linetype = is_extrapolated)) +
     geom_point(aes(shape = is_extrapolated), size = 3) +
     geom_line() +
@@ -189,7 +191,7 @@ plot_time_and_memory_comparison = function(results, n_extrapolation = 3, ncols=2
     theme_bw() +
     scale_color_manual(values = method_colors) +
     facet_wrap(name~., scales = "free", ncol = ncols, strip.position = "left")
-  
+
   return(p)
 
   # p_time = d %>%
@@ -202,7 +204,7 @@ plot_time_and_memory_comparison = function(results, n_extrapolation = 3, ncols=2
   #   scale_size_continuous(guide = "none") +
   #   theme_bw() +
   #   scale_color_manual(values = method_colors)
-  # 
+  #
   # p_time_ratio = d %>%
   #   ggplot(mapping = aes(x = size, y= time_ratio, col = model_name, linetype = is_extrapolated)) +
   #   geom_point(aes(shape = is_extrapolated), size = 3) +
@@ -213,7 +215,7 @@ plot_time_and_memory_comparison = function(results, n_extrapolation = 3, ncols=2
   #   scale_size_continuous(guide = "none") +
   #   theme_bw() +
   #   scale_color_manual(values = method_colors)
-  # 
+  #
   # p_mem <- d %>%
   #   ggplot(mapping = aes(x = size, y= memory * 1e-9, col = model_name, linetype = is_extrapolated)) +
   #   geom_point(aes(shape = is_extrapolated), size = 3) +
@@ -224,7 +226,7 @@ plot_time_and_memory_comparison = function(results, n_extrapolation = 3, ncols=2
   #   scale_size_continuous(guide = "none") +
   #   theme_bw() +
   #   scale_color_manual(values = method_colors)
-  # 
+  #
   # p_mem_ratio <- d %>%
   #   ggplot(mapping = aes(x=size, y= memory_ratio, col = model_name, linetype = is_extrapolated)) +
   #   geom_point(aes(shape = is_extrapolated), size = 3) +
@@ -235,7 +237,7 @@ plot_time_and_memory_comparison = function(results, n_extrapolation = 3, ncols=2
   #   scale_size_continuous(guide = "none") +
   #   theme_bw() +
   #   scale_color_manual(values = method_colors)
-  # 
+  #
   # list(
   #   p_time=p_time,
   #   p_time_ratio=p_time_ratio,
@@ -334,57 +336,57 @@ plot_upset <- function(fits_folder, lfc_cut, pval_cut) {
 }
 
 plot_volc = function (
-    devil.res, 
-    lfc_cut = 1, 
-    pval_cut = 0.05, 
-    labels = TRUE, 
-    colors = c("gray", "forestgreen", "steelblue", "indianred"), 
-    color_alpha = 0.7, 
-    point_size = 1, 
-    center = TRUE, 
+    devil.res,
+    lfc_cut = 1,
+    pval_cut = 0.05,
+    labels = TRUE,
+    colors = c("gray", "forestgreen", "steelblue", "indianred"),
+    color_alpha = 0.7,
+    point_size = 1,
+    center = TRUE,
     title = "Volcano plot") {
-  
+
   if (sum(is.na(devil.res))) {
     message("Warning: some of the reults are unrealiable (i.e. contains NaN)\n Those genes will not be displayed")
     devil.res <- stats::na.omit(devil.res)
   }
-  
-  d <- devil.res %>% 
-    dplyr::mutate(pval_filter = .data$adj_pval <= pval_cut, lfc_filter = abs(.data$lfc) >= lfc_cut) %>% 
+
+  d <- devil.res %>%
+    dplyr::mutate(pval_filter = .data$adj_pval <= pval_cut, lfc_filter = abs(.data$lfc) >= lfc_cut) %>%
     dplyr::mutate(class = dplyr::if_else(
-      .data$pval_filter & .data$lfc_filter, 
-      "p-value and lfc", 
+      .data$pval_filter & .data$lfc_filter,
+      "p-value and lfc",
       dplyr::if_else(
-        .data$pval_filter, 
-        "p-value", 
+        .data$pval_filter,
+        "p-value",
         dplyr::if_else(
-          .data$lfc_filter, 
-          "lfc", 
+          .data$lfc_filter,
+          "lfc",
           "non-significant"
           )
         )
       )
-      ) %>% dplyr::mutate(class = factor(class, levels = c("non-significant", "lfc", "p-value", "p-value and lfc"))) %>% 
+      ) %>% dplyr::mutate(class = factor(class, levels = c("non-significant", "lfc", "p-value", "p-value and lfc"))) %>%
     dplyr::mutate(label = dplyr::if_else(class == "p-value and lfc", .data$name, NA))
   d
-  
+
   if (sum(d$adj_pval == 0) > 0) {
     message(paste0(sum(d$adj_pval == 0), " genes have adjusted p-value equal to 0, will be set to the minimum non-zero value"))
     d$adj_pval[d$adj_pval == 0] <- min(d$adj_pval[d$adj_pval != 0])
   }
-  
-  p <- d %>% 
-    ggplot2::ggplot(mapping = ggplot2::aes(x = .data$lfc, y = -log10(.data$adj_pval), col = .data$class, label = .data$label)) + 
-    ggplot2::geom_point(alpha = color_alpha, size = point_size) + 
-    ggplot2::theme_minimal() + 
-    ggplot2::labs(x = expression(Log[2] ~ FC), y = expression(-log[10] ~ Pvalue), col = "") + ggplot2::scale_color_manual(values = colors) + 
-    ggplot2::geom_vline(xintercept = c(-lfc_cut, lfc_cut), 
-                        linetype = "dashed") + ggplot2::geom_hline(yintercept = -log10(pval_cut), 
+
+  p <- d %>%
+    ggplot2::ggplot(mapping = ggplot2::aes(x = .data$lfc, y = -log10(.data$adj_pval), col = .data$class, label = .data$label)) +
+    ggplot2::geom_point(alpha = color_alpha, size = point_size) +
+    ggplot2::theme_minimal() +
+    ggplot2::labs(x = expression(Log[2] ~ FC), y = expression(-log[10] ~ Pvalue), col = "") + ggplot2::scale_color_manual(values = colors) +
+    ggplot2::geom_vline(xintercept = c(-lfc_cut, lfc_cut),
+                        linetype = "dashed") + ggplot2::geom_hline(yintercept = -log10(pval_cut),
                                                                    linetype = "dashed") + ggplot2::ggtitle(title) + ggplot2::theme(legend.position = "bottom")
   if (center) {
     p <- p + ggplot2::xlim(c(-max(abs(d$lfc)), max(abs(d$lfc))))
   }
-  
+
   if (labels) {
     p = p + ggrepel::geom_label_repel(max.overlaps = Inf, col = "black")
   }
