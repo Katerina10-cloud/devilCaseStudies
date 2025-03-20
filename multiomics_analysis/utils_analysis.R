@@ -179,20 +179,40 @@ enrichmentGO <- function(rna_deg_data) {
 
   gseGO <- clusterProfiler::gseGO(
     genes,
-    ont = "BP",  # use BP for dotplot, 'All' to perfom gene classification
+    ont = "BP",  
     OrgDb = org.Hs.eg.db,
     minGSSize = 10,
-    maxGSSize = 500,
+    maxGSSize = 350,
     keyType = "SYMBOL",
     pvalueCutoff = 0.05,
     pAdjustMethod = "BH",
     verbose = TRUE,
     eps = 1e-10,
     by ="fgsea",
+    nPerm = 10000, 
     seed = 1234
   )
   return(gseGO)
   #return(gseGO@result %>% as.data.frame())
+}
+
+
+enrichmentReactomePA <- function(rna_deg_data) {
+  rna_deg_data$RankMetric <- -log10(rna_deg_data$adj_pval) * sign(rna_deg_data$lfc)
+  rna_deg_data <- rna_deg_data %>% arrange(-RankMetric)
+  genes <- rna_deg_data$RankMetric
+  names(genes) <- rna_deg_data$geneID
+  
+  entrez_ids <- mapIds(org.Hs.eg.db, keys = names(genes), column = "ENTREZID", keytype = "SYMBOL", multiVals = "first")
+  entrez_ids <- as.data.frame(entrez_ids)
+  names(genes) <- entrez_ids$entrez_ids
+  
+  gseReactome <- ReactomePA::gsePathway(genes, 
+                                        pvalueCutoff = 0.2,
+                                        pAdjustMethod = "BH", 
+                                        verbose = FALSE)
+  
+  return(gseReactome@result %>% as.data.frame())
 }
 
 

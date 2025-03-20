@@ -117,7 +117,8 @@ saveRDS(p_volcanos, "plot/volcanos.rds")
 
 ### Gene set Enrichement analysis ###
 
-pkgs <- c("ggplot2", "dplyr","tidyr","reactome.db", "fgsea", "org.Hs.eg.db", "data.table", "clusterProfiler", "enrichplot", "ggpubr")
+pkgs <- c("ggplot2", "dplyr","tidyr","reactome.db", "fgsea", "org.Hs.eg.db", "data.table", 
+          "clusterProfiler", "enrichplot", "ggpubr", "ReactomePA")
 sapply(pkgs, require, character.only = TRUE)
 
 enrichmentGO <- function(rna_deg_data) {
@@ -125,10 +126,12 @@ enrichmentGO <- function(rna_deg_data) {
   rna_deg_data <- rna_deg_data %>% arrange(-RankMetric)
   genes <- rna_deg_data$RankMetric
   names(genes) <- rna_deg_data$geneID
-
+  
+  set.seed(1234)
+  
   gseGO <- clusterProfiler::gseGO(
     genes,
-    ont = "BP",  # use BP for dotplot, 'All' to perfom gene classification
+    ont = "BP",  
     OrgDb = org.Hs.eg.db,
     minGSSize = 10,
     maxGSSize = 350,
@@ -136,8 +139,10 @@ enrichmentGO <- function(rna_deg_data) {
     pvalueCutoff = 0.05, 
     pAdjustMethod = "BH",
     verbose = TRUE, 
-    eps = 0
-    #seed = 1234
+    eps = 1e-10,
+    by ="fgsea",
+    nPerm = 10000,
+    seed = 1234
   )
   return(gseGO)
   #return(gseGO@result %>% as.data.frame())
@@ -146,6 +151,50 @@ enrichmentGO <- function(rna_deg_data) {
 gseGO_devil <- enrichmentGO(rna_deg_devil)
 gseGO_glm <- enrichmentGO(rna_deg_glm)
 gseGO_nebula <- enrichmentGO(rna_deg_nebula)
+
+gseGO_list <- list(
+  devil = gseGO_devil,
+  glm = gseGO_glm,
+  nebula = gseGO_nebula
+)
+
+gseGO_simplified <- lapply(gseGO_list, function(x) clusterProfiler::simplify(
+  x, cutoff = 0.6, 
+  by = "p.adjust", 
+  select_fun = min, 
+  measure = "Wang", 
+  semData = NULL
+))
+
+gseGO_devil_s  <- gseGO_simplified$devil
+gseGO_glm_s    <- gseGO_simplified$glm
+gseGO_nebula_s <- gseGO_simplified$nebula
+
+
+# ReactomePA
+
+enrichmentReactomePA <- function(rna_deg_data) {
+  rna_deg_data$RankMetric <- -log10(rna_deg_data$adj_pval) * sign(rna_deg_data$lfc)
+  rna_deg_data <- rna_deg_data %>% arrange(-RankMetric)
+  genes <- rna_deg_data$RankMetric
+  names(genes) <- rna_deg_data$geneID
+  
+  entrez_ids <- mapIds(org.Hs.eg.db, keys = names(genes), column = "ENTREZID", keytype = "SYMBOL", multiVals = "first")
+  entrez_ids <- as.data.frame(entrez_ids)
+  names(genes) <- entrez_ids$entrez_ids
+  
+  gseReactome <- ReactomePA::gsePathway(genes, 
+                                        pvalueCutoff = 0.2,
+                                        pAdjustMethod = "BH", 
+                                        verbose = FALSE)
+  
+  return(gseReactome@result %>% as.data.frame())
+}
+
+gseRe_devil <- enrichmentReactomePA(rna_deg_devil)
+gseRe_glm <- enrichmentReactomePA(rna_deg_glm)
+gseRe_nebula <- enrichmentReactomePA(rna_deg_nebula)
+
 
 # Plot Venn over results
 ggVennDiagram::ggVennDiagram(

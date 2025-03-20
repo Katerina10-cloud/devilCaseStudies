@@ -5,14 +5,8 @@ pkgs <- c("ggplot2", "dplyr","tidyr","tibble", "viridis", "smplot2", "Seurat", "
           "ggpubr", "ggrepel", "ggvenn", "ggpointdensity", "edgeR", "patchwork", 'ggVennDiagram', 'stringr',
           "enrichplot", "clusterProfiler", "data.table", "reactome.db", "fgsea", "org.Hs.eg.db")
 sapply(pkgs, require, character.only = TRUE)
-set.seed(1234)
+#set.seed(1234)
 source("utils_analysis.R")
-
-method_colors = c(
-  "glmGamPoi" = "#EAB578",
-  "NEBULA" =  'steelblue', #"#B0C4DE",
-  "devil" = "#099668"
-)
 
 # Loading data #
 rna_devil <- "results/MuscleRNA/devil_rna.RDS"
@@ -102,11 +96,16 @@ p_volcanos <- rna_join %>%
   theme_bw() +
   scale_x_continuous(breaks = seq(floor(min(rna_join$lfc)),
                                   ceiling(max(rna_join$lfc)), by = 2)) +
-  #facet_wrap(~factor(method, levels = c("devil", "glmGamPoi", "nebula")), nrow = 1, scales = "free") +
-  facet_wrap(~factor(method, levels = c("devil", "glmGamPoi", "nebula")), nrow = 3, scales = "free") +
+  facet_wrap(~factor(method, levels = c("devil", "glmGamPoi", "nebula")), nrow = 1, scales = "free") +
   labs(x = expression(Log[2] ~ FC),
        y = expression(-log[10] ~ Pvalue),
        col = "DE type") +
+  #ggplot2::theme(legend.position = 'right',
+                 #legend.text = element_text(size = 16, color = "black"),
+                 #legend.title = element_text(size = 18, color = "black"),
+                 #strip.text = element_text(size = 20, face = "plain", color = "black"),
+                 #axis.text = element_text(size = 18, color = "black"),
+                 #axis.title = element_text(size = 20, color = "black"))+
   guides(color = guide_legend(override.aes = list(alpha = 1)))
 p_volcanos
 
@@ -118,6 +117,24 @@ saveRDS(p_volcanos, "plot/volcanos.rds")
 gseGO_devil <- enrichmentGO(rna_deg_devil)
 gseGO_glm <- enrichmentGO(rna_deg_glm)
 gseGO_nebula <- enrichmentGO(rna_deg_nebula)
+
+gseGO_list <- list(
+  devil = gseGO_devil,
+  glm = gseGO_glm,
+  nebula = gseGO_nebula
+)
+
+gseGO_simplified <- lapply(gseGO_list, function(x) clusterProfiler::simplify(
+  x, cutoff = 0.6, 
+  by = "p.adjust", 
+  select_fun = min, 
+  measure = "Wang", 
+  semData = NULL
+))
+
+gseGO_devil_s  <- gseGO_simplified$devil@result
+gseGO_glm_s    <- gseGO_simplified$glm@result
+gseGO_nebula_s <- gseGO_simplified$nebula@result
 
 
 # clusterProfiler::simplify analysis ####
@@ -136,18 +153,16 @@ simp_plot <- df_simp %>%
   dplyr::select(model, n_simplified, f, c) %>%
   tidyr::pivot_longer(c(f, n_simplified)) %>%
   dplyr::mutate(name = ifelse(name=="f", "Fraction simplified", "N simplified")) %>%
-  dplyr::filter(name == "Fraction simplified") %>%
   ggplot(mapping = aes(x=c, y=value, col=model)) +
   geom_point() +
   geom_line() +
   theme_bw() +
   facet_wrap(~name, scales = "free", ncol = 1,strip.position = "top") +
-  scale_color_manual(values = method_colors) +
   labs(y = "Value", x="Clustering cutoff", col="")
 simp_plot
 saveRDS(simp_plot, file = "plot/simp_plot.rds")
 
-s_cutoff = 0.5
+s_cutoff = 0.6
 gseGO_devil_s = clusterProfiler::simplify(gseGO_devil, cutoff=s_cutoff)
 gseGO_glm_s = clusterProfiler::simplify(gseGO_glm, cutoff=s_cutoff)
 gseGO_nebula_s = clusterProfiler::simplify(gseGO_nebula, cutoff=s_cutoff)
@@ -164,3 +179,9 @@ saveRDS(gseGO_nebula, "results/gsea_GO/gseGO_nebula.RDS")
 GO_plot = plot_dotplot_GO(gseGO_devil_s@result, gseGO_glm_s@result, gseGO_nebula_s@result)
 GO_plot
 saveRDS(GO_plot, "plot/enrichment_dotplot.RDS")
+
+
+# ReactomePA enrichment
+gseRe_devil <- enrichmentReactomePA(rna_deg_devil)
+gseRe_glm <- enrichmentReactomePA(rna_deg_glm)
+gseRe_nebula <- enrichmentReactomePA(rna_deg_nebula)
