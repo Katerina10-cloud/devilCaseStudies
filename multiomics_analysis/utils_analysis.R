@@ -8,47 +8,63 @@ GO_CLUSTERS <- list(
     "myeloid leukocyte migration",
     "leukocyte migration",
     "cell surface toll-like receptor signaling pathway",
-    "biological process involved in interspecies interaction between organisms"
+    "biological process involved in interspecies interaction between organisms",
+    "T cell mediated immunity",
+    "positive regulation of cytokine production",
+    "cellular response to cytokine stimulus",
+    "lymphocyte activation",
+    "innate immune response"
   ),
   `Gene Expression and Regulation` = c(
     "gene expression",
-    "nucleic acid metabolic process",
-    "protein metabolic process",
-    "positive regulation of metabolic process",
     "regulation of biological process",
-    "biological regulation"
+    "biological regulation",
+    "positive regulation of gene expression",
+    "positive regulation of transcription by RNA polymerase II",
+    "positive regulation of response to stimulus"
   ),
   `Cellular Adhesion and Communication` = c(
     "homophilic cell adhesion via plasma membrane adhesion molecules",
     "cell-cell adhesion via plasma-membrane adhesion molecules",
     "regulation of substrate adhesion-dependent cell spreading",
-    "cell-cell signaling"
+    "cell-cell signaling",
+    "leukocyte cell-cell adhesion",
+    "regulation of cell communication"
   ),
   `Developmental and Morphogenetic Processes` = c(
     "multicellular organism development",
     "system development",
     "muscle cell development",
     "muscle system process",
+    "skeletal muscle cell differentiation",
+    "striated muscle cell development",
     "positive regulation of cell differentiation",
     "cellular component assembly involved in morphogenesis",
-    "non-membrane-bounded organelle assembly"
+    "non-membrane-bounded organelle assembly",
+    "organelle disassembly",
+    "inner ear development"
   ),
   `Muscle and Movement Processes` = c(
     "muscle contraction",
-    "actin filament-based movement"
+    "actin filament-based movement",
+    "actin filament-based process",
+    "myofibril assembly"
+    
   ),
   `Cell Death and Cell Cycle` = c(
     "cell death",
     "programmed cell death",
     "positive regulation of cell cycle process",
-    "regulation of growth"
+    "regulation of growth",
+    "cell killing"
   ),
-  `Localization and Transport` = c(
+  `Cellular Transport` = c(
     "establishment of localization",
     "transport",
     "cellular localization",
     "localization",
-    "regulation of protein secretion"
+    "regulation of protein secretion",
+    "endocytosis"
   ),
   `Signaling and Regulation` = c(
     "intracellular signaling cassette",
@@ -56,9 +72,20 @@ GO_CLUSTERS <- list(
     "transforming growth factor beta receptor superfamily signaling pathway",
     "cognition"
   ),
+  
+  `Metabolic processes` = c(
+    "cellular nitrogen compound catabolic process",
+    "proteolysis",
+    "negative regulation of RNA metabolic process",
+    "nucleic acid metabolic process",
+    "protein metabolic process",
+    "negative regulation of metabolic process"
+  ),
+  
   `Broad Categories` = c(
-    "biological_process",
-    "cellular process"
+    "response to gamma radiation",
+    "cellular response to hypoxia",
+    "epithelial cell proliferation"
   )
 )
 
@@ -129,7 +156,14 @@ plot_dotplot_GO = function(devil_res, glm_res, nebula_res) {
   nebula_res <- nebula_res %>% dplyr::mutate(method = "nebula", DE_type = ifelse(enrichmentScore > 0, "Up-regulated", "Down-regulated"))
 
   combined_data <- bind_rows(devil_res, glm_res, nebula_res) %>%
-    dplyr::filter(!(Description %in% c("biological_process", "cellular process")))
+    dplyr::filter(!(Description %in% c("response to cytokine", "positive regulation of developmental process",
+                                       "cognition", "defense response to other organism", "response to other organism",
+                                       "response to external biotic stimulus", "response to biotic stimulus",
+                                       "negative regulation of metabolic process", "negative regulation of nucleobase-containing compound metabolic process",
+                                       "biological process involved in interspecies interaction between organisms",
+                                       "negative regulation of nitrogen compound metabolic process",
+                                       "negative regulation of macromolecule biosynthetic process",
+                                       "macromolecule modification")))
 
   combined_data$GO_cluster = lapply(combined_data$Description, function(go_term) {
     for (cluster_name in names(GO_CLUSTERS)) {
@@ -142,14 +176,21 @@ plot_dotplot_GO = function(devil_res, glm_res, nebula_res) {
   }) %>% unlist()
 
   combined_data$GO_cluster <- str_wrap(combined_data$GO_cluster, width = 20)
+  
+  # Select top 10 terms per method and DE_type based on enrichmentScore
+  filtered_data <- combined_data %>%
+    group_by(method, DE_type) %>%
+    arrange(desc(enrichmentScore)) %>%
+    slice_head(n = 10) %>%
+    ungroup()
 
   # Enrichment plot
 
-  plot_GO = combined_data %>%
+  plot_GO = filtered_data %>%
     dplyr::mutate(
       Description = factor(
         Description,
-        levels = combined_data %>%
+        levels = filtered_data %>%
           arrange(factor(method, levels = c("devil", "glmGamPoi", "nebula")), enrichmentScore) %>%
           pull(Description) %>%
           unique()

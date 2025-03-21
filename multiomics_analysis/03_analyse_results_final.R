@@ -118,24 +118,6 @@ gseGO_devil <- enrichmentGO(rna_deg_devil)
 gseGO_glm <- enrichmentGO(rna_deg_glm)
 gseGO_nebula <- enrichmentGO(rna_deg_nebula)
 
-gseGO_list <- list(
-  devil = gseGO_devil,
-  glm = gseGO_glm,
-  nebula = gseGO_nebula
-)
-
-gseGO_simplified <- lapply(gseGO_list, function(x) clusterProfiler::simplify(
-  x, cutoff = 0.6, 
-  by = "p.adjust", 
-  select_fun = min, 
-  measure = "Wang", 
-  semData = NULL
-))
-
-gseGO_devil_s  <- gseGO_simplified$devil@result
-gseGO_glm_s    <- gseGO_simplified$glm@result
-gseGO_nebula_s <- gseGO_simplified$nebula@result
-
 
 # clusterProfiler::simplify analysis ####
 df_simp = get_simplified_GOterms()
@@ -180,6 +162,7 @@ GO_plot = plot_dotplot_GO(gseGO_devil_s@result, gseGO_glm_s@result, gseGO_nebula
 GO_plot
 saveRDS(GO_plot, "plot/enrichment_dotplot.RDS")
 
+ggsave("plot/enrichment_dotplot.png", dpi = 400, width = 12.0, height = 9.0, plot = GO_plot)
 
 # ReactomePA enrichment
 gseRe_devil <- enrichmentReactomePA(rna_deg_devil)
