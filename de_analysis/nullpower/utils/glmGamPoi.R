@@ -52,6 +52,7 @@ glmgp.cell.mult <- function(count, df){
 glmgp.cell.fixed <- function(count, df){
   #design_matrix <- model.matrix(~1+tx_cell, data = df)
   df$tx_cell = factor(df$tx_cell, levels = c(0,1))
+  df$donor_id = factor(df$donor_id, levels = unique(df$donor_id))
   design_matrix <- model.matrix(~1+tx_cell+donor_id, data = df)
   design_matrix[,1] <- 1
   
@@ -77,7 +78,7 @@ glmgp.cell.fixed <- function(count, df){
     }
     ,
     error = function(e) {
-      print("error with design matrix")
+      print(e)
       matrix(NA, nrow = dim(count)[1], ncol = 5)
     }
   )
