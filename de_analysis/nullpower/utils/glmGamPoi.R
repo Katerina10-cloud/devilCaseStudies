@@ -47,3 +47,40 @@ glmgp.cell.mult <- function(count, df){
   colnames(result) <- c('Estimate', 'Std. Error', 't value', 'Pr(>|t|)', 'Time')
   return(result %>% as.matrix())
 }
+
+# glmGam v2 ####
+glmgp.cell.fixed <- function(count, df){
+  #design_matrix <- model.matrix(~1+tx_cell, data = df)
+  df$tx_cell = factor(df$tx_cell, levels = c(0,1))
+  design_matrix <- model.matrix(~1+tx_cell+donor_id, data = df)
+  design_matrix[,1] <- 1
+  
+  result <- tryCatch(
+    {
+      s <- Sys.time()
+      fit <- glmGamPoi::glm_gp(count, design_matrix, on_disk=FALSE, size_factors=FALSE)
+      e <- Sys.time()
+      delta_time <- difftime(e, s, units = "secs") %>% as.numeric()
+      contrast = rep(0, ncol(design_matrix))
+      contrast[2] = 1
+      test <- glmGamPoi::test_de(fit, contrast = contrast)
+      
+      beta <- fit$Beta[,2]
+      pval <- test$pval
+      tval <- qnorm(1-pval/2) * sign(beta)
+      se <- beta/tval
+      
+      result <- dplyr::as_tibble(cbind(beta, se, tval, pval))
+      result$delta_time <- delta_time
+      colnames(result) <- c('Estimate', 'Std. Error', 't value', 'Pr(>|t|)', 'Time')
+      result
+    }
+    ,
+    error = function(e) {
+      print("error with design matrix")
+      matrix(NA, nrow = dim(count)[1], ncol = 5)
+    }
+  )
+  
+  return(result %>% as.matrix())
+}

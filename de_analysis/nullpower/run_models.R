@@ -16,7 +16,8 @@ list.func <- list(
   glmgp.cell.mult,
   nebula.mult,
   devil.base,
-  devil.mixed
+  devil.mixed,
+  glmgp.cell.fixed
 )
 
 set.seed(12345)
@@ -221,8 +222,8 @@ for (is.pb in IS.PB) {
           timing_df <- dplyr::bind_rows(
             timing_df,
             dplyr::tibble(
-              algo=c('glmGamPoi (Pb)', 'edgeR (Pb)', 'limma (Pb)', 'glmGamPoi (cell)', 'Nebula', 'Devil (base)', 'Devil (mixed)'),
-              timings = timings,
+              algo=c('glmGamPoi (Pb)', 'edgeR (Pb)', 'limma (Pb)', 'glmGamPoi (cell)', 'Nebula', 'Devil (base)', 'Devil (mixed)', "glmGamPoi (fixed)"),
+	      timings = timings,
               author=author,
               is.pb=is.pb,
               n.sample=n.sample,
@@ -230,7 +231,7 @@ for (is.pb in IS.PB) {
               int.ct=int.ct, n.cells=dim(cnt.select)[2], iter=i.iter))
 
           df.result <- do.call(rbind, list.result.method)
-          rownames(df.result) <- c('glmGamPoi (Pb)', 'edgeR (Pb)', 'limma (Pb)', 'glmGamPoi (cell)', 'Nebula', 'Devil (base)', 'Devil (mixed)')
+          rownames(df.result) <- c('glmGamPoi (Pb)', 'edgeR (Pb)', 'limma (Pb)', 'glmGamPoi (cell)', 'Nebula', 'Devil (base)', 'Devil (mixed)', "glmGamPoi (fixed)")
           list.result.null[[i.iter]] <- t(df.result)[(max_gene+1):MAX_GENE,]
           list.result.pow[[i.iter]] <- t(df.result)[1:max_gene,]
 
