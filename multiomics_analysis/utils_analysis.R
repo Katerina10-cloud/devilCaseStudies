@@ -89,6 +89,62 @@ GO_CLUSTERS <- list(
   )
 )
 
+REACTOME_CLUSTERS <- list(
+  `Immune Response` = c(
+    "Toll-like Receptor Cascades",
+    "Innate Immune System"
+  ),
+  
+  `Gene Expression and Regulation` = c(
+    "Transcriptional regulation by RUNX2",
+    "NGF-stimulated transcription",
+    "Estrogen-dependent gene expression"
+   
+  ),
+
+  `Muscle and Movement Processes` = c(
+    "Striated Muscle Contraction",
+    "Muscle contraction",
+    "Smooth Muscle Contraction",
+    "Metabolism of steroids"
+    
+  ),
+  `Cell Death and Cell Cycle` = c(
+    "Programmed Cell Death",
+    "Senescence-Associated Secretory Phenotype (SASP)",
+    "Oxidative Stress Induced Senescence"
+    
+  ),
+  `Cellular Transport` = c(
+    "Iron uptake and transport"
+  ),
+  `Signaling and Regulation` = c(
+    "Signaling by MET",
+    "Interleukin-1 family signaling",
+    "Negative regulation of the PI3K/AKT network",
+    "PIP3 activates AKT signaling",
+    "Negative regulation of MAPK pathway",
+    "PTEN Regulation",
+    "ER-Phagosome pathway",
+    "RAS processing",
+    "Cytokine Signaling in Immune system",
+    "Signaling by Interleukins",
+    "Signal Transduction"
+  ),
+  
+  `Metabolic processes` = c(
+    "Metabolism of RNA",
+    "Metabolism of lipids"
+  ),
+  
+  `Broad Categories` = c(
+    "tRNA processing",
+    "DNA Repair",
+    "Generic Transcription Pathway",
+    "RNA Polymerase II Transcription"
+  )
+)
+
 remove_redundant_terms <- function(data, enrichment_col = "enrichmentScore", core_col = "core_enrichment", desc_col = "Description", threshold = 0.5) {
   filtered_data <- data %>%
     mutate(genes = strsplit(!!sym(core_col), "/"))
@@ -148,6 +204,7 @@ get_simplified_GOterms = function(by=.05) {
 
   dplyr::bind_rows(sdevil, sglm, snebula)
 }
+
 
 plot_dotplot_GO = function(devil_res, glm_res, nebula_res) {
 
@@ -209,6 +266,69 @@ plot_dotplot_GO = function(devil_res, glm_res, nebula_res) {
   plot_GO
 }
 
+
+plot_dotplot_RE = function(devil_res, glm_res, nebula_res) {
+  
+  devil_res <- devil_res %>% dplyr::mutate(method = "devil", DE_type = ifelse(enrichmentScore > 0, "Up-regulated", "Down-regulated"))
+  glm_res <- glm_res %>% dplyr::mutate(method = "glmGamPoi", DE_type = ifelse(enrichmentScore > 0, "Up-regulated", "Down-regulated"))
+  nebula_res <- nebula_res %>% dplyr::mutate(method = "nebula", DE_type = ifelse(enrichmentScore > 0, "Up-regulated", "Down-regulated"))
+  
+  combined_data <- bind_rows(devil_res, glm_res, nebula_res) %>%
+    dplyr::filter(Description %in% c("Toll-like Receptor Cascades", "Innate Immune System", "Transcriptional regulation by RUNX2",
+                                     "NGF-stimulated transcription", "Estrogen-dependent gene expression",  "Striated Muscle Contraction",
+                                     "Muscle contraction", "Smooth Muscle Contraction", "Metabolism of steroids",
+                                     "Programmed Cell Death", "Senescence-Associated Secretory Phenotype (SASP)", 
+                                     "Oxidative Stress Induced Senescence", "Iron uptake and transport", 
+                                     "Signaling by MET", "Interleukin-1 family signaling", "Negative regulation of the PI3K/AKT network",
+                                     "PIP3 activates AKT signaling", "Negative regulation of MAPK pathway", "PTEN Regulation",
+                                     "ER-Phagosome pathway", "RAS processing", "Cytokine Signaling in Immune system",
+                                     "Signaling by Interleukins", "Signal Transduction", "Metabolism of RNA",
+                                     "Metabolism of lipids", "tRNA processing", "DNA Repair", "Generic Transcription Pathway",
+                                     "RNA Polymerase II Transcription"))
+  
+  combined_data$RE_cluster = lapply(combined_data$Description, function(re_term) {
+    for (cluster_name in names(REACTOME_CLUSTERS)) {
+      if (re_term %in% REACTOME_CLUSTERS[[cluster_name]]) {
+        return(cluster_name)
+      }
+    }
+    print(re_term)
+    return("RE term not found in any cluster")
+  }) %>% unlist()
+  
+  combined_data$RE_cluster <- str_wrap(combined_data$RE_cluster, width = 20)
+  
+  # Select top 10 terms per method and DE_type based on enrichmentScore
+  filtered_data <- combined_data %>%
+    group_by(method, DE_type) %>%
+    arrange(desc(enrichmentScore)) %>%
+    slice_head(n = 10) %>%
+    ungroup()
+  
+  # Enrichment plot
+  
+  plot_RE = filtered_data %>%
+    dplyr::mutate(
+      Description = factor(
+        Description,
+        levels = filtered_data %>%
+          arrange(factor(method, levels = c("devil", "glmGamPoi", "nebula")), enrichmentScore) %>%
+          pull(Description) %>%
+          unique()
+      ),
+      DE_type = factor(DE_type, levels = c("Up-regulated", "Down-regulated")) # Ensure DE_type is ordered
+    ) %>%
+    ggplot(aes(x = method, y = Description, size = setSize, color = p.adjust)) +
+    geom_point() +
+    facet_grid(RE_cluster~DE_type, space = "free", scales = "free") +
+    scale_color_gradient(low = "cornflowerblue", high = "coral", name = "p-value") +
+    theme_bw() +
+    labs(title = "", x = "", y = "Biological Process Reactome term", size = "Gene Count") +
+    theme(
+      strip.text.y = element_text(angle = 0, hjust = 0.5)  # Rotate labels horizontally
+    )
+  plot_RE
+}
 
 
 
