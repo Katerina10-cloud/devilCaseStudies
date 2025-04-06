@@ -1,28 +1,25 @@
 # Define GO clusters
-# Define GO clusters
+
 GO_CLUSTERS <- list(
-  `Defense and Immune Response` = c(
+  `Immune Response` = c(
     "defense response",
     "immune system process",
-    "response to chemical",
     "myeloid leukocyte migration",
     "leukocyte migration",
     "cell surface toll-like receptor signaling pathway",
-    "biological process involved in interspecies interaction between organisms",
     "T cell mediated immunity",
     "positive regulation of cytokine production",
     "cellular response to cytokine stimulus",
     "lymphocyte activation",
-    "innate immune response"
+    "innate immune response",
+    "cell killing"
   ),
-  `Gene Expression and Regulation` = c(
-    "gene expression",
-    "regulation of biological process",
-    "biological regulation",
+  
+  `Gene Expression Regulation` = c(
     "positive regulation of gene expression",
-    "positive regulation of transcription by RNA polymerase II",
-    "positive regulation of response to stimulus"
+    "positive regulation of transcription by RNA polymerase II"
   ),
+  
   `Cellular Adhesion and Communication` = c(
     "homophilic cell adhesion via plasma membrane adhesion molecules",
     "cell-cell adhesion via plasma-membrane adhesion molecules",
@@ -31,33 +28,28 @@ GO_CLUSTERS <- list(
     "leukocyte cell-cell adhesion",
     "regulation of cell communication"
   ),
-  `Developmental and Morphogenetic Processes` = c(
-    "multicellular organism development",
-    "system development",
-    "muscle cell development",
-    "muscle system process",
-    "skeletal muscle cell differentiation",
-    "striated muscle cell development",
-    "positive regulation of cell differentiation",
-    "cellular component assembly involved in morphogenesis",
-    "non-membrane-bounded organelle assembly",
-    "organelle disassembly",
-    "inner ear development"
+  
+  `Cell Division, Development & Organelle Biogenesis ` = c(
+   "epithelial cell proliferation",
+   "positive regulation of cell differentiation",
+   "cellular component assembly involved in morphogenesis",
+   "non-membrane-bounded organelle assembly", 
+   "organelle disassembly",
+   "regulation of cell cycle process"
   ),
-  `Muscle and Movement Processes` = c(
+  
+  `Muscle Function, Development & Cytoskeleton Dynamics` = c(
     "muscle contraction",
     "actin filament-based movement",
     "actin filament-based process",
-    "myofibril assembly"
-    
+    "myofibril assembly",
+    "muscle system process",
+    "skeletal muscle cell differentiation",
+    "striated muscle cell development",
+    "muscle cell development"
   ),
-  `Cell Death and Cell Cycle` = c(
-    "cell death",
-    "programmed cell death",
-    "positive regulation of cell cycle process",
-    "regulation of growth",
-    "cell killing"
-  ),
+  
+  
   `Cellular Transport` = c(
     "establishment of localization",
     "transport",
@@ -66,26 +58,25 @@ GO_CLUSTERS <- list(
     "regulation of protein secretion",
     "endocytosis"
   ),
-  `Signaling and Regulation` = c(
-    "intracellular signaling cassette",
-    "regulation of signaling",
-    "transforming growth factor beta receptor superfamily signaling pathway",
-    "cognition"
+  
+  `Cell Signaling` = c(
+    "regulation of signaling"
   ),
   
-  `Metabolic processes` = c(
+  `Metabolic Processes` = c(
     "cellular nitrogen compound catabolic process",
     "proteolysis",
     "negative regulation of RNA metabolic process",
     "nucleic acid metabolic process",
     "protein metabolic process",
-    "negative regulation of metabolic process"
+    "negative regulation of metabolic process",
+    "RNA metabolic process"
   ),
   
-  `Broad Categories` = c(
+  `Stress Response` = c(
     "response to gamma radiation",
     "cellular response to hypoxia",
-    "epithelial cell proliferation"
+    "response to chemical"
   )
 )
 
@@ -211,7 +202,13 @@ plot_dotplot_GO = function(devil_res, glm_res, nebula_res) {
   devil_res <- devil_res %>% dplyr::mutate(method = "devil", DE_type = ifelse(enrichmentScore > 0, "Up-regulated", "Down-regulated"))
   glm_res <- glm_res %>% dplyr::mutate(method = "glmGamPoi", DE_type = ifelse(enrichmentScore > 0, "Up-regulated", "Down-regulated"))
   nebula_res <- nebula_res %>% dplyr::mutate(method = "nebula", DE_type = ifelse(enrichmentScore > 0, "Up-regulated", "Down-regulated"))
-
+  
+  replacement_map <- c(
+    "innate immune response" = "immune system process",
+    "actin filament-based process" = "actin filament-based movement",
+    "negative regulation of RNA metabolic process" = "RNA metabolic process"
+  )
+  
   combined_data <- bind_rows(devil_res, glm_res, nebula_res) %>%
     dplyr::filter(!(Description %in% c("response to cytokine", "positive regulation of developmental process",
                                        "cognition", "defense response to other organism", "response to other organism",
@@ -220,7 +217,11 @@ plot_dotplot_GO = function(devil_res, glm_res, nebula_res) {
                                        "biological process involved in interspecies interaction between organisms",
                                        "negative regulation of nitrogen compound metabolic process",
                                        "negative regulation of macromolecule biosynthetic process",
-                                       "macromolecule modification")))
+                                       "macromolecule modification", "response to gamma radiation", "positive regulation of gene expression",
+                                       "locomotion", "inner ear development", "positive regulation of response to stimulus",
+                                       "cellular response to chemical stimulus", "anatomical structure morphogenesis",
+                                       "positive regulation of macromolecule biosynthetic process", "positive regulation of biological process",
+                                       "regulation of biological process", "response to organic substance"))) 
 
   combined_data$GO_cluster = lapply(combined_data$Description, function(go_term) {
     for (cluster_name in names(GO_CLUSTERS)) {
@@ -240,6 +241,9 @@ plot_dotplot_GO = function(devil_res, glm_res, nebula_res) {
     arrange(desc(enrichmentScore)) %>%
     slice_head(n = 10) %>%
     ungroup()
+  
+  filtered_data <- filtered_data %>% 
+    dplyr::mutate(Description = str_replace_all(Description, replacement_map))
 
   # Enrichment plot
 
@@ -350,8 +354,8 @@ enrichmentGO <- function(rna_deg_data) {
     verbose = TRUE,
     eps = 1e-10,
     by ="fgsea",
-    nPerm = 10000, 
-    seed = 1234
+    nPerm = 10000,
+    seed = 123
   )
   return(gseGO)
   #return(gseGO@result %>% as.data.frame())

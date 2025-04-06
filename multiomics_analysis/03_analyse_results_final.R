@@ -8,6 +8,8 @@ sapply(pkgs, require, character.only = TRUE)
 #set.seed(1234)
 source("utils_analysis.R")
 
+setwd("/Users/katsiarynadavydzenka/Documents/PhD_AI/devilCaseStudies/multiomics_analysis")
+
 # Loading data #
 rna_devil <- "results/MuscleRNA/devil_rna.RDS"
 rna_devil <- readRDS(rna_devil) %>% dplyr::rename(geneID=name)
@@ -149,6 +151,9 @@ gseGO_devil_s = clusterProfiler::simplify(gseGO_devil, cutoff=s_cutoff)
 gseGO_glm_s = clusterProfiler::simplify(gseGO_glm, cutoff=s_cutoff)
 gseGO_nebula_s = clusterProfiler::simplify(gseGO_nebula, cutoff=s_cutoff)
 
+devil_s <- gseGO_devil_s@result
+glm_s <- gseGO_glm_s@result
+
 saveRDS(gseGO_devil_s, "results/gsea_GO/gseGO_devil_s.RDS")
 saveRDS(gseGO_devil, "results/gsea_GO/gseGO_devil.RDS")
 
@@ -158,13 +163,30 @@ saveRDS(gseGO_glm, "results/gsea_GO/gseGO_glm.RDS")
 saveRDS(gseGO_nebula_s, "results/gsea_GO/gseGO_nebula_s.RDS")
 saveRDS(gseGO_nebula, "results/gsea_GO/gseGO_nebula.RDS")
 
+gseGO_devil_s <- readRDS("results/gsea_GO/gseGO_devil_s.RDS")
+gseGO_glm_s <- readRDS("results/gsea_GO/gseGO_glm_s.RDS")
+gseGO_nebula_s <- readRDS("results/gsea_GO/gseGO_nebula_s.RDS")
+
 GO_plot = plot_dotplot_GO(gseGO_devil_s@result, gseGO_glm_s@result, gseGO_nebula_s@result)
 GO_plot
 saveRDS(GO_plot, "plot/enrichment_dotplot.RDS")
 
-ggsave("plot/enrichment_dotplot.png", dpi = 400, width = 12.0, height = 9.0, plot = GO_plot)
+ggsave("plot/enrichment_dotplot.png", dpi = 400, width = 10.0, height = 9.0, plot = GO_plot)
 
 # ReactomePA enrichment
 gseRe_devil <- enrichmentReactomePA(rna_deg_devil)
 gseRe_glm <- enrichmentReactomePA(rna_deg_glm)
 gseRe_nebula <- enrichmentReactomePA(rna_deg_nebula)
+
+saveRDS(gseRe_devil, "results/gse_Reactome/gseRE_devil.RDS")
+saveRDS(gseRe_glm, "results/gse_Reactome/gseRE_glm.RDS")
+saveRDS(gseRe_nebula, "results/gse_Reactome/gseRE_nebula.RDS")
+
+# Plot
+
+RE_plot = plot_dotplot_RE(gseRe_devil, gseRe_glm, gseRe_nebula)
+RE_plot
+saveRDS(RE_plot, "plot/enrichment_dotplot_RE.RDS")
+
+ggsave("plot/enrichment_dotplot_RE.png", dpi = 400, width = 12.0, height = 9.0, plot = RE_plot)
+
