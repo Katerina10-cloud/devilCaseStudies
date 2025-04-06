@@ -86,29 +86,27 @@ REACTOME_CLUSTERS <- list(
     "Innate Immune System"
   ),
   
-  `Gene Expression and Regulation` = c(
+  `Gene Expression Regulation` = c(
     "Transcriptional regulation by RUNX2",
     "NGF-stimulated transcription",
-    "Estrogen-dependent gene expression"
-   
+    "Estrogen-dependent gene expression",
+    "Generic Transcription Pathway",
+    "RNA Polymerase II Transcription",
+    "tRNA processing"
   ),
 
   `Muscle and Movement Processes` = c(
     "Striated Muscle Contraction",
     "Muscle contraction",
-    "Smooth Muscle Contraction",
-    "Metabolism of steroids"
-    
+    "Smooth Muscle Contraction"
   ),
-  `Cell Death and Cell Cycle` = c(
+  
+  `Cell Death & Cellular Maintenance` = c(
     "Programmed Cell Death",
-    "Senescence-Associated Secretory Phenotype (SASP)",
-    "Oxidative Stress Induced Senescence"
+    "DNA Repair"
     
   ),
-  `Cellular Transport` = c(
-    "Iron uptake and transport"
-  ),
+  
   `Signaling and Regulation` = c(
     "Signaling by MET",
     "Interleukin-1 family signaling",
@@ -125,14 +123,14 @@ REACTOME_CLUSTERS <- list(
   
   `Metabolic processes` = c(
     "Metabolism of RNA",
-    "Metabolism of lipids"
+    "Metabolism of lipids",
+    "Metabolism of steroids",
+    "Iron uptake and transport"
   ),
   
-  `Broad Categories` = c(
-    "tRNA processing",
-    "DNA Repair",
-    "Generic Transcription Pathway",
-    "RNA Polymerase II Transcription"
+  `Stress Response` = c(
+    "Senescence-Associated Secretory Phenotype (SASP)",
+    "Oxidative Stress Induced Senescence"
   )
 )
 
