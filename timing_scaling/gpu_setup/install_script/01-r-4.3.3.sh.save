@@ -1,0 +1,29 @@
+#!/usr/bin/bash 
+
+SOURCE_PATH="/u/area/ntosato/scratch/timing/time_scale_final/software/source"
+INSTALL_PATH="/u/area/ntosato/scratch/timing/time_scale_final/software/programs/R"
+MODULE_PATH="/u/area/ntosato/scratch/timing/time_scale_final/software/modules"
+
+VERSION="4.3.3"
+PLATFORM="a100"
+mkdir -p "$INSTALL_PATH/$VERSION-$PLATFORM"
+
+###clone
+
+cd $SOURCE_PATH/
+wget https://cloud.r-project.org/src/base/R-4/R-${VERSION}.tar.gz
+tar -xzf R-${VERSION}.tar.gz
+
+### use the modules 
+module use $MODULE_PATH
+module load openBLAS/0.3.29-$PLATFORM
+
+echo $OPENBLAS_ROOT
+exit
+
+###compile
+cd $SOURCE_PATH/R-$VERSION
+
+mkdir -p  ${INSTALL_PATH}/$VERSION-$PLATFORM/
+
+p
