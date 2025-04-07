@@ -184,9 +184,14 @@ saveRDS(gseRe_nebula, "results/gse_Reactome/gseRE_nebula.RDS")
 
 # Plot
 
+gseRe_devil <- readRDS("results/gse_Reactome/gseRE_devil.RDS")
+gseRe_glm <- readRDS("results/gse_Reactome/gseRE_glm.RDS")
+gseRe_nebula <- readRDS("results/gse_Reactome/gseRE_nebula.RDS")
+
+
 RE_plot = plot_dotplot_RE(gseRe_devil, gseRe_glm, gseRe_nebula)
 RE_plot
 saveRDS(RE_plot, "plot/enrichment_dotplot_RE.RDS")
 
-ggsave("plot/enrichment_dotplot_RE.png", dpi = 400, width = 12.0, height = 9.0, plot = RE_plot)
+ggsave("plot/enrichment_dotplot_RE.png", dpi = 400, width = 10.0, height = 9.0, plot = RE_plot)
 

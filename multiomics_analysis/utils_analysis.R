@@ -204,14 +204,15 @@ plot_dotplot_GO = function(devil_res, glm_res, nebula_res) {
   replacement_map <- c(
     "innate immune response" = "immune system process",
     "actin filament-based process" = "actin filament-based movement",
-    "negative regulation of RNA metabolic process" = "RNA metabolic process"
+    "negative regulation of RNA metabolic process" = "RNA metabolic process",
+    "homophilic cell adhesion via plasma membrane adhesion molecules" = "homophilic cell adhesion"
   )
   
   combined_data <- bind_rows(devil_res, glm_res, nebula_res) %>%
     dplyr::filter(!(Description %in% c("response to cytokine", "positive regulation of developmental process",
                                        "cognition", "defense response to other organism", "response to other organism",
                                        "response to external biotic stimulus", "response to biotic stimulus",
-                                       "negative regulation of metabolic process", "negative regulation of nucleobase-containing compound metabolic process",
+                                       "negative regulation of nucleobase-containing compound metabolic process",
                                        "biological process involved in interspecies interaction between organisms",
                                        "negative regulation of nitrogen compound metabolic process",
                                        "negative regulation of macromolecule biosynthetic process",
