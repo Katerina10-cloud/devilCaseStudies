@@ -1,8 +1,8 @@
 #!/usr/bin/bash 
 
-SOURCE_PATH="/u/area/ntosato/scratch/timing/time_scale_final/software/source"
-INSTALL_PATH="/u/area/ntosato/scratch/timing/time_scale_final/software/programs/R"
-MODULE_PATH="/u/area/ntosato/scratch/timing/time_scale_final/software/modules"
+SOURCE_PATH="software/source"
+INSTALL_PATH="software/programs/cutensor"
+MODULE_PATH="software/modules"
 VERSION="2.2.0.0"
 
 ###clone

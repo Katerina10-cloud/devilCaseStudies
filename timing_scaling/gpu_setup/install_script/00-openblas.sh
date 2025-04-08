@@ -1,8 +1,8 @@
 #!/usr/bin/bash -e
 
-SOURCE_PATH="/u/area/ntosato/scratch/timing/time_scale_final/software/source"
-INSTALL_PATH="/u/area/ntosato/scratch/timing/time_scale_final/software/programs/openBLAS"
-MODULE_PATH="/u/area/ntosato/scratch/timing/time_scale_final/software/modules/openBLAS"
+SOURCE_PATH="software/source"
+INSTALL_PATH="software/programs/openBLAS"
+MODULE_PATH="software/modules/openBLAS"
 
 VERSION="0.3.29"
 PLATFORM="h100"

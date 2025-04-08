@@ -1,8 +1,8 @@
 #!/usr/bin/bash 
 
-SOURCE_PATH="/u/area/ntosato/scratch/timing/time_scale_final/software/source"
-INSTALL_PATH="/u/area/ntosato/scratch/timing/time_scale_final/software/programs/R"
-MODULE_PATH="/u/area/ntosato/scratch/timing/time_scale_final/software/modules"
+SOURCE_PATH="software/source"
+INSTALL_PATH="software/programs/R"
+MODULE_PATH="software/modules"
 VERSION="4.3.3"
 PLATFORM="h100"
 mkdir -p "$INSTALL_PATH/$VERSION-$PLATFORM"
