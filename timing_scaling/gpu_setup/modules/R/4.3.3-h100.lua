@@ -19,4 +19,5 @@ local home    = "/u/area/ntosato/scratch/timing/time_scale_final/software/progra
 prepend_path("PATH", home .. "/bin")
 prepend_path("LD_LIBRARY_PATH", home .."/lib64")
 prepend_path("MANPATH", home .."/share/man")
+prepend_path("R_LIBS_USER","/u/area/ntosato/scratch/timing/time_scale_final/software/programs/r_packages_h100")
 
