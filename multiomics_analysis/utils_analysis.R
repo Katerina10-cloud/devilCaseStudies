@@ -201,7 +201,8 @@ plot_dotplot_GO = function(devil_res, glm_res, nebula_res) {
   replacement_map <- c(
     "innate immune response" = "immune system process",
     "actin filament-based process" = "actin filament-based movement",
-    #"RNA metabolic process" = "negative regulation of RNA metabolic process",
+    "muscle cell development" = "striated muscle cell development",
+    "striated striated muscle cell development" = "striated muscle cell development",
     "homophilic cell adhesion via plasma membrane adhesion molecules" = "homophilic cell adhesion"
   )
   

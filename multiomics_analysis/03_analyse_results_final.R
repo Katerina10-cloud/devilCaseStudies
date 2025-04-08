@@ -121,7 +121,7 @@ gseGO_glm <- enrichmentGO(rna_deg_glm)
 gseGO_nebula <- enrichmentGO(rna_deg_nebula)
 
 
-# clusterProfiler::simplify analysis ####
+## clusterProfiler::simplify analysis ##
 df_simp = get_simplified_GOterms()
 saveRDS(df_simp, "results/gsea_GO/simplified_df.RDS")
 df_simp = readRDS("results/gsea_GO/simplified_df.RDS")
