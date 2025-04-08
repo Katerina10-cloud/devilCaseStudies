@@ -153,6 +153,7 @@ gseGO_nebula_s = clusterProfiler::simplify(gseGO_nebula, cutoff=s_cutoff)
 
 devil_s <- gseGO_devil_s@result
 glm_s <- gseGO_glm_s@result
+nebula_s <- gseGO_nebula_s@result
 
 saveRDS(gseGO_devil_s, "results/gsea_GO/gseGO_devil_s.RDS")
 saveRDS(gseGO_devil, "results/gsea_GO/gseGO_devil.RDS")

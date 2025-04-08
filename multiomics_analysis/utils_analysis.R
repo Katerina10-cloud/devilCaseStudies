@@ -49,12 +49,8 @@ GO_CLUSTERS <- list(
     "muscle cell development"
   ),
   
-  
   `Cellular Transport` = c(
-    "establishment of localization",
-    "transport",
-    "cellular localization",
-    "localization",
+    "vesicle-mediated transport",
     "regulation of protein secretion",
     "endocytosis"
   ),
@@ -64,13 +60,15 @@ GO_CLUSTERS <- list(
   ),
   
   `Metabolic Processes` = c(
+    "aromatic compound catabolic process",
     "cellular nitrogen compound catabolic process",
     "proteolysis",
     "negative regulation of RNA metabolic process",
     "nucleic acid metabolic process",
     "protein metabolic process",
     "negative regulation of metabolic process",
-    "RNA metabolic process"
+    "RNA metabolic process",
+    "regulation of lipid metabolic process"
   ),
   
   `Stress Response` = c(
@@ -104,7 +102,6 @@ REACTOME_CLUSTERS <- list(
   `Cell Death & Cellular Maintenance` = c(
     "Programmed Cell Death",
     "DNA Repair"
-    
   ),
   
   `Signaling and Regulation` = c(
@@ -204,23 +201,21 @@ plot_dotplot_GO = function(devil_res, glm_res, nebula_res) {
   replacement_map <- c(
     "innate immune response" = "immune system process",
     "actin filament-based process" = "actin filament-based movement",
-    "negative regulation of RNA metabolic process" = "RNA metabolic process",
+    #"RNA metabolic process" = "negative regulation of RNA metabolic process",
     "homophilic cell adhesion via plasma membrane adhesion molecules" = "homophilic cell adhesion"
   )
   
   combined_data <- bind_rows(devil_res, glm_res, nebula_res) %>%
-    dplyr::filter(!(Description %in% c("response to cytokine", "positive regulation of developmental process",
-                                       "cognition", "defense response to other organism", "response to other organism",
-                                       "response to external biotic stimulus", "response to biotic stimulus",
-                                       "negative regulation of nucleobase-containing compound metabolic process",
+    dplyr::filter(!(Description %in% c("organic cyclic compound catabolic process", "defense response to other organism",
                                        "biological process involved in interspecies interaction between organisms",
-                                       "negative regulation of nitrogen compound metabolic process",
-                                       "negative regulation of macromolecule biosynthetic process",
-                                       "macromolecule modification", "response to gamma radiation", "positive regulation of gene expression",
-                                       "locomotion", "inner ear development", "positive regulation of response to stimulus",
-                                       "cellular response to chemical stimulus", "anatomical structure morphogenesis",
-                                       "positive regulation of macromolecule biosynthetic process", "positive regulation of biological process",
-                                       "regulation of biological process", "response to organic substance"))) 
+                                       "positive regulation of response to stimulus", "macromolecule modification",
+                                       "anatomical structure morphogenesis", "response to organic substance",
+                                       "positive regulation of gene expression", "locomotion", "response to chemical",
+                                       "cell population proliferation", "system development", "regulation of biological process",
+                                       "multicellular organismal process", "cellular component organization or biogenesis",
+                                       "cellular component organization", "response to gamma radiation", "dephosphorylation",
+                                       "cognition", "inner ear development"
+                                       ))) 
 
   combined_data$GO_cluster = lapply(combined_data$Description, function(go_term) {
     for (cluster_name in names(GO_CLUSTERS)) {
@@ -336,7 +331,9 @@ plot_dotplot_RE = function(devil_res, glm_res, nebula_res) {
 
 
 enrichmentGO <- function(rna_deg_data) {
+  rna_deg_data$adj_pval[rna_deg_data$adj_pval == 0] = min(rna_deg_data$adj_pval[rna_deg_data$adj_pval != 0])
   rna_deg_data$RankMetric <- -log10(rna_deg_data$adj_pval) * sign(rna_deg_data$lfc)
+  #rna_deg_data$RankMetric <- -log10(rna_deg_data$adj_pval) * rna_deg_data$lfc
   rna_deg_data <- rna_deg_data %>% arrange(-RankMetric)
   genes <- rna_deg_data$RankMetric
   names(genes) <- rna_deg_data$geneID
@@ -351,10 +348,11 @@ enrichmentGO <- function(rna_deg_data) {
     pvalueCutoff = 0.05,
     pAdjustMethod = "BH",
     verbose = TRUE,
-    eps = 1e-10,
-    by ="fgsea",
-    nPerm = 10000,
-    seed = 123
+    eps = 0,
+    nPermSimple = 10000
+    #by ="fgsea",
+    #nPerm = 10000,
+    #seed = 123
   )
   return(gseGO)
   #return(gseGO@result %>% as.data.frame())
