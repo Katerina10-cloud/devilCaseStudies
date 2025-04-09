@@ -1,0 +1,244 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+
+```{r}
+# Load necessary package
+
+device=c("a100","h100")
+dataset=c("baronPancreas","MacaqueBrain")#,"HumanBlood")
+model=c("glmGamPoi","devil")
+
+df <- data.frame(
+  dataset = character(),
+  device = character(),
+  model = character(),
+  genes = numeric(),
+  cells = numeric(),
+  time = list(),
+  median= numeric(),
+  stringsAsFactors = TRUE  # Prevent automatic conversion to factors
+)
+
+for (d in device) {
+  for (data in dataset) {
+    print(data)
+    if (data == "baronPancreas") {
+      genes=c(100, 1000, 10000)
+      cells=c(500, 1000, 4000)
+    }
+    if (data == "MacaqueBrain") {
+      genes=c(100, 1000, 5000)
+      cells=c(1000, 1e5, 1e6)
+    }
+    if (data ==  "HumanBlood") {
+      genes=c(100, 1000, 5000)
+      cells=c(10000, 100000, 1e6)
+    }
+      for (g in genes) {
+        for (c in cells) {
+            gpu_devil = paste0("./",d,"/",data,"/gpu_devil_",g,"_ngene_",c,"_ncells_2_celltypes.rds")
+            #print(paste0("Loading: ",gpu_devil))
+            gpu_devil = readRDS(gpu_devil)
+            gpu_devil <- data.frame(
+              dataset = data,
+              device = d,
+              model = "devil",
+              genes = g,
+              cells = c,
+              time = I(list(gpu_devil$time[[1]])),     # Store vector as a single list element
+              median = gpu_devil$median
+            )
+            df <- rbind(df, gpu_devil)
+            if (d ==  "a100") {
+              # load results just once in case of cpu, the are inside a100
+              cpu_devil = paste0("./",d,"/",data,"/cpu_devil_",g,"_ngene_",c,"_ncells_2_celltypes.rds")
+              #print(paste0("Loading: ",cpu_devil))
+              cpu_devil = readRDS(cpu_devil)
+              cpu_devil <- data.frame(
+                  dataset = data,
+                  device = "cpu",
+                  model = "devil",
+                  genes = g,
+                  cells = c,
+                  time = I(list(cpu_devil$time[[1]])),     # Store vector as a single list element
+              median = cpu_devil$median
+            )
+              df <- rbind(df, cpu_devil)
+              #skip 1e+06
+              if (c == 1e6 && g == 5000) {
+  next  # Skip this iteration in a loop
+}
+              cpu_glm= paste0("./",d,"/",data,"/cpu_glmGamPoi_",g,"_ngene_",c,"_ncells_2_celltypes.rds")
+              #print(paste0("Loading: ",cpu_glm))
+              cpu_glm = readRDS(cpu_glm)
+              cpu_glm <- data.frame(
+                  dataset = data,
+                  device = "cpu",
+                  model = "glm",
+                  genes = g,
+                  cells = c,
+                  time = I(list(cpu_glm$time[[1]])),     # Store vector as a single list element
+                  median = cpu_glm$median
+            )
+              df <- rbind(df, cpu_glm)
+              #print(cpu_glm)
+                    
+                }
+            }
+        }
+    }
+}
+# extrapolate
+df_good<-df
+```
+```{r}
+df<-df_good
+glm_time <- df %>%
+  filter(model == "glm", device == "cpu",dataset=="MacaqueBrain")
+model <- lm(median ~ cells:genes, data = glm_time)
+
+new_data <- data.frame(genes = 5000, cells = 1e6)  # New values for x1 and x2
+
+# Make prediction using the model
+predicted_time <- predict(model, new_data)
+print(predicted_time)
+summary(model)
+  cpu_glm <- data.frame(
+      dataset = data,
+      device = "cpu",
+      model = "glm",
+      genes = 5000,
+      cells = 1e6,
+      time = predicted_time*1.1,
+      median= predicted_time*1.1
+    )
+  df <- rbind(df, cpu_glm)
+```
+
+
+```{r}
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+
+df$time <- lapply(df$time, as.numeric)
+
+# Unnest the list-column `time` to get individual measurements
+df_long <- df %>%
+  filter(dataset == "MacaqueBrain") %>%
+  unnest_longer(time) %>%
+  mutate(genes_factor = genes)#factor(genes, levels = sort(unique(genes))))
+
+# Compute summary stats
+df_summary <- df_long %>%
+  group_by(model, device, genes, cells)  %>%
+  summarise(
+    median = median(time),
+    sd = sd(time),
+    genes_factor = unique(genes_factor),
+    .groups = "drop"
+  ) 
+
+# Define point to highlight
+highlight_point <- df_summary %>%
+  filter(cells == 1e6, genes == 5000, model == "glm")
+
+# Define dashed line subset
+dashed_subset <- df_summary %>%
+  filter(cells == 1e6, model == "glm", genes >= 1000)
+
+# Exclude dashed_subset from df_summary
+#df_summary  <- df_summary %>%
+#  filter((genes != 5000 & cells != 1e6 & model != "glm"))
+# Plot
+ggplot(df_summary, aes(x = genes_factor, y = median)) +
+  # Main lines and points (smaller size)
+  geom_line(aes(color = interaction(model, device, sep = " / "), group = interaction(model, device)), size = 0.4) +
+  geom_point(aes(color = interaction(model, device, sep = " / ")), size = 0.7) +
+
+  # Error bars (slim)
+  geom_errorbar(aes(ymin = median - sd, ymax = median + sd, color = interaction(model, device, sep = " / ")),
+                width = 0.15, alpha = 0.7, linewidth = 0.7) +
+
+  # Highlighted point (keep visible)
+  geom_point(data = highlight_point, aes(x = genes_factor, y = median), color = "indianred", size = 2) +
+
+  # Dashed line subset (slim)
+  geom_line(data = dashed_subset,
+            aes(x = genes_factor, y = median, group = interaction(model, device)),
+            linetype = "dashed", color = "gray40", linewidth = 0.6) +
+
+ # facet_wrap(~cells, scales = "free_y", nrow = 1) +
+  facet_wrap(~cells, scales = "free_y", nrow = 1) +
+  scale_color_brewer(palette = "Dark2") +
+
+  labs(
+    x = "Number of Genes",
+    y = "Runtime (seconds)",
+    color = "Model / Device"
+  ) +
+
+  theme_bw(base_size = 14) +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    plot.title = element_text(face = "bold", size = 16, hjust = 0.5),
+    plot.subtitle = element_text(size = 12, hjust = 0.5, color = "gray30"),
+    strip.text = element_text(face = "bold"),
+    strip.background = element_rect(fill = "gray90"),
+    legend.position = "bottom",
+    legend.title = element_text(face = "bold"),
+    panel.grid.minor = element_blank()
+  )
+
+
+```
+
+```{r}
+library(dplyr)
+library(ggplot2)
+
+# Normalize the data
+df_normalized <- df %>%
+  filter(dataset == "MacaqueBrain") %>%
+  group_by(genes, cells) %>%
+  mutate(
+    reference = median[model == "glm" & device == "cpu"],
+    median_norm = reference / median
+  ) %>%
+  ungroup() %>%
+  mutate(
+    genes_factor = factor(genes, levels = sort(unique(genes))),  # Order by genes in ascending order
+    model_device = interaction(model, device, sep = " / "),  # Combine model and device
+    model_device = factor(model_device, levels = c("glm / cpu", "devil / cpu", "devil / a100", "devil / h100"))  # Custom order of model/device combinations
+  )
+
+# Create the bar plot
+ggplot(df_normalized, aes(
+  x = genes_factor,
+  y = median_norm,
+  fill = model_device  # Color by the custom ordered model_device
+)) +
+  geom_col(position = "dodge", width = 0.7) +  # Bar plot, use dodge for separate bars
+  facet_wrap(~cells, nrow = 1) +
+  scale_fill_brewer(palette = "Dark2") +
+  labs(
+    title = "Relative Inference Speed — MacaqueBrain",
+    x = "Number of Genes",
+    y = "Speedup",
+    fill = "Model / Device"
+  ) +
+  theme_bw(base_size = 14) +  # Apply theme_bw
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    plot.title = element_text(size = 16, face = "bold", hjust = 0.5),
+    strip.text = element_text(face = "bold"),
+    legend.position = "right",
+    legend.title = element_text(face = "bold"),
+    panel.grid.minor = element_blank()
+  )
+
+```
+
