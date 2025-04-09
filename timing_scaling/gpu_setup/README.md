@@ -223,7 +223,7 @@ $ echo $CUDA_HOME
 /opt/programs/cuda/12.1
 $ echo $CUTENSOR_HOME
 /u/area/ntosato/scratch/timing/time_scale_final/software/programs/cutensor/2.2.0.0
-``
+```
 
 And then install `devil`, using the branch `devel` that contain the accellerated code:
 
