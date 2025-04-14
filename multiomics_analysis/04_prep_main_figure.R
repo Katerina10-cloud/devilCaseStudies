@@ -3,6 +3,9 @@ rm(list = ls())
 pkgs <- c("ggplot2", "dplyr","tidyr","tibble", "viridis", "smplot2", "Seurat", "gridExtra",
           "ggpubr", "ggrepel", "ggvenn", "ggpointdensity", "patchwork", "ComplexHeatmap", "magick")
 sapply(pkgs, require, character.only = TRUE)
+library(ggplot2)
+library(patchwork)
+library(grid)
 
 cell_group_colors = c(
   "old" = "darkorange",
@@ -140,60 +143,135 @@ ggsave("plot/hm.pdf", width = 10, height = 6, units = "in", dpi = 700)
 # input UMAPs ####
 load("results/data/metadata_rna_umap.Rdata")
 
-metadata_rna$cell_type %>% unique()
+# metadata_rna$cell_type %>% unique()
+# 
+# x_lims <- c(-5.5, 1)
+# y_lims <- c(0, 11)
+# 
+# box = dplyr::tibble(
+#   xmin=x_lims[1],
+#   xmax=x_lims[2],
+#   ymin=y_lims[1],
+#   ymax=y_lims[2],
+# )
+# 
+# 
+# 
+# umap_cell_types <- metadata_rna %>%
+#   dplyr::sample_n(10001) %>% 
+#   #`rownames<-`(1:nrow(metadata_atac)) %>%
+#   dplyr::mutate(cell_type = if_else(cell_type %in% c("Myonuclei TI", "Myonuclei TII"), cell_type, "Other")) %>%
+#   #dplyr::filter(cell_type %in% c("Myonuclei TI", "Myonuclei TII")) %>%
+#   #dplyr::sample_n(5000) %>%
+#   dplyr::select(umap_1, umap_2, cell_type, age_pop) %>%
+#   dplyr::mutate(idx = row_number()) %>%
+#   #dplyr::filter(umap_1 >= -1, umap_2 >= -6, umap_2 <= 7.5) %>%
+#   ggplot(mapping = aes(x=umap_1, y=umap_2, col=cell_type)) +
+#   geom_point(alpha = .5, size = .5) +
+#   geom_rect(mapping = aes(xmin=x_lims[1], ymin=y_lims[1], xmax=x_lims[2], ymax=y_lims[2]), col="black", fill = alpha("white", 0)) +
+#   scale_color_manual(values = c("Myonuclei TI" = "maroon", "Myonuclei TII"="#008080", "Other" = "gray90")) +
+#   theme_bw() +
+#   labs(x = "UMAP 1", y = "UMAP 2", col="Cell type")
+# 
+# umap_cell_types <- umap_cell_types +
+#   theme_void() +
+#   theme(legend.position = "none")
+# 
+# umap_ages <- metadata_rna %>%
+#   #`rownames<-`(1:nrow(metadata_atac)) %>%
+#   #dplyr::mutate(cell_type = if_else(cell_type %in% c("Myonuclei TI", "Myonuclei TII"), cell_type, "Other")) %>%
+#   dplyr::filter(cell_type %in% c("Myonuclei TI", "Myonuclei TII")) %>%
+#   dplyr::sample_n(10000) %>% 
+#   dplyr::select(umap_1, umap_2, cell_type, age_pop) %>%
+#   dplyr::mutate(idx = row_number()) %>%
+#   #dplyr::filter(umap_1 >= -1, umap_2 >= -6, umap_2 <= 7.5) %>%
+#   ggplot(mapping = aes(x=umap_1, y=umap_2, col=age_pop)) +
+#   geom_point(alpha = .8, size = .5) +
+#   theme_bw() +
+#   scale_color_manual(values = c("old_pop" = "goldenrod3", "young_pop" = "#483D8B")) +
+#   lims(x = x_lims) +
+#   labs(x = "UMAP 1", y = "UMAP 2", col="Cell type") +
+#   theme_void() +
+#   theme(legend.position = "none")
+# umap_ages
+# 
+# diff(x_lims)
+# diff(y_lims)
+
+# ggsave("plot/umap_cell_types.png", plot = umap_cell_types, width = 10, height = 10, units = "in", dpi = 1200)
+# ggsave("plot/umap_ages.png", plot = umap_ages, width = diff(x_lims) / 2, height = diff(y_lims) / 2, units = "in", dpi = 1200)
+
+
+
+
+
+
+
+
+
+
+
+
+# Define zoom area
+df = metadata_rna %>%
+  dplyr::sample_n(10000) %>% 
+  dplyr::mutate(age_pop = ifelse(grepl("young", age_pop), "Young", "Old")) %>% 
+  dplyr::mutate(cell_type = if_else(cell_type %in% c("Myonuclei TI", "Myonuclei TII"), cell_type, "Other")) %>%
+  dplyr::select(umap_1, umap_2, cell_type, age_pop) %>%
+  dplyr::mutate(idx = row_number())
 
 x_lims <- c(-5.5, 1)
 y_lims <- c(0, 11)
-
-box = dplyr::tibble(
-  xmin=x_lims[1],
-  xmax=x_lims[2],
-  ymin=y_lims[1],
-  ymax=y_lims[2],
-)
+df_zoom <- df %>% 
+  dplyr::filter(umap_1 >= x_lims[1], umap_1 <= x_lims[2], umap_2 >= y_lims[1], umap_2 <= y_lims[2])
 
 
 
-umap_cell_types <- metadata_rna %>%
-  dplyr::sample_n(10000) %>% 
-  #`rownames<-`(1:nrow(metadata_atac)) %>%
-  dplyr::mutate(cell_type = if_else(cell_type %in% c("Myonuclei TI", "Myonuclei TII"), cell_type, "Other")) %>%
-  #dplyr::filter(cell_type %in% c("Myonuclei TI", "Myonuclei TII")) %>%
-  #dplyr::sample_n(5000) %>%
-  dplyr::select(umap_1, umap_2, cell_type, age_pop) %>%
-  dplyr::mutate(idx = row_number()) %>%
-  #dplyr::filter(umap_1 >= -1, umap_2 >= -6, umap_2 <= 7.5) %>%
-  ggplot(mapping = aes(x=umap_1, y=umap_2, col=cell_type)) +
-  geom_point(alpha = .5, size = .5) +
-  geom_rect(mapping = aes(xmin=x_lims[1], ymin=y_lims[1], xmax=x_lims[2], ymax=y_lims[2]), col="black", fill = alpha("white", 0)) +
-  scale_color_manual(values = c("Myonuclei TI" = "maroon", "Myonuclei TII"="#008080", "Other" = "gray90")) +
-  theme_bw() +
-  labs(x = "UMAP 1", y = "UMAP 2", col="Cell type")
+# ----- Main plot with rectangle -----
+p1 <- ggplot(df, aes(x = umap_1, y = umap_2, color = cell_type)) +
+  geom_point(size = 0.5, alpha = 0.5) +
+  scale_color_manual(
+    name = "Cell Type",
+    values = c(
+      "Myonuclei TI" = "maroon",
+      "Myonuclei TII" = "#008080",
+      "Other" = "gray50"
+    )
+  ) +
+  coord_fixed() +
+  theme_classic() +
+  labs(x = "UMAP 1", y = "UMAP 2") +
+  guides(colour = guide_legend(override.aes = list(size=2, alpha=1)))
+  annotate("rect", xmin = x_lims[1], xmax = x_lims[2],
+           ymin = y_lims[1], ymax = y_lims[2],
+           color = "black", fill = NA, linewidth = 0.6, linetype = "dashed")
 
-umap_cell_types <- umap_cell_types +
+# ----- Zoomed-in plot (with panel border and no axes) -----
+p2 <- ggplot(df_zoom, aes(x = umap_1, y = umap_2, color = age_pop)) +
+  geom_point(alpha = 0.8, size = 0.5) +
+  scale_color_manual(
+    name = "Age Population",
+    values = c(
+      "Old" = "goldenrod3",
+      "Young" = "#483D8B"
+    )
+  ) +
+  coord_cartesian(xlim = x_lims, ylim = y_lims) +
+  coord_fixed() +
   theme_void() +
-  theme(legend.position = "none")
+  theme(
+    panel.border = element_rect(color = "black", fill = NA, linewidth = 0.8),
+    legend.position = "bottom"  # Show this legend too
+  ) +
+  guides(colour = guide_legend(override.aes = list(size=2, alpha=1)))
 
-umap_ages <- metadata_rna %>%
-  #`rownames<-`(1:nrow(metadata_atac)) %>%
-  #dplyr::mutate(cell_type = if_else(cell_type %in% c("Myonuclei TI", "Myonuclei TII"), cell_type, "Other")) %>%
-  dplyr::filter(cell_type %in% c("Myonuclei TI", "Myonuclei TII")) %>%
-  dplyr::sample_n(10000) %>% 
-  dplyr::select(umap_1, umap_2, cell_type, age_pop) %>%
-  dplyr::mutate(idx = row_number()) %>%
-  #dplyr::filter(umap_1 >= -1, umap_2 >= -6, umap_2 <= 7.5) %>%
-  ggplot(mapping = aes(x=umap_1, y=umap_2, col=age_pop)) +
-  geom_point(alpha = .8, size = .5) +
-  theme_bw() +
-  scale_color_manual(values = c("old_pop" = "goldenrod3", "young_pop" = "#483D8B")) +
-  lims(x = x_lims) +
-  labs(x = "UMAP 1", y = "UMAP 2", col="Cell type") +
-  theme_void() +
-  theme(legend.position = "none")
-umap_ages
+# ----- Patchwork combo -----
+combined_plot <- p1 + 
+  inset_element(p2, left = 0.6, bottom = 0.4, right = 1, top = 1, align_to = 'panel')
 
-diff(x_lims)
-diff(y_lims)
+# Show both legends together below
+final <- combined_plot + plot_layout(guides = "collect") & theme(legend.position = "right")
 
-ggsave("plot/umap_cell_types.png", plot = umap_cell_types, width = 10, height = 10, units = "in", dpi = 1200)
-ggsave("plot/umap_ages.png", plot = umap_ages, width = diff(x_lims) / 2, height = diff(y_lims) / 2, units = "in", dpi = 1200)
+final
+
+ggsave("plot/umap_both.png", plot = final, width = 8, height = 8, units = "in", dpi = 600)
