@@ -7,6 +7,7 @@ source("utils_plots.R")
 AUTHOR <- author <- "hsc"
 method_cellwise <- c("glmGamPoi (cell)", "Devil (base)", "limma", "Nebula")
 method_patientwise <- c("Nebula", "Devil (mixed)", "limma", "glmGamPoi (cell)")
+method_levels <- c("limma", "glmGamPoi", "glmGamPoi (cell)", "Nebula", "NEBULA", "Devil (mixed)", "Devil (base)", "Devil", "devil")
 
 d1 <- all_null_plots(author, FALSE, algos =method_cellwise, ct.indexes = c(1), pde.values = c(.05), n_samples_vec = c(20), only_tibble=TRUE)[[1]] %>%
   dplyr::mutate(ytype = "p-value", xtype="Cell-wise")
@@ -17,27 +18,8 @@ d3 <- all_pow_plots(author, FALSE, algos =method_cellwise, ct.indexes = c(1), pd
 d4 <- all_pow_plots(author, TRUE, algos = method_patientwise, ct.indexes = c(1), pde.values = c(.05), n_samples_vec = c(20), only_tibble = T)[[1]] %>%
   dplyr::mutate(ytype = "-log10 p-value", xtype="Patient-wise")
 
-# pB <- dplyr::bind_rows(d1, d2, d3, d4) %>%
-#   dplyr::group_by(xtype, ytype) %>%
-#   dplyr::sample_n(500) %>%
-#   ggplot(mapping = aes(x=x, y=observed_p_value, col=name)) +
-#   geom_point(position = position_dodge(width = .02)) +
-#   geom_line(linewidth = .8, position = position_dodge(width = .02)) +
-#   #geom_line(linewidth = 1, position = position_dodge(width = 0.01)) +
-#   scale_color_manual(values = method_colors) +
-#   facet_grid(ytype~xtype, scales = "free") +
-#   theme_bw() +
-#   labs(x = "Uniform quantiles", y="", col="Algorithm") +
-#   #scale_color_manual(values = c("steelblue", "yellow", "indianred3", "orange", "purple", "forestgreen", "pink")) +
-#   scale_color_manual(values = method_colors) +
-#   #facet_wrap(~paste0(n.genes, " genes")) +
-#   theme(legend.position = "bottom") +
-#   scale_x_continuous(breaks = scales::pretty_breaks(n=3)) +
-#   scale_y_continuous(breaks = scales::pretty_breaks(n=3))
-# pB
 
 
-method_levels <- c("limma", "glmGamPoi", "glmGamPoi (cell)", "Nebula", "NEBULA", "Devil (mixed)", "Devil (base)", "Devil", "devil")
 #dplyr::bind_rows(d1, d2, d3, d4) %>%
 pB <- dplyr::bind_rows(d1, d2) %>%
   dplyr::mutate(name = dplyr::if_else(grepl("Devil", name), "devil", name)) %>%

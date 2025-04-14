@@ -2,106 +2,286 @@
 require(ggupset)
 
 method_colors = c(
-  "glmGamPoi" = "#EAB578",
+  "glmGamPoi - cpu" = "#EAB578",
   "nebula" =  "steelblue",
   "NEBULA" =  "steelblue",
-  "devil" = "#099668",
-  "devil (GPU)" = "indianred"
+  "devil - cpu" = "#099668",
+  "devil - a100" = "#384B41",
+  "devil - h100" = "#9BB0A5",
+  "devil - gpu" = "#9BB0A5"
 )
 
-get_results <- function(results_folder) {
+get_time_results <- function(results_folder) {
   results_paths <- list.files(results_folder)
-  results_paths <- results_paths[results_paths != "fits"]
+  results_paths <- results_paths[!results_paths %in% c("fits", "memory", "large", "no_overdispersion")]
 
-  results <- lapply(results_paths, function(p) {
-    print(p)
+  results <- lapply(results_paths, function(device_path) {
+    lapply(list.files(file.path(results_folder, device_path)), function(p){
+      info <- unlist(strsplit(p, "_"))
+      res = readRDS(file.path(results_folder, device_path, p))
+      dplyr::tibble(
+        model_name = paste(info[1], info[2]),
+        n_genes = info[3],
+        n_cells = info[5],
+        n_cell_types = info[7],
+        time = as.numeric(unlist(res$time), units = "secs")#,
+        #memory = res$mem_alloc
+      ) %>% dplyr::mutate(model_name = ifelse(grepl("gpu" ,model_name), device_path, model_name))
+    }) %>% do.call("bind_rows", .)
+  }) %>% do.call("bind_rows", .) %>%
+    dplyr::mutate(n_cells = as.numeric(n_cells), n_genes = as.numeric(n_genes))
+
+  results %>%
+    dplyr::mutate(model_name = dplyr::recode(model_name,
+                                             "cpu devil" = "devil - cpu",
+                                             "cpu glmGamPoi" = "glmGamPoi - cpu",
+                                             "a100" = "devil - a100",
+                                             "h100" = "devil - h100")) %>%
+    dplyr::mutate(Measure = "observed")
+}
+
+
+predict_time_results = function(results) {
+  unique_nc = unique(results$n_cells)
+  unique_ng = unique(results$n_genes)
+  unique_m = unique(results$model_name)
+
+  lapply(unique_m, function(m) {
+    lapply(unique_nc, function(nc) {
+      d = results %>% dplyr::filter(n_cells==nc, model_name==m)
+      if (length(unique(d$n_genes)) < 3) {
+        n_genes_to_predict = unique_ng[!unique_ng %in% d$n_genes]
+
+        ratios = results %>%
+          dplyr::filter(n_genes == n_genes_to_predict) %>%
+          #dplyr::filter(n_cells == nc) %>%
+          dplyr::group_by(model_name, n_genes, n_cells) %>%
+          dplyr::summarise(time = mean(time)) %>%
+          dplyr::filter(n_cells != nc) %>%
+          dplyr::ungroup() %>%
+          dplyr::mutate(ratio = time[model_name == m] / time)
+
+        average_ratios = ratios %>% dplyr::filter(model_name != m) %>%
+          dplyr::group_by(model_name) %>%
+          dplyr::summarise(average_ratio = median(ratio))
+        average_ratios_vec = c(average_ratios$average_ratio)
+        names(average_ratios_vec) = average_ratios$model_name
+
+        time_predicted = results %>%
+          dplyr::filter(n_genes == n_genes_to_predict, n_cells == nc) %>%
+          dplyr::select(model_name, time) %>%
+          dplyr::mutate(predicted_time = time * average_ratios_vec[model_name]) %>%
+          dplyr::pull(predicted_time) %>%
+          mean()
+
+        # ratios = results %>% dplyr::filter(n_genes == n_genes_to_predict, model_name==m | model_name == m_compare) %>%
+        #   dplyr::group_by(model_name, n_genes, n_cells) %>%
+        #   dplyr::summarise(time = mean(time)) %>%
+        #   dplyr::filter(n_cells != nc) %>%
+        #   dplyr::ungroup() %>%
+        #   dplyr::mutate(ratio = time / time[model_name == m_compare]) %>%
+        #   dplyr::filter(model_name == m) %>%
+        #   dplyr::pull(ratio)
+        # ratio = mean(ratios)
+        #
+        # time_predicted = ratio * (results %>% dplyr::filter(n_genes == n_genes_to_predict, model_name == m_compare, n_cells == nc) %>%
+        #   dplyr::group_by(model_name, n_genes, n_cells) %>%
+        #   dplyr::summarise(time = mean(time)) %>%
+        #   dplyr::pull(time))
+
+        # lin_mod = lm(time~n_genes * n_cells, data = results %>% dplyr::filter(model_name == m))
+        # n_genes_to_predict = unique_ng[!unique_ng %in% d$n_genes]
+        # time_predicted = predict(lin_mod, data.frame(n_genes = n_genes_to_predict, n_cells = nc))
+        #
+        # lin_mod = lm(time~n_genes, data = d)
+        # n_genes_to_predict = unique_ng[!unique_ng %in% d$n_genes]
+        # time_predicted = predict(lin_mod, data.frame(n_genes = n_genes_to_predict, n_cells = nc))
+
+        dplyr::tibble(model_name = m, n_genes = n_genes_to_predict, n_cells = nc, n_cell_types = unique(d$n_cell_types), time = time_predicted, Measure = "predicted")
+      }
+
+    }) %>% do.call("bind_rows", .)
+  }) %>% do.call("bind_rows", .)
+}
+
+
+get_memory_results <- function(results_folder) {
+  results_path <- file.path(results_folder, "memory")
+
+  results = lapply(list.files(results_path), function(p){
     info <- unlist(strsplit(p, "_"))
-    res = readRDS(paste0(results_folder, p))
-
+    res = readRDS(file.path(results_path, p))
     dplyr::tibble(
       model_name = paste(info[1], info[2]),
       n_genes = info[3],
       n_cells = info[5],
       n_cell_types = info[7],
-      time = as.numeric(unlist(res$time), units = "secs"),
-      memory = res$mem_alloc
+      #time = as.numeric(unlist(res$time), units = "secs")#,
+      memory = as.numeric(res$mem_alloc) / 1e9
     )
   }) %>% do.call("bind_rows", .) %>%
     dplyr::mutate(n_cells = as.numeric(n_cells), n_genes = as.numeric(n_genes))
 
-  results$model_name %>% unique()
   results %>%
-    dplyr::mutate(model_name = ifelse(model_name == "cpu devil", "devil", model_name)) %>%
-    dplyr::mutate(model_name = ifelse(model_name == "cpu glmGamPoi", "glmGamPoi", model_name)) %>%
-    dplyr::mutate(model_name = ifelse(model_name == "gpu devil", "devil (GPU)", model_name))
+    dplyr::mutate(model_name = dplyr::recode(model_name,
+                                             "cpu devil" = "devil - cpu",
+                                             "cpu glmGamPoi" = "glmGamPoi - cpu",
+                                             "gpu devil" = "devil - gpu")) %>%
+    dplyr::mutate(Measure = "observed")
 }
+
+predict_memory_results = function(results) {
+  unique_nc = unique(results$n_cells)
+  unique_ng = unique(results$n_genes)
+  unique_m = unique(results$model_name)
+
+  m = unique_m[2]
+  nc = unique_nc[3]
+  lapply(unique_m, function(m) {
+    lapply(unique_nc, function(nc) {
+      d = results %>% dplyr::filter(n_cells==nc, model_name==m)
+      if (length(unique(d$n_genes)) < 3) {
+        n_genes_to_predict = unique_ng[!unique_ng %in% d$n_genes]
+
+        ratios = results %>%
+          dplyr::filter(n_genes == n_genes_to_predict) %>%
+          #dplyr::filter(n_cells == nc) %>%
+          dplyr::group_by(model_name, n_genes, n_cells) %>%
+          dplyr::summarise(memory = mean(memory)) %>%
+          dplyr::filter(n_cells != nc) %>%
+          dplyr::ungroup() %>%
+          dplyr::mutate(ratio = memory[model_name == m] / memory)
+
+        average_ratios = ratios %>% dplyr::filter(model_name != m) %>%
+          dplyr::group_by(model_name) %>%
+          dplyr::summarise(average_ratio = median(ratio))
+        average_ratios_vec = c(average_ratios$average_ratio)
+        names(average_ratios_vec) = average_ratios$model_name
+
+        memory_predicted = results %>%
+          dplyr::filter(n_genes == n_genes_to_predict, n_cells == nc) %>%
+          dplyr::select(model_name, memory) %>%
+          dplyr::mutate(predicted_memory = memory * average_ratios_vec[model_name]) %>%
+          dplyr::pull(predicted_memory) %>%
+          mean()
+
+        dplyr::tibble(model_name = m, n_genes = n_genes_to_predict, n_cells = nc, n_cell_types = unique(d$n_cell_types), memory = memory_predicted,Measure = "predicted")
+      }
+
+    }) %>% do.call("bind_rows", .)
+  }) %>% do.call("bind_rows", .)
+}
+
 
 time_comparison = function(results, ratio = FALSE) {
   if (!isFALSE(ratio)) {
-    results %>%
-      dplyr::group_by(n_genes, n_cells, n_cell_types, model_name) %>%
+    df = results %>%
+      dplyr::group_by(n_genes, n_cells, n_cell_types, model_name,Measure) %>%
       dplyr::summarise(y = mean(time)) %>%
       dplyr::group_by(n_genes, n_cells, n_cell_types) %>%
-      dplyr::mutate(y = y / y[model_name == ratio]) %>%
-      ggplot(mapping = aes(x = as.factor(n_genes), y = y, col = model_name, fill=model_name)) +
-      geom_bar(position = "dodge", stat = "identity") +
-      #scale_y_continuous(transform = "log10") +
-      #geom_point() +
-      #geom_line() +
-      #ggh4x::facet_nested(~"N cells"+n_cells, scales = "free", space = "free_y") +
-      #facet_grid(~n_cells, scales = "free_y", shrink = T) +
-      facet_wrap(~paste0(n_cells, " cells"), scales = "free_y", shrink = T) +
-      theme_bw() +
-      labs(x = "N genes", y = "Time ratio (s)", col = "Model", fill="Model") +
-      scale_fill_manual(values = method_colors) +
-      scale_color_manual(values = method_colors)
+      dplyr::mutate(y = y[model_name == ratio] / y) %>%
+      dplyr::group_by(n_genes, n_cells) %>%
+      dplyr::mutate(is_observed =Measure[model_name == ratio] == "observed") %>%
+      dplyr::mutate(Measure = if_else(is_observed,Measure, "predicted"))
+
+    p = df %>%
+      ggplot(mapping = aes(x = as.factor(n_genes), y = y, col = model_name, fill=model_name, linetype =Measure)) +
+      geom_bar(position = "dodge", stat = "identity", col="black") +
+      ggh4x::facet_nested(~"Number of cells"+n_cells, scales = "free_y", shrink = T)
   } else {
-    results %>%
+    df = results %>%
       dplyr::group_by(n_genes, n_cells, n_cell_types, model_name) %>%
-      dplyr::summarise(y = mean(time), sd =sd(time)) %>%
-      ggplot(mapping = aes(x = as.factor(n_genes), y = y, col = model_name, fill=model_name)) +
-      geom_bar(position = "dodge", stat = "identity") +
-      #scale_y_continuous(transform = "log10") +
-      #geom_point() +
-      #geom_line() +
-      #ggh4x::facet_nested(~"N cells"+n_cells, scales = "free", space = "free_y") +
-      #facet_grid(~n_cells, scales = "free_y", shrink = T) +
-      facet_wrap(~paste0(n_cells, " cells"), scales = "free_y", shrink = T) +
-      theme_bw() +
-      labs(x = "N genes", y = "Time (s)", col = "Model", fill="Model") +
-      scale_fill_manual(values = method_colors) +
-      scale_color_manual(values = method_colors)
+      dplyr::mutate(y = mean(time), sd =sd(time)) %>%
+      dplyr::select(n_genes, n_cells, n_cell_types, model_name, y, sd,Measure) %>%
+      dplyr::distinct()
+
+    p = df %>%
+      ggplot(mapping = aes(x = as.factor(n_genes), y = y, col = model_name, fill=model_name, ymin=y-sd, ymax=y+sd)) +
+      geom_bar(mapping = aes(linetype =Measure), position = position_dodge(), stat = "identity", col="black") +
+      geom_errorbar(col="black", width = .2, position = position_dodge(.99)) +
+      ggh4x::facet_nested(~"Number of cells"+n_cells, scales = "free_y", shrink = T, independent = "y")
   }
+
+  y_name = ifelse(isFALSE(ratio), "Runtime (seconds)", paste0("Speedup (vs. ", ratio, ")"))
+  
+  p +
+    theme_bw() +
+    labs(
+      x = "Number of Genes",
+      y = y_name,
+      color = "Model - Device",
+      fill = "Model - Device"
+    ) +
+    theme(
+      strip.text = element_text(face = "bold"),
+      strip.background = element_rect(fill = "gray90"),
+      legend.position = "bottom",
+      legend.title = element_text(face = "bold"),
+      panel.grid.minor = element_blank()
+    ) +
+    scale_fill_manual(values = method_colors) +
+    scale_color_manual(values = method_colors) +
+    guides(
+      fill = guide_legend(order = 1),
+      col = guide_legend(order = 1),
+      linetype = guide_legend(order = 2, override.aes = list(fill = rep(NA, length(unique(df$Measure)))))
+    )
 }
 
 memory_comparison = function(results, ratio=FALSE) {
+
   if (!isFALSE(ratio)) {
-    results %>%
-      dplyr::mutate(memory = as.numeric(memory) * 1e-9) %>%
-      dplyr::group_by(n_genes, n_cells, n_cell_types, model_name) %>%
+    df = results %>%
+      dplyr::group_by(n_genes, n_cells, n_cell_types, model_name,Measure) %>%
       dplyr::summarise(y = mean(memory)) %>%
       dplyr::group_by(n_genes, n_cells, n_cell_types) %>%
       dplyr::mutate(y = y / y[model_name == ratio]) %>%
-      ggplot(mapping = aes(x = as.factor(n_genes), y = y, fill = model_name)) +
-      geom_bar(stat = "identity", position = "dodge") +
-      theme_bw() +
-      facet_wrap(~paste0(n_cells, " cells"), scales = "free_y", shrink = T) +
-      theme_bw() +
-      labs(x = "N genes", y = "Memory ratio (GB)", col = "Model", fill="Model") +
-      scale_fill_manual(values = method_colors) +
-      scale_color_manual(values = method_colors)
+      dplyr::group_by(n_genes, n_cells) %>%
+      dplyr::mutate(is_observed =Measure[model_name == ratio] == "observed") %>%
+      dplyr::mutate(Measure = if_else(is_observed,Measure, "predicted"))
+
+    p = df %>%
+      ggplot(mapping = aes(x = as.factor(n_genes), y = y, col = model_name, fill=model_name, linetype =Measure)) +
+      geom_bar(position = "dodge", stat = "identity", col="black") +
+      ggh4x::facet_nested(~"Number of cells"+n_cells, scales = "free_y", shrink = T)
   } else {
-    results %>%
-      dplyr::mutate(memory = as.numeric(memory) * 1e-9) %>%
-      ggplot(mapping = aes(x = as.factor(n_genes), y = memory, fill = model_name)) +
-      geom_bar(stat = "identity", position = "dodge") +
-      theme_bw() +
-      facet_wrap(~paste0(n_cells, " cells"), scales = "free_y", shrink = T) +
-      theme_bw() +
-      labs(x = "N genes", y = "Memory used (GB)", col = "Model", fill="Model") +
-      scale_fill_manual(values = method_colors) +
-      scale_color_manual(values = method_colors)
+    df = results %>%
+      dplyr::group_by(n_genes, n_cells, n_cell_types, model_name) %>%
+      dplyr::mutate(y = mean(memory), sd =sd(memory)) %>%
+      dplyr::select(n_genes, n_cells, n_cell_types, model_name, y, sd,Measure) %>%
+      dplyr::distinct()
+
+    p = df %>%
+      ggplot(mapping = aes(x = as.factor(n_genes), y = y, col = model_name, fill=model_name, ymin=y-sd, ymax=y+sd)) +
+      geom_bar(mapping = aes(linetype =Measure), position = position_dodge(), stat = "identity", col="black") +
+      geom_errorbar(col="black", width = .2, position = position_dodge(.99)) +
+      ggh4x::facet_nested(~"Number of cells"+n_cells, scales = "free_y", shrink = T, independent = "y")
   }
+
+  y_name = ifelse(isFALSE(ratio), "Memory (GB)", paste0("Memory ratio (vs. ", ratio, ")"))
+
+  p +
+    theme_bw() +
+    labs(
+      x = "Number of Genes",
+      y = y_name,
+      color = "Model - Device",
+      fill = "Model - Device"
+    ) +
+    theme(
+      strip.text = element_text(face = "bold"),
+      strip.background = element_rect(fill = "gray90"),
+      legend.position = "bottom",
+      legend.title = element_text(face = "bold"),
+      panel.grid.minor = element_blank()
+    ) +
+    scale_fill_manual(values = method_colors) +
+    scale_color_manual(values = method_colors) +
+    guides(
+      fill = guide_legend(order = 1),
+      col = guide_legend(order = 1),
+      linetype = guide_legend(order = 2, override.aes = list(fill = rep(NA, length(unique(df$Measure)))))
+    )
 }
 
 time_per_gene_comparison = function(results) {
@@ -257,15 +437,15 @@ plot_correlations <- function(fits_folder) {
   p1 <- dplyr::bind_rows(
     dplyr::tibble(
       x = gpu.devil.res$lfc,
-      x_name = "gpu devil",
+      x_name = "devil - gpu",
       y = devil.res$lfc,
-      y_name = "cpu devil"
+      y_name = "devil - cpu"
     ),
     dplyr::tibble(
       x = gpu.devil.res$lfc,
-      x_name = "gpu devil",
+      x_name = "devil - gpu",
       y = glm.res$lfc,
-      y_name = "cpu glmGamPoi"
+      y_name = "glmGamPoi - cpu"
     )
   ) %>%
     dplyr::group_by(x_name, y_name) %>%
@@ -275,22 +455,20 @@ plot_correlations <- function(fits_folder) {
     ggpubr::stat_cor() +
     facet_grid(x_name~y_name, switch = "both") +
     theme_bw() +
-    labs(x = bquote(LFC[1]), y=bquote(LFC[2])) +
-    ggtitle("Log fold change correlation")
-  p1
+    labs(x = bquote(LFC[1]), y=bquote(LFC[2]))
 
   p2 <- dplyr::bind_rows(
     dplyr::tibble(
       x = gpu.devil.res$theta,
-      x_name = "gpu devil",
+      x_name = "devil / gpu",
       y = devil.res$theta,
-      y_name = "cpu devil"
+      y_name = "devil / cpu"
     ),
     dplyr::tibble(
       x = gpu.devil.res$theta,
-      x_name = "gpu devil",
+      x_name = "devil / gpu",
       y = glm.res$theta,
-      y_name = "cpu glmGamPoi"
+      y_name = "glmGamPoi / cpu"
     )
   ) %>%
     dplyr::group_by(x_name, y_name) %>%
@@ -299,16 +477,12 @@ plot_correlations <- function(fits_folder) {
     ggpubr::stat_cor() +
     facet_grid(x_name~y_name, switch = "both") +
     theme_bw() +
-    labs(x = bquote(theta[1]), y=bquote(theta[2])) +
-    ggtitle("Overdisperions correlation")
-  p2
+    labs(x = bquote(theta[1]), y=bquote(theta[2]))
 
   list(lfc=p1, theta=p2)
 }
 
-fits_folder <- "results/baronPancreas/fits/"
-pval_cut <- .05
-lfc_cut <- 1
+# fits_folder <- "results/baronPancreas/fits/"
 plot_upset <- function(fits_folder, lfc_cut, pval_cut) {
   fits <- list.files(fits_folder, full.names = T)
 
@@ -324,6 +498,13 @@ plot_upset <- function(fits_folder, lfc_cut, pval_cut) {
     dplyr::tibble(algorithm = name, de_genes = de_genes)
   }) %>% do.call("bind_rows", .)
 
+  res = res %>%
+    dplyr::mutate(algorithm = dplyr::recode(algorithm,
+                                             "cpu devil" = "devil - cpu",
+                                             "cpu glmGamPoi" = "glmGamPoi - cpu",
+                                            "gpu devil" = "devil - gpu",
+                                             "a100" = "devil - a100",
+                                             "h100" = "devil - h100"))
   res %>%
     group_by(de_genes) %>%
     summarize(algorithm = list(algorithm)) %>%
@@ -332,7 +513,8 @@ plot_upset <- function(fits_folder, lfc_cut, pval_cut) {
     geom_text(stat='count', aes(label=after_stat(count)), vjust=-1) +
     scale_y_continuous(breaks = NULL, lim = c(0, nrow(res) / length(fits)), name = "") +
     scale_x_upset() +
-    theme_bw()
+    theme_bw() +
+    labs(x = "")
 }
 
 plot_volc = function (
@@ -391,4 +573,153 @@ plot_volc = function (
     p = p + ggrepel::geom_label_repel(max.overlaps = Inf, col = "black")
   }
   p
+}
+
+plot_large_test = function(dataset_name) {
+  results_folder <- file.path("results", dataset_name, "large")
+  res_paths = list.files(results_folder)
+  p = res_paths[1]
+
+  all_res = lapply(res_paths, function(p) {
+    info <- unlist(strsplit(p, "_"))
+    res = readRDS(file.path(results_folder, p))
+    dplyr::tibble(
+      model_name = paste(info[1], info[2]),
+      n_genes = info[3],
+      n_cells = as.numeric(info[5]),
+      n_cell_types = info[7],
+      time = as.numeric(unlist(res$time), units = "secs")
+    )
+  }) %>% do.call("bind_rows", .) %>% dplyr::mutate(model_name = "devil - gpu")
+
+  all_res %>%
+    dplyr::mutate(n_cells = factor(n_cells, levels = sort(n_cells))) %>%
+    ggplot(mapping = aes(x=n_cells, y=time, fill=model_name)) +
+    geom_col(col="black") +
+    scale_fill_manual(values = method_colors) +
+    ggh4x::facet_nested(~"Number of genes"+n_genes, scales = "free_y", shrink = T, independent = "y") +
+    theme_bw() +
+    theme_bw() +
+    labs(
+      x = "Number of Cells",
+      y = "Runtime (seconds)",
+      color = "Model - Device",
+      fill = "Model - Device"
+    ) +
+    theme(
+      strip.text = element_text(face = "bold"),
+      strip.background = element_rect(fill = "gray90"),
+      legend.position = "bottom",
+      legend.title = element_text(face = "bold"),
+      panel.grid.minor = element_blank()
+    ) +
+    scale_fill_manual(values = method_colors) +
+    scale_color_manual(values = method_colors)
+}
+
+
+# Plot overdispersion comparison
+plot_overdispersion_comparison = function(dataset_name, ratio) {
+  no_disp_path = file.path("results", dataset_name, "no_overdispersion")
+  device_paths = list.files(no_disp_path)
+
+  df1 = lapply(device_paths, function(device) {
+    lapply(list.files(file.path(no_disp_path, device, dataset_name)), function(p){
+      fp = file.path(no_disp_path, device, dataset_name, p)
+      if (file.exists(fp) && !dir.exists(fp)) {
+        info <- unlist(strsplit(p, "_"))
+        res = readRDS(fp)
+        dplyr::tibble(
+          model_name = paste(info[1], info[2]),
+          n_genes = info[3],
+          n_cells = info[5],
+          n_cell_types = info[7],
+          time = as.numeric(unlist(res$time), units = "secs")#,
+          #memory = res$mem_alloc
+        ) %>% dplyr::mutate(model_name = ifelse(grepl("gpu" ,model_name), device, model_name))
+      }
+    }) %>% do.call("bind_rows", .) %>%
+      dplyr::mutate(model_name = paste0("devil - ", model_name)) %>%
+      dplyr::mutate(Overdispersion = "w.o")
+  }) %>% do.call("bind_rows", .)
+  rm(no_disp_path, device_paths)
+
+  disp_path = file.path("results", dataset_name)
+  device_paths = c("a100", "h100")
+  df2 = lapply(device_paths, function(device) {
+    lapply(list.files(file.path(disp_path, device)), function(p){
+      fp = file.path(disp_path, device, p)
+      if (file.exists(fp) && !dir.exists(fp)) {
+        info <- unlist(strsplit(p, "_"))
+        res = readRDS(fp)
+        dplyr::tibble(
+          model_name = paste(info[1], info[2]),
+          n_genes = info[3],
+          n_cells = info[5],
+          n_cell_types = info[7],
+          time = as.numeric(unlist(res$time), units = "secs")#,
+          #memory = res$mem_alloc
+        ) %>% dplyr::mutate(model_name = ifelse(grepl("gpu" ,model_name), device, model_name))
+      }
+    }) %>% do.call("bind_rows", .) %>%
+      dplyr::mutate(model_name = paste0("devil - ", model_name)) %>%
+      dplyr::mutate(Overdispersion = "w")
+  }) %>% do.call("bind_rows", .)
+  rm(disp_path, device_paths)
+
+  df = dplyr::bind_rows(df1, df2)
+  rm(df1, df2)
+
+  df = df %>%
+    dplyr::group_by(n_genes, n_cells, n_cell_types, model_name, Overdispersion) %>%
+    dplyr::mutate(y = mean(time), sd =sd(time)) %>%
+    dplyr::select(n_genes, n_cells, n_cell_types, model_name, y, sd, Overdispersion) %>%
+    dplyr::distinct() %>%
+    dplyr::mutate(n_cells = factor(as.numeric(n_cells), levels = unique(sort(as.numeric(df$n_cells)))))
+
+  if (ratio) {
+    df = df %>%
+      dplyr::group_by(n_genes, n_cells, n_cell_types, model_name) %>%
+      dplyr::mutate(y_diff = y[Overdispersion == "w"] - y) %>%
+      dplyr::mutate(y = y[Overdispersion == "w"] / y)
+  }
+
+  
+  if (!ratio) {
+    p = df %>%
+      ggplot(mapping = aes(x = as.factor(n_genes), y = y, col = model_name, fill=model_name, ymin=y-sd, ymax=y+sd, linetype = Overdispersion)) +
+      geom_bar(position = position_dodge(), stat = "identity", col="black") +
+      ggh4x::facet_nested(~"Number of cells"+n_cells, scales = "free_y", shrink = T, independent = "y") +
+      geom_errorbar(col="black", width = .2, position = position_dodge(.99), show.legend = F)
+  } else {
+    p = df %>%
+      ggplot(mapping = aes(x = as.factor(n_genes), y = y, col = model_name, fill=model_name, ymin=y-sd, ymax=y+sd, linetype = Overdispersion)) +
+      geom_bar(position = position_dodge(), stat = "identity", col="black") +
+      ggh4x::facet_nested(~"Number of cells"+n_cells, scales = "free_y", shrink = T)
+  }
+
+  y_name = ifelse(isFALSE(ratio), "Runtime (seconds)", paste0("Speedup (vs. with Overdispersion)"))
+
+  p +
+    theme_bw() +
+    labs(
+      x = "Number of Genes",
+      y = y_name,
+      color = "Model - Device",
+      fill = "Model - Device"
+    ) +
+    theme(
+      strip.text = element_text(face = "bold"),
+      strip.background = element_rect(fill = "gray90"),
+      legend.position = "bottom",
+      legend.title = element_text(face = "bold"),
+      panel.grid.minor = element_blank()
+    ) +
+    scale_fill_manual(values = method_colors) +
+    scale_color_manual(values = method_colors) +
+    guides(
+      fill = guide_legend(order = 1),
+      col = guide_legend(order = 1),
+      linetype = guide_legend(order = 2, override.aes = list(fill = rep(NA, length(unique(df$Overdispersion)))))
+    )
 }

@@ -1,0 +1,57 @@
+
+rm(list = ls())
+require(tidyverse)
+library(patchwork)
+source("utils_img.R")
+
+dataset_name = "baronPancreas"
+add_predicttions = TRUE
+for (dataset_name in c("MacaqueBrain", "baronPancreas")) {
+  results_folder <- paste0("results/", dataset_name)
+  fits_folder = paste0("results/", dataset_name, "/fits/")
+  time_results = get_time_results(results_folder)
+  mem_results = get_memory_results(results_folder)
+  if (add_predicttions) {
+    time_results = plyr::rbind.fill(time_results, predict_time_results(time_results))
+    mem_results = plyr::rbind.fill(mem_results, predict_memory_results(mem_results))
+    time_results$Measure[is.na(time_results$Measure)] = "observed"
+    mem_results$Measure[is.na(mem_results$Measure)] = "observed"
+  } else {
+    time_results$Measure = "observed"
+    mem_results$Measure = "observed"
+  }
+
+  # Comparisons ####
+  pA <- time_comparison(time_results)
+  pB <- memory_comparison(mem_results)
+
+  pC <- time_comparison(time_results, ratio = "glmGamPoi - cpu")
+  pD <- memory_comparison(mem_results, ratio = "glmGamPoi - cpu")
+
+  # Correlations ####
+  corr_plots <- plot_correlations(fits_folder)
+
+  # Plot UpSet ####
+  upset <- plot_upset(fits_folder, lfc_cut = 1, pval_cut = .05)
+  upset = ggplotify::as.ggplot(upset)
+
+  # Plot large test
+  dir.create(file.path("img/RDS/", dataset_name), recursive = T, showWarnings = F)
+  if (dataset_name == "MacaqueBrain") {
+    pLarge = plot_large_test(dataset_name)
+    saveRDS(pLarge, file.path("img/RDS/", dataset_name, "large.RDS"))
+  }
+
+  # Overdispersion
+  p_disp_runtime = plot_overdispersion_comparison(dataset_name, ratio = FALSE)
+  p_disp_speedup = plot_overdispersion_comparison(dataset_name, ratio = TRUE)
+
+  saveRDS(pA, file.path("img/RDS/", dataset_name, "runtime.RDS"))
+  saveRDS(pB, file.path("img/RDS/", dataset_name, "memory.RDS"))
+  saveRDS(pC, file.path("img/RDS/", dataset_name, "speedup.RDS"))
+  saveRDS(pD, file.path("img/RDS/", dataset_name, "memory_ratio.RDS"))
+  saveRDS(corr_plots, file.path("img/RDS/", dataset_name, "correlation.RDS"))
+  saveRDS(upset, file.path("img/RDS/", dataset_name, "upset.RDS"))
+  saveRDS(p_disp_runtime, file.path("img/RDS/", dataset_name, "disp_runtime.RDS"))
+  saveRDS(p_disp_speedup, file.path("img/RDS/", dataset_name, "disp_speedup.RDS"))
+}

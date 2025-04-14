@@ -350,6 +350,8 @@ timings <- patchwork::wrap_plots(plots, ncol = 2, nrow = 2) +
   theme(plot.tag = element_text(face = 'bold'))
 timings
 
+
+
 ggsave("../figures/supp_03_a.pdf", cellwise_pvalues_plot, width = 14, height = 12, units = "in", dpi = 600)
 ggsave("../figures/supp_03_b.pdf", boxplots_cwise, width = 14, height = 12, units = "in", dpi = 600)
 ggsave("../figures/supp_03_c.pdf", pwise_pvalues_plot, width = 14, height = 12, units = "in", dpi = 600)

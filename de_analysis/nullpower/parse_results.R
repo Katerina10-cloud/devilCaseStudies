@@ -4,7 +4,7 @@ require(tidyverse)
 require(patchwork)
 
 method_cellwise <- c("glmGamPoi (cell)", "Devil (base)", "limma", "Nebula")
-method_patientwise <- c("Nebula", "Devil (mixed)", "limma", "glmGamPoi (cell)")
+method_patientwise <- c("Nebula", "Devil (mixed)", "limma", "glmGamPoi (cell)", "glmGamPoi (fixed)")
 
 # FPR test ####
 beta <- 0.5
@@ -12,11 +12,11 @@ res <- dplyr::tibble()
 
 for (is.pb in c(TRUE, FALSE)) {
   if (is.pb) {
-    head_foler_null = "nullpower/null_subject"
-    head_foler_pow = "nullpower/pow_subject"
+    head_foler_null = "null_subject"
+    head_foler_pow = "pow_subject"
   } else {
-    head_foler_null = "nullpower/null_cell"
-    head_foler_pow = "nullpower/pow_cell"
+    head_foler_null = "null_cell"
+    head_foler_pow = "pow_cell"
   }
 
   ll <- list.files(head_foler_null, full.names = T)
@@ -25,7 +25,7 @@ for (is.pb in c(TRUE, FALSE)) {
     for (i in 1:length(ll)) {
       l <- ll[i]
       print(l)
-      l <- unlist(str_split(l, "/"))[[3]]
+      l <- unlist(str_split(l, "/"))[[2]]
       author <- unlist(str_split(l, ".n."))[[1]]
       n.patients <- as.numeric(unlist(str_split(l, ".n."))[[2]])
       n.genes <- as.numeric(unlist(strsplit(unlist(str_split(l, ".ngenes."))[[2]], ".ct."))[[1]])
@@ -39,10 +39,10 @@ for (is.pb in c(TRUE, FALSE)) {
       dpow <- read.delim(paste0(head_foler_pow,"/", l), sep=",") %>% dplyr::mutate(DE = TRUE, iter = i.iter)
 
       d <- dplyr::bind_rows(dpow, dnull)
-      colnames(d) <- c("Gene", "glmGamPoi (Pb)", "edgeR", "limma", "glmGamPoi (cell)", "Nebula", "Devil (base)", "Devil (mixed)", "DE", "Iter")
+      colnames(d) <- c("Gene", "glmGamPoi (Pb)", "edgeR", "limma", "glmGamPoi (cell)", "Nebula", "Devil (base)", "Devil (mixed)", "glmGamPoi (fixed)", "DE", "Iter")
 
       c <- colnames(d)[2]
-      n_algo <- ncol(d) - 2
+      n_algo <- ncol(d) - 3
       
       r <- d %>% 
         tidyr::pivot_longer(!c(Gene, DE, Iter)) %>% 
@@ -127,4 +127,4 @@ for (is.pb in c(TRUE, FALSE)) {
   }
 }
 
-saveRDS(res, "nullpower/final_res/results.rds")
+saveRDS(res, "final_res/results.rds")
