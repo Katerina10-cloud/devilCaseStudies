@@ -17,7 +17,8 @@ GO_CLUSTERS <- list(
   
   `Gene Expression Regulation` = c(
     "positive regulation of gene expression",
-    "positive regulation of transcription by RNA polymerase II"
+    "positive regulation of transcription by RNA polymerase II",
+    "ncRNA processing"
   ),
   
   `Cellular Adhesion and Communication` = c(
@@ -42,6 +43,7 @@ GO_CLUSTERS <- list(
     "muscle contraction",
     "actin filament-based movement",
     "actin filament-based process",
+    "actin-mediated cell contraction",
     "myofibril assembly",
     "muscle system process",
     "skeletal muscle cell differentiation",
@@ -63,18 +65,18 @@ GO_CLUSTERS <- list(
     "aromatic compound catabolic process",
     "cellular nitrogen compound catabolic process",
     "proteolysis",
-    "negative regulation of RNA metabolic process",
+    "negative regulation of cellular metabolic process",
     "nucleic acid metabolic process",
     "protein metabolic process",
     "negative regulation of metabolic process",
     "RNA metabolic process",
-    "regulation of lipid metabolic process"
+    "nucleobase-containing compound catabolic process"
   ),
   
   `Stress Response` = c(
     "response to gamma radiation",
     "cellular response to hypoxia",
-    "response to chemical"
+    "cellular response to chemical stimulus"
   )
 )
 
@@ -200,7 +202,7 @@ plot_dotplot_GO = function(devil_res, glm_res, nebula_res) {
   
   replacement_map <- c(
     "innate immune response" = "immune system process",
-    "actin filament-based process" = "actin filament-based movement",
+    "actin filament-based process" = "actin-mediated cell contraction",
     "muscle cell development" = "striated muscle cell development",
     "striated striated muscle cell development" = "striated muscle cell development",
     "homophilic cell adhesion via plasma membrane adhesion molecules" = "homophilic cell adhesion"
@@ -209,13 +211,18 @@ plot_dotplot_GO = function(devil_res, glm_res, nebula_res) {
   combined_data <- bind_rows(devil_res, glm_res, nebula_res) %>%
     dplyr::filter(!(Description %in% c("organic cyclic compound catabolic process", "defense response to other organism",
                                        "biological process involved in interspecies interaction between organisms",
-                                       "positive regulation of response to stimulus", "macromolecule modification",
-                                       "anatomical structure morphogenesis", "response to organic substance",
-                                       "positive regulation of gene expression", "locomotion", "response to chemical",
-                                       "cell population proliferation", "system development", "regulation of biological process",
+                                       "regulation of response to external stimulus", "actin filament-based movement",
+                                       "biological process involved in interspecies interaction between organisms",
+                                       "negative regulation of nitrogen compound metabolic process",
+                                       "positive regulation of response to stimulus", "positive regulation of multicellular organismal process",
+                                       "macromolecule modification", "anatomical structure morphogenesis", "response to organic substance",
+                                       "positive regulation of gene expression", "regulation of response to external stimulus", 
+                                       "positive regulation of cellular biosynthetic process", "response to chemical",
+                                       "cell population proliferation", "system development", "regulation of biological process", 
                                        "multicellular organismal process", "cellular component organization or biogenesis",
-                                       "cellular component organization", "response to gamma radiation", "dephosphorylation",
-                                       "cognition", "inner ear development"
+                                       "cell-cell adhesion via plasma-membrane adhesion molecules",
+                                       "response to gamma radiation", "cognition", "inner ear development",
+                                       "T cell activation"
                                        ))) 
 
   combined_data$GO_cluster = lapply(combined_data$Description, function(go_term) {

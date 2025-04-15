@@ -5,10 +5,10 @@ pkgs <- c("ggplot2", "dplyr","tidyr","tibble", "viridis", "smplot2", "Seurat", "
           "ggpubr", "ggrepel", "ggvenn", "ggpointdensity", "edgeR", "patchwork", 'ggVennDiagram', 'stringr',
           "enrichplot", "clusterProfiler", "data.table", "reactome.db", "fgsea", "org.Hs.eg.db")
 sapply(pkgs, require, character.only = TRUE)
-#set.seed(1234)
+
 source("utils_analysis.R")
 
-setwd("/Users/katsiarynadavydzenka/Documents/PhD_AI/devilCaseStudies/multiomics_analysis")
+#setwd("/Users/katsiarynadavydzenka/Documents/PhD_AI/devilCaseStudies/multiomics_analysis")
 
 # Loading data #
 rna_devil <- "results/MuscleRNA/devil_rna.RDS"
@@ -114,6 +114,7 @@ p_volcanos
 ggsave("plot/volcanos_v2.png", dpi = 400, width = 16.0, height = 5.0, plot = p_volcanos)
 saveRDS(p_volcanos, "plot/volcanos.rds")
 
+
 ### Gene set Enrichement analysis ###
 
 gseGO_devil <- enrichmentGO(rna_deg_devil)
@@ -174,25 +175,24 @@ saveRDS(GO_plot, "plot/enrichment_dotplot.RDS")
 
 ggsave("plot/enrichment_dotplot.png", dpi = 400, width = 10.0, height = 9.0, plot = GO_plot)
 
-# ReactomePA enrichment
-gseRe_devil <- enrichmentReactomePA(rna_deg_devil)
-gseRe_glm <- enrichmentReactomePA(rna_deg_glm)
-gseRe_nebula <- enrichmentReactomePA(rna_deg_nebula)
 
-saveRDS(gseRe_devil, "results/gse_Reactome/gseRE_devil.RDS")
-saveRDS(gseRe_glm, "results/gse_Reactome/gseRE_glm.RDS")
-saveRDS(gseRe_nebula, "results/gse_Reactome/gseRE_nebula.RDS")
+# ReactomePA enrichment
+#gseRe_devil <- enrichmentReactomePA(rna_deg_devil)
+#gseRe_glm <- enrichmentReactomePA(rna_deg_glm)
+#gseRe_nebula <- enrichmentReactomePA(rna_deg_nebula)
+
+#saveRDS(gseRe_devil, "results/gse_Reactome/gseRE_devil.RDS")
+#saveRDS(gseRe_glm, "results/gse_Reactome/gseRE_glm.RDS")
+#saveRDS(gseRe_nebula, "results/gse_Reactome/gseRE_nebula.RDS")
 
 # Plot
+#gseRe_devil <- readRDS("results/gse_Reactome/gseRE_devil.RDS")
+#gseRe_glm <- readRDS("results/gse_Reactome/gseRE_glm.RDS")
+#gseRe_nebula <- readRDS("results/gse_Reactome/gseRE_nebula.RDS")
 
-gseRe_devil <- readRDS("results/gse_Reactome/gseRE_devil.RDS")
-gseRe_glm <- readRDS("results/gse_Reactome/gseRE_glm.RDS")
-gseRe_nebula <- readRDS("results/gse_Reactome/gseRE_nebula.RDS")
+#RE_plot = plot_dotplot_RE(gseRe_devil, gseRe_glm, gseRe_nebula)
+#RE_plot
+#saveRDS(RE_plot, "plot/enrichment_dotplot_RE.RDS")
 
-
-RE_plot = plot_dotplot_RE(gseRe_devil, gseRe_glm, gseRe_nebula)
-RE_plot
-saveRDS(RE_plot, "plot/enrichment_dotplot_RE.RDS")
-
-ggsave("plot/enrichment_dotplot_RE.png", dpi = 400, width = 10.0, height = 9.0, plot = RE_plot)
+#ggsave("plot/enrichment_dotplot_RE.png", dpi = 400, width = 10.0, height = 9.0, plot = RE_plot)
 
