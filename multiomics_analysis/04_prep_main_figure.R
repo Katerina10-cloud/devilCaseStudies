@@ -275,3 +275,4 @@ final <- combined_plot + plot_layout(guides = "collect") & theme(legend.position
 final
 
 ggsave("plot/umap_both.png", plot = final, width = 8, height = 8, units = "in", dpi = 600)
+saveRDS(final, "plot/umap_both.rds")
