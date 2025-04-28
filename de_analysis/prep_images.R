@@ -8,9 +8,10 @@ source("utils_supp_plots.R")
 method_cellwise <- c("glmGamPoi (cell)", "Devil (base)", "limma", "Nebula")
 method_patientwise <- c("Nebula", "Devil (mixed)", "limma", "glmGamPoi (cell)")
 method_levels <- c("limma", "glmGamPoi", "glmGamPoi (cell)", "Nebula", "NEBULA", "Devil (mixed)", "Devil (base)", "Devil", "devil")
-author = "hsc"
 
+author = "hsc"
 for (author in c("hsc", "kumar", "yazar", "bca")) {
+  MCCs_boxplots = plot_MCCs_boxplots(author)
   pvalues_plot = plot_pvalues(author, method_cellwise, method_patientwise)
   MCCs_plot = plot_MCCs(author, method_cellwise, method_patientwise)
   ks_plots = plot_ks(author, method_cellwise, method_patientwise)
@@ -18,6 +19,7 @@ for (author in c("hsc", "kumar", "yazar", "bca")) {
 
   dir.create(file.path("img/RDS/", author), recursive = TRUE, showWarnings = F)
 
+  saveRDS(MCCs_boxplots, file.path("img/RDS/", author, "MCCs_boxplots.RDS"))
   saveRDS(pvalues_plot, file.path("img/RDS/", author, "pvalues.RDS"))
   saveRDS(MCCs_plot, file.path("img/RDS/", author, "MCCs.RDS"))
   saveRDS(ks_plots, file.path("img/RDS/", author, "ks_test.RDS"))
@@ -33,7 +35,7 @@ all_models_plot = free(all_models_plots$MCC) + free(all_models_plots$timing) + f
   plot_layout(design = des) +
   plot_annotation(tag_levels = c("A")) &
   theme(plot.tag = element_text(face = 'bold'))
-ggsave("../figures/supp_03_a.pdf", all_models_plot, width = 14, height = 12, units = "in", dpi = 600)
+ggsave("../figures/supp_03_a.pdf", all_models_plot, width = 10, height = 10, units = "in", dpi = 600)
 
 # Supplemetary
 cwise_pvalues_plot = get_cwise_pvalues_plot()

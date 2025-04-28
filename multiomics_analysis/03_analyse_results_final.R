@@ -6,6 +6,12 @@ pkgs <- c("ggplot2", "dplyr","tidyr","tibble", "viridis", "smplot2", "Seurat", "
           "enrichplot", "clusterProfiler", "data.table", "reactome.db", "fgsea", "org.Hs.eg.db")
 sapply(pkgs, require, character.only = TRUE)
 
+method_colors = c(
+  "glmGamPoi" = "#EAB578",
+  "NEBULA" =  'steelblue',
+  "devil" = "#099668"
+)
+
 source("utils_analysis.R")
 
 #setwd("/Users/katsiarynadavydzenka/Documents/PhD_AI/devilCaseStudies/multiomics_analysis")
@@ -102,12 +108,6 @@ p_volcanos <- rna_join %>%
   labs(x = expression(Log[2] ~ FC),
        y = expression(-log[10] ~ Pvalue),
        col = "DE type") +
-  #ggplot2::theme(legend.position = 'right',
-                 #legend.text = element_text(size = 16, color = "black"),
-                 #legend.title = element_text(size = 18, color = "black"),
-                 #strip.text = element_text(size = 20, face = "plain", color = "black"),
-                 #axis.text = element_text(size = 18, color = "black"),
-                 #axis.title = element_text(size = 20, color = "black"))+
   guides(color = guide_legend(override.aes = list(alpha = 1)))
 p_volcanos
 
@@ -137,13 +137,14 @@ auc_scores = readRDS("results/gsea_GO/auc_scores.RDS")
 simp_plot <- df_simp %>%
   dplyr::select(model, n_simplified, f, c) %>%
   tidyr::pivot_longer(c(f, n_simplified)) %>%
-  dplyr::mutate(name = ifelse(name=="f", "Fraction simplified", "N simplified")) %>%
+  dplyr::mutate(name = ifelse(name=="f", "Fraction of Terms Retained", "Reduced Terms Count")) %>%
   ggplot(mapping = aes(x=c, y=value, col=model)) +
   geom_point() +
   geom_line() +
   theme_bw() +
-  facet_wrap(~name, scales = "free", ncol = 1,strip.position = "top") +
-  labs(y = "Value", x="Clustering cutoff", col="")
+  facet_wrap(~name, scales = "free", ncol = 1,strip.position = "left") +
+  labs(y = "", x="Clustering cutoff", col="") +
+  scale_color_manual(values = method_colors)
 simp_plot
 saveRDS(simp_plot, file = "plot/simp_plot.rds")
 

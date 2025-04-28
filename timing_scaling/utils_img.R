@@ -6,9 +6,8 @@ method_colors = c(
   "nebula" =  "steelblue",
   "NEBULA" =  "steelblue",
   "devil - cpu" = "#099668",
-  "devil - a100" = "#384B41",
-  "devil - h100" = "#9BB0A5",
-  "devil - gpu" = "#9BB0A5"
+  "devil - h100" = "#384B41",
+  "devil - a100" = "#9BB0A5"
 )
 
 get_time_results <- function(results_folder) {
@@ -126,7 +125,7 @@ get_memory_results <- function(results_folder) {
     dplyr::mutate(model_name = dplyr::recode(model_name,
                                              "cpu devil" = "devil - cpu",
                                              "cpu glmGamPoi" = "glmGamPoi - cpu",
-                                             "gpu devil" = "devil - gpu")) %>%
+                                             "gpu devil" = "devil - a100")) %>%
     dplyr::mutate(Measure = "observed")
 }
 
@@ -172,7 +171,6 @@ predict_memory_results = function(results) {
   }) %>% do.call("bind_rows", .)
 }
 
-
 time_comparison = function(results, ratio = FALSE) {
   if (!isFALSE(ratio)) {
     df = results %>%
@@ -196,14 +194,14 @@ time_comparison = function(results, ratio = FALSE) {
       dplyr::distinct()
 
     p = df %>%
-      ggplot(mapping = aes(x = as.factor(n_genes), y = y, col = model_name, fill=model_name, ymin=y-sd, ymax=y+sd)) +
-      geom_bar(mapping = aes(linetype =Measure), position = position_dodge(), stat = "identity", col="black") +
-      geom_errorbar(col="black", width = .2, position = position_dodge(.99)) +
+      ggplot(mapping = aes(x = as.factor(n_genes), y = y, col = model_name, fill=model_name, ymin=y-sd, ymax=y+sd, linetype =Measure)) +
+      geom_bar(position = position_dodge(), stat = "identity", col="black") +
+      geom_errorbar(col="black", width = .2, position = position_dodge(.99), linetype = "solid") +
       ggh4x::facet_nested(~"Number of cells"+n_cells, scales = "free_y", shrink = T, independent = "y")
   }
 
   y_name = ifelse(isFALSE(ratio), "Runtime (seconds)", paste0("Speedup (vs. ", ratio, ")"))
-  
+
   p +
     theme_bw() +
     labs(
@@ -252,13 +250,13 @@ memory_comparison = function(results, ratio=FALSE) {
       dplyr::distinct()
 
     p = df %>%
-      ggplot(mapping = aes(x = as.factor(n_genes), y = y, col = model_name, fill=model_name, ymin=y-sd, ymax=y+sd)) +
-      geom_bar(mapping = aes(linetype =Measure), position = position_dodge(), stat = "identity", col="black") +
-      geom_errorbar(col="black", width = .2, position = position_dodge(.99)) +
+      ggplot(mapping = aes(x = as.factor(n_genes), y = y, col = model_name, fill=model_name, ymin=y-sd, ymax=y+sd, linetype =Measure)) +
+      geom_bar(position = position_dodge(), stat = "identity", col="black") +
+      geom_errorbar(col="black", width = .2, position = position_dodge(.99), linetype = "solid") +
       ggh4x::facet_nested(~"Number of cells"+n_cells, scales = "free_y", shrink = T, independent = "y")
   }
 
-  y_name = ifelse(isFALSE(ratio), "Memory (GB)", paste0("Memory ratio (vs. ", ratio, ")"))
+  y_name = ifelse(isFALSE(ratio), "Memory (GB)", paste0("Relative memory (vs. ", ratio, ")"))
 
   p +
     theme_bw() +
@@ -431,21 +429,21 @@ plot_correlations <- function(fits_folder) {
   fits <- list.files(fits_folder, full.names = T)
 
   devil.res <- readRDS(fits[grepl("/cpu_devil_", fits)])
-  gpu.devil.res <- readRDS(fits[grepl("/gpu_devil_", fits)])
+  #gpu.devil.res <- readRDS(fits[grepl("/gpu_devil_", fits)])
   glm.res <- readRDS(fits[grepl("/cpu_glmGam", fits)])
 
   p1 <- dplyr::bind_rows(
+    # dplyr::tibble(
+    #   x = gpu.devil.res$lfc,
+    #   x_name = "devil - a100",
+    #   y = devil.res$lfc,
+    #   y_name = "devil - cpu"
+    # ),
     dplyr::tibble(
-      x = gpu.devil.res$lfc,
-      x_name = "devil - gpu",
-      y = devil.res$lfc,
-      y_name = "devil - cpu"
-    ),
-    dplyr::tibble(
-      x = gpu.devil.res$lfc,
-      x_name = "devil - gpu",
+      x = devil.res$lfc,
+      x_name = "devil",
       y = glm.res$lfc,
-      y_name = "glmGamPoi - cpu"
+      y_name = "glmGamPoi"
     )
   ) %>%
     dplyr::group_by(x_name, y_name) %>%
@@ -458,17 +456,17 @@ plot_correlations <- function(fits_folder) {
     labs(x = bquote(LFC[1]), y=bquote(LFC[2]))
 
   p2 <- dplyr::bind_rows(
+    # dplyr::tibble(
+    #   x = gpu.devil.res$theta,
+    #   x_name = "devil - gpu",
+    #   y = devil.res$theta,
+    #   y_name = "devil - cpu"
+    # ),
     dplyr::tibble(
-      x = gpu.devil.res$theta,
-      x_name = "devil / gpu",
-      y = devil.res$theta,
-      y_name = "devil / cpu"
-    ),
-    dplyr::tibble(
-      x = gpu.devil.res$theta,
-      x_name = "devil / gpu",
+      x = devil.res$theta,
+      x_name = "devil",
       y = glm.res$theta,
-      y_name = "glmGamPoi / cpu"
+      y_name = "glmGamPoi"
     )
   ) %>%
     dplyr::group_by(x_name, y_name) %>%
@@ -502,7 +500,7 @@ plot_upset <- function(fits_folder, lfc_cut, pval_cut) {
     dplyr::mutate(algorithm = dplyr::recode(algorithm,
                                              "cpu devil" = "devil - cpu",
                                              "cpu glmGamPoi" = "glmGamPoi - cpu",
-                                            "gpu devil" = "devil - gpu",
+                                            "gpu devil" = "devil - a100",
                                              "a100" = "devil - a100",
                                              "h100" = "devil - h100"))
   res %>%
@@ -575,7 +573,7 @@ plot_volc = function (
   p
 }
 
-plot_large_test = function(dataset_name) {
+plot_large_test = function(dataset_name, add_competitors = FALSE) {
   results_folder <- file.path("results", dataset_name, "large")
   res_paths = list.files(results_folder)
   p = res_paths[1]
@@ -585,36 +583,57 @@ plot_large_test = function(dataset_name) {
     res = readRDS(file.path(results_folder, p))
     dplyr::tibble(
       model_name = paste(info[1], info[2]),
-      n_genes = info[3],
+      n_genes = as.numeric(info[3]),
       n_cells = as.numeric(info[5]),
       n_cell_types = info[7],
       time = as.numeric(unlist(res$time), units = "secs")
     )
-  }) %>% do.call("bind_rows", .) %>% dplyr::mutate(model_name = "devil - gpu")
+  }) %>% do.call("bind_rows", .) %>% dplyr::mutate(model_name = "devil - a100")
 
-  all_res %>%
-    dplyr::mutate(n_cells = factor(n_cells, levels = sort(n_cells))) %>%
-    ggplot(mapping = aes(x=n_cells, y=time, fill=model_name)) +
-    geom_col(col="black") +
-    scale_fill_manual(values = method_colors) +
-    ggh4x::facet_nested(~"Number of genes"+n_genes, scales = "free_y", shrink = T, independent = "y") +
-    theme_bw() +
-    theme_bw() +
-    labs(
-      x = "Number of Cells",
-      y = "Runtime (seconds)",
-      color = "Model - Device",
-      fill = "Model - Device"
-    ) +
-    theme(
-      strip.text = element_text(face = "bold"),
-      strip.background = element_rect(fill = "gray90"),
-      legend.position = "bottom",
-      legend.title = element_text(face = "bold"),
-      panel.grid.minor = element_blank()
-    ) +
-    scale_fill_manual(values = method_colors) +
-    scale_color_manual(values = method_colors)
+  if (add_competitors) {
+    competitors_time = get_time_results(file.path("results/", dataset_name))
+    competitors_time = competitors_time %>% dplyr::filter(n_genes %in% all_res$n_genes) %>%
+      dplyr::group_by(model_name, n_genes, n_cells, n_cell_types) %>%
+      dplyr::summarise(time = mean(time))
+
+    all_res = dplyr::bind_rows(all_res, competitors_time) %>%
+      dplyr::group_by(model_name, n_genes, n_cells, n_cell_types) %>%
+      dplyr::summarise(time = mean(time))
+
+    all_res %>%
+      ggplot(mapping = aes(x = n_cells, y=time, col=model_name)) +
+      geom_point() +
+      geom_line() +
+      theme_bw() +
+      scale_fill_manual(values = method_colors) +
+      scale_color_manual(values = method_colors) +
+      scale_x_continuous(transform = "log10") +
+      scale_y_continuous(transform = "log10")
+  } else {
+    all_res %>%
+      dplyr::mutate(n_cells = factor(n_cells, levels = sort(n_cells))) %>%
+      ggplot(mapping = aes(x=n_cells, y=time, fill=model_name)) +
+      geom_col(col="black") +
+      scale_fill_manual(values = method_colors) +
+      ggh4x::facet_nested(~"Number of genes"+n_genes, scales = "free_y", shrink = T, independent = "y") +
+      theme_bw() +
+      theme_bw() +
+      labs(
+        x = "Number of Cells",
+        y = "Runtime (seconds)",
+        color = "Model - Device",
+        fill = "Model - Device"
+      ) +
+      theme(
+        strip.text = element_text(face = "bold"),
+        strip.background = element_rect(fill = "gray90"),
+        legend.position = "bottom",
+        legend.title = element_text(face = "bold"),
+        panel.grid.minor = element_blank()
+      ) +
+      scale_fill_manual(values = method_colors) +
+      scale_color_manual(values = method_colors)
+  }
 }
 
 
@@ -684,7 +703,7 @@ plot_overdispersion_comparison = function(dataset_name, ratio) {
       dplyr::mutate(y = y[Overdispersion == "w"] / y)
   }
 
-  
+
   if (!ratio) {
     p = df %>%
       ggplot(mapping = aes(x = as.factor(n_genes), y = y, col = model_name, fill=model_name, ymin=y-sd, ymax=y+sd, linetype = Overdispersion)) +

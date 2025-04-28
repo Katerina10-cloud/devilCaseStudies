@@ -4,7 +4,9 @@ require(tidyverse)
 library(patchwork)
 source("utils_img.R")
 
-dataset_name = "baronPancreas"
+model_levels = c("glmGamPoi - cpu", "devil - cpu", "devil - a100", "devil - h100")
+
+dataset_name = "MacaqueBrain"
 add_predicttions = TRUE
 for (dataset_name in c("MacaqueBrain", "baronPancreas")) {
   results_folder <- paste0("results/", dataset_name)
@@ -20,6 +22,9 @@ for (dataset_name in c("MacaqueBrain", "baronPancreas")) {
     time_results$Measure = "observed"
     mem_results$Measure = "observed"
   }
+  
+  time_results$model_name = factor(time_results$model_name, levels = model_levels)
+  mem_results$model_name = factor(mem_results$model_name, levels = model_levels)
 
   # Comparisons ####
   pA <- time_comparison(time_results)
