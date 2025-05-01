@@ -3,7 +3,7 @@
 rm(list = ls())
 pkgs <- c("ggplot2", "dplyr","tidyr","tibble", "viridis", "smplot2", "Seurat", "gridExtra",
           "ggpubr", "ggrepel", "ggvenn", "ggpointdensity", "edgeR", "patchwork", 'ggVennDiagram', 'stringr',
-          "enrichplot", "clusterProfiler", "data.table", "reactome.db", "fgsea", "org.Hs.eg.db")
+          "enrichplot", "clusterProfiler", "data.table", "reactome.db", "fgsea", "org.Hs.eg.db", "GOSemSim")
 sapply(pkgs, require, character.only = TRUE)
 
 method_colors = c(
@@ -14,7 +14,7 @@ method_colors = c(
 
 source("utils_analysis.R")
 
-#setwd("/Users/katsiarynadavydzenka/Documents/PhD_AI/devilCaseStudies/multiomics_analysis")
+setwd("/Users/katsiarynadavydzenka/Documents/PhD_AI/devilCaseStudies/multiomics_analysis")
 
 # Loading data #
 rna_devil <- "results/MuscleRNA/devil_rna.RDS"
@@ -175,6 +175,86 @@ GO_plot
 saveRDS(GO_plot, "plot/enrichment_dotplot.RDS")
 
 ggsave("plot/enrichment_dotplot.png", dpi = 400, width = 10.0, height = 9.0, plot = GO_plot)
+
+
+
+### glmGamPoi private genes/ shared genes enrichment - to test for potential overcalling / permissiveness ###
+
+run_enrichment <- function(df, gene_ids) {
+  filtered <- df %>% dplyr::filter(geneID %in% gene_ids)
+  enrichmentGO(filtered)
+}
+
+rna_deg_glm$adj_pval[rna_deg_glm$adj_pval == 0] <- min(rna_deg_glm$adj_pval[rna_deg_glm$adj_pval != 0])
+
+glm_private_g <- setdiff(rna_deg_glm$geneID, union(rna_deg_devil$geneID, rna_deg_nebula$geneID))
+shared_glm_devil <- intersect(rna_deg_glm$geneID, rna_deg_devil$geneID)
+
+gseGO_glm_private <- run_enrichment(rna_deg_glm, glm_private_g)
+gseGO_shared_glm  <- run_enrichment(rna_deg_glm, shared_glm_devil)
+gseGO_shared_devil <- run_enrichment(rna_deg_devil, shared_glm_devil)
+
+# Test only shared pathways
+go_glm <- gseGO_shared_glm@result$ID
+go_devil <- gseGO_shared_devil@result$ID
+
+shared_terms <- intersect(go_glm, go_devil)
+private_glm  <- setdiff(go_glm, go_devil)
+private_devil <- setdiff(go_devil, go_glm)
+
+shared_df <- gseGO_shared_glm@result[gseGO_shared_glm@result$ID %in% shared_terms, ]
+shared_df$Group <- "Shared"
+
+private_glm_df <- gseGO_shared_glm@result[gseGO_shared_glm@result$ID %in% private_glm, ]
+private_glm_df$Group <- "Private glmGamPoi"
+
+private_devil_df <- gseGO_shared_devil@result[gseGO_shared_devil@result$ID %in% private_devil, ]
+private_devil_df$Group <- "Private devil"
+
+go_terms_combined <- rbind(shared_df, private_glm_df, private_devil_df)
+
+# Calculate semantic specificity 
+
+hsGO_BP <- godata('org.Hs.eg.db', ont = "BP")
+
+calculate_specificity_scores <- function(gsea_result, semData) {
+  go_terms <- gsea_result@result$ID
+  sim_matrix <- mgoSim(go_terms, go_terms, semData = semData, measure = "Wang", combine = NULL)
+  specificity_scores <- rowMeans(sim_matrix, na.rm = TRUE)
+  gsea_result@result$specificity <- specificity_scores
+  return(gsea_result)
+}
+
+gseGO_glm_private <- calculate_specificity_scores(gseGO_glm_private, hsGO_BP)
+gseGO_shared_glm  <- calculate_specificity_scores(gseGO_shared_glm, hsGO_BP)
+gseGO_shared_devil <- calculate_specificity_scores(gseGO_shared_devil, hsGO_BP)
+
+
+# Specificity comparison 
+
+specificity_comparison <- data.frame(
+  GeneSet = rep(c("Private glmGamPoisson", "Shared glmGamPoisson", "Shared devil"), c(nrow(gseGO_glm_private@result), nrow(gseGO_shared_glm@result), nrow(gseGO_shared_devil@result))),
+  Specificity = c(gseGO_glm_private@result$specificity, gseGO_shared_glm@result$specificity, gseGO_shared_devil@result$specificity)
+)
+
+specificity_boxplot <- ggplot(go_terms_combined, aes(x = Group, y = specificity, fill = Group)) +
+  geom_boxplot() +
+  scale_fill_manual(values = c("Private glmGamPoi" = "#f99379", 
+                               "Private devil" = "#099668", 
+                               "Shared" = "#EAB578"))+
+  labs(title = "Comparison of Specificity Scores (only shared genes)",
+       x = "Gene set",
+       y = "Specificity Score",
+       fill = "GO term group") +
+  theme_classic() +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    legend.position = "right"
+  )
+specificity_boxplot
+
+ggsave("plot/specificity_score_comparison_onlyShared.png", dpi = 400, width = 6.0, height = 4.0, plot = specificity_boxplot)
+
 
 
 # ReactomePA enrichment
