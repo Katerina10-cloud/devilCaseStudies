@@ -588,7 +588,7 @@ plot_large_test = function(dataset_name, add_competitors = FALSE) {
       n_cell_types = info[7],
       time = as.numeric(unlist(res$time), units = "secs")
     )
-  }) %>% do.call("bind_rows", .) %>% dplyr::mutate(model_name = "devil - a100")
+  }) %>% do.call("bind_rows", .) %>% dplyr::mutate(model_name = "devil - h100")
 
   if (add_competitors) {
     competitors_time = get_time_results(file.path("results/", dataset_name))
@@ -607,8 +607,9 @@ plot_large_test = function(dataset_name, add_competitors = FALSE) {
       theme_bw() +
       scale_fill_manual(values = method_colors) +
       scale_color_manual(values = method_colors) +
-      scale_x_continuous(transform = "log10") +
-      scale_y_continuous(transform = "log10")
+      #scale_x_continuous(transform = "log10") +
+      #scale_y_continuous(transform = "log10") +
+      labs(x = "Number of cells", y = "Runtime (seconds)", col = "Model - device")
   } else {
     all_res %>%
       dplyr::mutate(n_cells = factor(n_cells, levels = sort(n_cells))) %>%

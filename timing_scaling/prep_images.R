@@ -43,7 +43,7 @@ for (dataset_name in c("MacaqueBrain", "baronPancreas")) {
   # Plot large test
   dir.create(file.path("img/RDS/", dataset_name), recursive = T, showWarnings = F)
   if (dataset_name == "MacaqueBrain") {
-    pLarge = plot_large_test(dataset_name)
+    pLarge = plot_large_test(dataset_name, add_competitors = T)
     saveRDS(pLarge, file.path("img/RDS/", dataset_name, "large.RDS"))
   }
 

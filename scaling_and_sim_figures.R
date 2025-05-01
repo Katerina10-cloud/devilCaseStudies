@@ -52,7 +52,14 @@ rm(pA, pB, pCD, pEF, final_plot, design)
 # EXTENDED ####
 # Use MacaqueBrain and HSC
 pAB = readRDS("timing_scaling/img/RDS/MacaqueBrain/correlation.RDS")
-pC = readRDS("timing_scaling/img/RDS/MacaqueBrain/large.RDS")
+pC = readRDS("timing_scaling/img/RDS/MacaqueBrain/large.RDS") +
+  theme(legend.direction='horizontal',
+        legend.position = "bottom",
+        legend.box = "vertical",
+        legend.spacing.y = unit(0, "pt"),
+        legend.spacing.x = unit(1, "pt"),
+        legend.box.margin = margin(0, 0, 0, 0)) +
+  guides(color = guide_legend(ncol = 2))
 pFG = readRDS("de_analysis/img/RDS/hsc/ks_test.RDS")
 pFG$cellwise = pFG$cellwise + theme(legend.direction='horizontal',
                                     legend.position = "bottom",
@@ -96,7 +103,7 @@ final_plot = free(pAB$lfc) + free(pAB$theta) + free(pC) +
     panel.grid.minor = element_blank()
   )
 final_plot
-ggsave(filename = "all_figures/scaling_and_sim/ext_2.pdf", plot = final_plot, dpi = 600, width = 11.7, height = 7, units = "in")
+ggsave(filename = "all_figures/scaling_and_sim/ext_2.pdf", plot = final_plot, dpi = 600, width = 13.7, height = 9, units = "in")
 rm(pAB, pC, pD, pFG, pH, final_plot, design)
 
 # SUPP SCALING ####

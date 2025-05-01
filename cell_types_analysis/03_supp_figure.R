@@ -356,6 +356,7 @@ unlink("Rplots.pdf")
 # save figure
 final_plot <- (free(pA) / free(pB) / free(pC) / free(pD)) + plot_annotation(tag_levels = "A") + plot_layout(heights = c(2,1,1,1))
 ggsave(paste0("plot_figure/", dataset_name, ".pdf"), dpi=600, width = 8, height = 12, plot = final_plot)
+ggsave(paste0("plot_figure/", dataset_name, ".png"), dpi=600, width = 8, height = 12, plot = final_plot)
 
 # pCB <- (pC | pB) + plot_layout(widths = c(1.2,3))
 # final_plot <- (pA / pCB) + plot_annotation(tag_levels = "A") + plot_layout(heights = c(2,1))
