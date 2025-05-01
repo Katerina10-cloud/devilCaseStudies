@@ -219,7 +219,7 @@ hsGO_BP <- godata('org.Hs.eg.db', ont = "BP")
 
 calculate_specificity_scores <- function(gsea_result, semData) {
   go_terms <- gsea_result@result$ID
-  sim_matrix <- mgoSim(go_terms, go_terms, semData = semData, measure = "Wang", combine = NULL)
+  sim_matrix <- GOSemSim::mgoSim(go_terms, go_terms, semData = semData, measure = "Wang", combine = NULL)
   specificity_scores <- rowMeans(sim_matrix, na.rm = TRUE)
   gsea_result@result$specificity <- specificity_scores
   return(gsea_result)
@@ -229,33 +229,58 @@ gseGO_glm_private <- calculate_specificity_scores(gseGO_glm_private, hsGO_BP)
 gseGO_shared_glm  <- calculate_specificity_scores(gseGO_shared_glm, hsGO_BP)
 gseGO_shared_devil <- calculate_specificity_scores(gseGO_shared_devil, hsGO_BP)
 
+shared_combined <- rbind(gseGO_shared_glm@result, gseGO_shared_devil@result)
+shared_combined <- shared_combined[!duplicated(shared_combined$ID), ]
 
-# Specificity comparison 
+# Specificity comparison plot
 
 specificity_comparison <- data.frame(
-  GeneSet = rep(c("Private glmGamPoisson", "Shared glmGamPoisson", "Shared devil"), c(nrow(gseGO_glm_private@result), nrow(gseGO_shared_glm@result), nrow(gseGO_shared_devil@result))),
-  Specificity = c(gseGO_glm_private@result$specificity, gseGO_shared_glm@result$specificity, gseGO_shared_devil@result$specificity)
+  GeneSet = rep(c("Private glmGamPoisson", "Shared glmGamPoisson/devil"),
+                c(nrow(gseGO_glm_private@result), nrow(shared_combined))),
+  Specificity = c(gseGO_glm_private@result$specificity, shared_combined$specificity)
 )
 
-specificity_boxplot <- ggplot(go_terms_combined, aes(x = Group, y = specificity, fill = Group)) +
+specificity_boxplot <- ggplot(specificity_comparison, aes(x = GeneSet, y = Specificity, fill = GeneSet)) +
   geom_boxplot() +
-  scale_fill_manual(values = c("Private glmGamPoi" = "#f99379", 
-                               "Private devil" = "#099668", 
-                               "Shared" = "#EAB578"))+
-  labs(title = "Comparison of Specificity Scores (only shared genes)",
+  stat_compare_means(
+    method = "wilcox.test", 
+    comparisons = list(c("Private glmGamPoisson", "Shared glmGamPoisson/devil")),
+    label = "p.format"
+  ) +
+  scale_fill_manual(values = c("Private glmGamPoisson" = "#f99379", 
+                               "Shared glmGamPoisson/devil" = "#099668")) +
+  labs(title = "Comparison of Specificity Scores",
        x = "Gene set",
        y = "Specificity Score",
-       fill = "GO term group") +
+       fill = "Gene set group") +
   theme_classic() +
   theme(
     plot.title = element_text(hjust = 0.5),
     legend.position = "right"
   )
+
 specificity_boxplot
 
 ggsave("plot/specificity_score_comparison_onlyShared.png", dpi = 400, width = 6.0, height = 4.0, plot = specificity_boxplot)
+ggsave("plot/specificity_score_comparison.png", dpi = 400, width = 7.0, height = 5.0, plot = specificity_boxplot)
+saveRDS(specificity_boxplot, "plot/specificity_boxplot.RDS")
 
 
+# GO terms overlap #
+
+terms_glm <- gseGO_shared_glm@result$ID
+terms_devil <- gseGO_shared_devil@result$ID
+
+venn_data <- list(glmGamPoisson = terms_glm, devil = terms_devil)
+
+venn <- ggVennDiagram(venn_data, color = 1, lwd = 0.8,
+                      set_label = list(size = 2))+
+  scale_fill_gradient(low = "#F9E0B0", high = "#BF8B4B")+
+  theme(legend.position = "none")
+venn
+
+saveRDS(venn, "plot/venn_GOterms_overplap.rds")
+ggsave("plot/venn_GOterms_overplap.png", venn, width = 6, height = 6)
 
 # ReactomePA enrichment
 #gseRe_devil <- enrichmentReactomePA(rna_deg_devil)
