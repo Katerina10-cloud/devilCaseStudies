@@ -172,8 +172,8 @@ gseGO_nebula_s <- readRDS("results/gsea_GO/gseGO_nebula_s.RDS")
 
 GO_plot = plot_dotplot_GO(gseGO_devil_s@result, gseGO_glm_s@result, gseGO_nebula_s@result)
 GO_plot
-saveRDS(GO_plot, "plot/enrichment_dotplot.RDS")
 
+saveRDS(GO_plot, "plot/enrichment_dotplot.RDS")
 ggsave("plot/enrichment_dotplot.png", dpi = 400, width = 10.0, height = 9.0, plot = GO_plot)
 
 
@@ -193,6 +193,11 @@ shared_glm_devil <- intersect(rna_deg_glm$geneID, rna_deg_devil$geneID)
 gseGO_glm_private <- run_enrichment(rna_deg_glm, glm_private_g)
 gseGO_shared_glm  <- run_enrichment(rna_deg_glm, shared_glm_devil)
 gseGO_shared_devil <- run_enrichment(rna_deg_devil, shared_glm_devil)
+
+#gseGO_glm_private_s = clusterProfiler::simplify(gseGO_glm_private, cutoff=0.6)
+
+saveRDS(gseGO_glm_private, "results/gsea_GO/gseGO_glm_private.RDS")
+
 
 # Test only shared pathways
 go_glm <- gseGO_shared_glm@result$ID
