@@ -100,12 +100,12 @@ for (i in 1:length(gene_list)) {
   umap_df$sample = seurat_obj$sample
   umap_df$Annotation = seurat_obj$Annotation
   
-  saveRDS(object = umap_df, file = paste0("test_analysis/", list_name, ".png"))
+  saveRDS(object = umap_df, file = paste0("test_analysis/", list_name, ".RDS"))
   
   # 5. Plot UMAP — color by sample (or change to 'Age', 'Cell Type', etc.)
   p = DimPlot(seurat_obj, reduction = "umap", group.by = "age_pop", pt.size = .05) +
     ggtitle(list_name)
-  png(paste0("test_analysis/", list_name, ".png"), width = 8, height = 8, units="in", res=300)
-  print(p)
-  dev.off()
+  #png(paste0("test_analysis/", list_name, ".png"), width = 8, height = 8, units="in", res=300)
+  #print(p)
+  #dev.off()
 }
