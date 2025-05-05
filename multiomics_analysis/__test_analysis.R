@@ -108,7 +108,10 @@ gseGO_devil <- enrichmentGO(rna_devil %>% dplyr::filter(adj_pval <= .05))
 gseGO_glm <- enrichmentGO(rna_glm %>% dplyr::filter(adj_pval <= .05))
 gseGO_nebula <- enrichmentGO(rna_nebula %>% dplyr::filter(adj_pval <= .05))
 
-gseGO_devil@result$Description
+saveRDS(gseGO_devil, "test_analysis_res/gseGO_devil.rds")
+saveRDS(gseGO_glm, "test_analysis_res/gseGO_glm.rds")
+saveRDS(gseGO_nebula, "test_analysis_res/gseGO_nebula.rds")
+
 gseGO_devil@result %>% nrow()
 gseGO_glm@result %>% nrow()
 gseGO_nebula@result %>% nrow()
@@ -161,88 +164,57 @@ plot_dotplot = function(topK = 10) {
   
   clusters <- c(
     # Muscle development & contraction
-    "Muscle Development and Contraction",  # 1
-    "Muscle Development and Contraction",  # 2
-    "Muscle Development and Contraction",  # 3
-    "Muscle Development and Contraction",  # 4
-    "Muscle Development and Contraction",  # 5
-    "Muscle Development and Contraction",  # 6
-    "Muscle Development and Contraction",  # 7
-    
-    # Cell adhesion
-    "Cell Adhesion",  # 8
-    "Cell Adhesion",  # 9
-    
-    # Immune/defense response
-    "Immune and Defense Response",  # 10
-    "Cell Cycle, Apoptosis, and Signaling",  # 11
-    "Immune and Defense Response",  # 12
-    "Immune and Defense Response",  # 13
-    "Immune and Defense Response",  # 14
-    "Immune and Defense Response",  # 15
-    "Immune and Defense Response",  # 16
-    "Immune and Defense Response",  # 17
-    
-    # Transport
-    "Transport and Endocytosis",  # 18
-    
-    # Morphogenesis
-    "Morphogenesis and Tissue Organization",  # 19
-    
-    # Organ development (non-muscle)
-    "Organ Development (non-muscle)",  # 20
-    
-    # Morphogenesis
-    "Morphogenesis and Tissue Organization",  # 21
-    
-    # Muscle development
-    "Muscle Development and Contraction",  # 22
-    
-    # Apoptosis / signaling
-    "Cell Cycle, Apoptosis, and Signaling",  # 23
-    
-    # Other / metabolic regulation
-    "Other / General Regulation",  # 24
-    "Other / General Regulation",  # 25
-    
-    # Growth factor / cytokine
-    "Growth Factor and Cytokine Response",  # 26
-    "Cell Cycle, Apoptosis, and Signaling",  # 27
-    "Growth Factor and Cytokine Response",  # 28
-    
-    # Organ development (non-muscle)
-    "Organ Development (non-muscle)",  # 29
-    
-    # Transport
-    "Transport and Endocytosis",  # 30
-    
-    # Apoptosis
-    "Cell Cycle, Apoptosis, and Signaling",  # 31
-    "Cell Cycle, Apoptosis, and Signaling",  # 32
-    
-    # Immune
-    "Immune and Defense Response",  # 33
-    "Immune and Defense Response",  # 34
-    
-    # Transport
-    "Transport and Endocytosis",  # 35
-    
-    # Immune
-    "Immune and Defense Response",  # 36
-    "Immune and Defense Response",  # 37
-    "Immune and Defense Response",  # 38
-    
-    # Organ development (non-muscle)
-    "Organ Development (non-muscle)",  # 39
-    
-    # Cytokine / growth factor
-    "Growth Factor and Cytokine Response",  # 40
-    
-    # Other regulation
-    "Other / General Regulation",  # 41
-    
-    # Cytokine / growth factor
-    "Growth Factor and Cytokine Response"   # 42
+    "Muscle Development and Contraction",
+    "Muscle Development and Contraction",
+    "Muscle Development and Contraction",
+    "Muscle Development and Contraction",
+    "Muscle Development and Contraction",
+    "Muscle Development and Contraction",
+    "Muscle Development and Contraction",
+    "Cell Adhesion",
+    "Cell Adhesion",
+    "Immune and Defense Response",
+    "Cell Cycle, Apoptosis, and Signaling",
+    "Immune and Defense Response",
+    "Immune and Defense Response",
+    "Immune and Defense Response",
+    "Immune and Defense Response",
+    "Immune and Defense Response",
+    "Immune and Defense Response",
+    "Transport and Endocytosis",
+    "Morphogenesis and Tissue Organization",
+    "Organ Development (non-muscle)",
+    "Muscle Development and Contraction",
+    "Muscle Development and Contraction",
+    "Cell Cycle, Apoptosis, and Signaling",
+    "Other / General Regulation",
+    "Other / General Regulation",
+    "Response to signaling molecules",
+    "Cell Cycle, Apoptosis, and Signaling",
+    "Response to signaling molecules",
+    "Organ Development (non-muscle)", 
+    "Transport and Endocytosis",
+    "Cell Cycle, Apoptosis, and Signaling",
+    "Cell Cycle, Apoptosis, and Signaling",
+    "Immune and Defense Response",
+    "Immune and Defense Response",
+    "Transport and Endocytosis",
+    "Immune and Defense Response",
+    "Immune and Defense Response",
+    "Immune and Defense Response",
+    "Organ Development (non-muscle)",
+    "Response to signaling molecules",
+    "Other / General Regulation",
+    "Response to signaling molecules"
+  )
+  
+  redundant_terms = list(
+    "cell-cell adhesion via plasma-membrane adhesion molecules" = c("cell-cell adhesion via plasma-membrane adhesion molecules", "homophilic cell adhesion via plasma membrane adhesion molecules"),
+    "regulation of extrinsic apoptotic signaling pathway" = c("regulation of extrinsic apoptotic signaling pathway", "regulation of extrinsic apoptotic signaling pathway via death domain receptors", "negative regulation of extrinsic apoptotic signaling pathway via death domain receptors", "negative regulation of extrinsic apoptotic signaling pathway"),
+    "response to fibroblast growth factor" = c("regulation of extrinsic apoptotic signaling pathway", "cellular response to fibroblast growth factor stimulus"),
+    "response to cytokine" = c("response to cytokine", "cellular response to cytokine stimulus"),
+    "response to biotic stimulus" = c("response to external biotic stimulus","response to biotic stimulus"),
+    "defense response" = c("defense response", "defense response to symbiont", "defense response to other organism")
   )
   
   go_cluster_map = c(clusters)
@@ -278,6 +250,17 @@ plot_dotplot = function(topK = 10) {
     nebula_res %>% dplyr::mutate(name = "NEBULA")
   )
   
+  df$Description = lapply(1:nrow(df), function(i) {
+    r = df[i,]
+    for (j in 1:length(redundant_terms)) {
+      if (r$Description %in% redundant_terms[[j]]) {
+        return(names(redundant_terms)[j])
+      }
+    }
+    return(r$Description)  
+  }) %>% unlist()
+  
+  df = df %>% dplyr::group_by(Description, name) %>% dplyr::filter(GeneRatio == max(GeneRatio))
   df$Biological_process = go_cluster_map[df$Description]
   
   ggplot(df, mapping = aes(x = name, y=Description, size = GeneRatio, col=pvalue )) +
@@ -346,6 +329,10 @@ tissue = target_tissue <- "Skeletal Muscle"
 tissue_gse_devil = get_tissue_specific_res(gseGO_devil, "devil")
 tissue_gse_glm = get_tissue_specific_res(gseGO_glm, "glmGamPoi")
 tissue_gse_nebula = get_tissue_specific_res(gseGO_nebula, "NEBULA")
+
+saveRDS(tissue_gse_devil, "test_analysis_res/tissue_gse_devil.rds")
+saveRDS(tissue_gse_glm, "test_analysis_res/tissue_gse_glm")
+saveRDS(tissue_gse_nebula, "test_analysis_res/tissue_gse_nebula")
 
 pval_cut = .05
 best_df = lapply(list(tissue_gse_devil, tissue_gse_glm, tissue_gse_nebula), function(tissue_gse) {
@@ -452,5 +439,6 @@ gene_group_impact_plot = compare_gse(
   name2 = "glmGamPoi private"
 )
 saveRDS(gene_group_impact_plot, "plot/final_gene_group_impact_plot.rds")
+
 
 

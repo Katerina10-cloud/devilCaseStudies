@@ -126,7 +126,7 @@ pCD = (pC + theme(legend.direction='vertical', legend.position = "bottom", legen
 
 final_plot = free(pAB) + free(pCD) +
   plot_layout(nrow = 2) +
-  plot_annotation(tag_levels = "A") &
+  plot_annotation(tag_levels = list(c("A", "", "B", "", ""))) &
   theme(
     text = element_text(size = 12),
     plot.tag = element_text(face = 'bold'),
@@ -170,7 +170,7 @@ EEFFGG"
 supp_fig = free(pAB) + free(pCD) +
   free(pEF$lfc) + free(pEF$theta) + free(pG) +
   plot_layout(design = design) +
-  plot_annotation(tag_levels = list(c("A", "B", "C", "", "D"))) &
+  plot_annotation(tag_levels = list(c("A", "", "B", "", "C", "", "D"))) &
   theme(
     text = element_text(size = 12),
     plot.tag = element_text(face = 'bold'),
@@ -240,4 +240,3 @@ CCCC
 
   ggsave(paste0("all_figures/scaling_and_sim/supp_sim_",author,".pdf"), final_plot, width = 10, height = 10, dpi = 600, units = "in")
 }
-

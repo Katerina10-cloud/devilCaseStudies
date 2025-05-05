@@ -28,6 +28,26 @@ cw_table <- res %>%
   dplyr::mutate(name = factor(name, levels=c("devil", "Nebula", "glmGamPoi", "limma"))) %>% 
   dplyr::arrange(name) %>% 
   tidyr::pivot_wider(names_from = name, values_from = MCC)
+
+cw_table <- res %>%
+  dplyr::filter(is.pb == FALSE) %>%
+  dplyr::filter(name %in% method_cellwise) %>%
+  dplyr::mutate(name = ifelse(grepl("glmGamPoi", name), "glmGamPoi", name)) %>%
+  dplyr::mutate(name = ifelse(grepl("Devil", name), "devil", name)) %>%
+  dplyr::group_by(name, author, patients, is.pb) %>%
+  dplyr::summarise(
+    across(
+      c(MCC), # Explicitly list the columns
+      ~sprintf("%.3f ± %.3f", quantile(., .25), quantile(., .75)),
+      .names = "{.col}" # Column naming
+    ),
+    .groups = "drop"
+  ) %>%
+  dplyr::select(name, author, patients, MCC) %>% 
+  dplyr::mutate(name = factor(name, levels=c("devil", "Nebula", "glmGamPoi", "limma"))) %>% 
+  dplyr::arrange(name) %>% 
+  tidyr::pivot_wider(names_from = name, values_from = MCC)
+
 cw_table
 
 ## PatientWise ####
