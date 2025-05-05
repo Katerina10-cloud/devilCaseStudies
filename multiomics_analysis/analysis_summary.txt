@@ -1,0 +1,28 @@
+GO Term Enrichment Analysis - Comparison Summary
+================================================
+
+Initial number of significant DE genes: 2650 
+Number of 'sketchy' genes removed: 479 
+Number of DE genes after filtering: 2171 
+
+GO term enrichment results:
+- GO terms in full analysis: 83 
+- GO terms in filtered analysis: 69 
+
+GO term overlap:
+# A tibble: 3 × 2
+  presence             count
+  <chr>                <int>
+1 Both                    48
+2 Only with sketchy       35
+3 Only without sketchy    21
+
+GO terms found only with sketchy genes: 35 
+GO terms found only without sketchy genes: 21 
+
+Significance changes for GO terms present in both analyses:
+# A tibble: 2 × 2
+  significance_change              count
+  <chr>                            <int>
+1 Less significant without sketchy    30
+2 More significant without sketchy    18
