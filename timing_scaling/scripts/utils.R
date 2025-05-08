@@ -282,13 +282,8 @@ my_fit_devil <- function(
     if (is.null(dim(beta))) {
       beta = matrix(beta, ncol = 1)
     }
-<<<<<<< HEAD
-
-    iterations=res_beta_fit$iter
-=======
-
+    
     iterations=c(res_beta_fit$iter, res_beta_fit_extra$iter)
->>>>>>> 21c7fb8c9b06f7258856dd1d7882f32b3a1c7156
 
   } else {
     start_time <- Sys.time()
@@ -355,8 +350,6 @@ make_example_dds <- function(n_genes, n_replicates, n_conditions){
   object <- list(countData = countData, design = x)
   object
 }
-
-<<<<<<< HEAD
 
 fit_devil_gpu <- function(
     input_matrix,
@@ -701,4 +694,3 @@ plot_correlations <- function(fits_folder) {
 
   list(lfc=p1, theta=p2)
 }
->>>>>>> 21c7fb8c9b06f7258856dd1d7882f32b3a1c7156
