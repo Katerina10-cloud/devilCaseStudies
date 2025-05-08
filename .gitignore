@@ -1,6 +1,8 @@
 .DS_Store
 .RData
 *data/*
+de_analysis/*test*
+de_analysis/nullpower/*test*
 *seurat.RDS
 .Rproj.user
 *.Rproj
