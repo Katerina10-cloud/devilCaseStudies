@@ -42,7 +42,7 @@ for (n_genes in c(100, 1000, 10000)) {
     ), min_iterations = MIN_ITER, memory = T)
     b.devil$result <- NULL
 
-    res_name = paste0("results/baronPancreas/cpu_devil_", n_genes, "_ngene_", n_cells, "_ncells_", N_CELL_TYPES, "_celltypes.rds")
+    res_name = paste0("results/baronPancreas/cpu/cpu_devil_", n_genes, "_ngene_", n_cells, "_ncells_", N_CELL_TYPES, "_celltypes.rds")
     saveRDS(b.devil, file = res_name)
 
     print("inference starting glm ...")
@@ -52,7 +52,7 @@ for (n_genes in c(100, 1000, 10000)) {
     )
     b.glmGamPoi$result <- NULL
 
-    res_name = paste0("results/baronPancreas/cpu_glmGamPoi_", n_genes, "_ngene_", n_cells, "_ncells_", N_CELL_TYPES, "_celltypes.rds")
+    res_name = paste0("results/baronPancreas/cpu/cpu_glmGamPoi_", n_genes, "_ngene_", n_cells, "_ncells_", N_CELL_TYPES, "_celltypes.rds")
     saveRDS(b.glmGamPoi, file = res_name)
   }
 }

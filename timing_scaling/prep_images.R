@@ -6,7 +6,7 @@ source("utils_img.R")
 
 model_levels = c("glmGamPoi - cpu", "devil - cpu", "devil - a100", "devil - h100")
 
-dataset_name = "MacaqueBrain"
+dataset_name = "baronPancreas"
 add_predicttions = TRUE
 for (dataset_name in c("MacaqueBrain", "baronPancreas")) {
   results_folder <- paste0("results/", dataset_name)
