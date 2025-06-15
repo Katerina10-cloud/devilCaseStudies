@@ -25,6 +25,8 @@ for (dataset_name in c("MacaqueBrain", "baronPancreas")) {
   
   time_results$model_name = factor(time_results$model_name, levels = model_levels)
   mem_results$model_name = factor(mem_results$model_name, levels = model_levels)
+  
+  mem_results %>% dplyr::arrange(n_cells, n_genes)
 
   # Comparisons ####
   pA <- time_comparison(time_results)

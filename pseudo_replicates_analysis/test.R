@@ -44,7 +44,7 @@ method_names <- c('glmGamPoi (Pb)', 'edgeR (Pb)', 'limma (Pb)',
                   'glmGamPoi (cell)', 'Nebula', 'Devil (base)', 'Devil (mixed)')
 
 # Define datasets to analyze
-dataset_names <- c("Crowell19", "BacherTCellData", "ReprocessedFluidigmData", "HuCortexData")
+dataset_names <- c("Crowell19", "BacherTCellData", "HuCortexData")
 dataset_names = c("Crowell19", "BacherTCellData", "HuCortexData", "LedergorMyelomaData", "GrunHSCData")
 # =============================================================================
 # EXPERIMENT FUNCTIONS
@@ -98,7 +98,7 @@ get_dataset = function(dataset_name) {
 }
 
 apply_qc_filtering <- function(cnt_matrix, col_data) {
-  print("Applying QC filtering...")
+  print("Applying QC filtering with donor balancing...")
   
   # Calculate QC metrics
   library_sizes <- colSums(cnt_matrix)
@@ -120,31 +120,88 @@ apply_qc_filtering <- function(cnt_matrix, col_data) {
     print("Warning: No mitochondrial genes found with standard naming conventions")
   }
   
-  # Apply QC thresholds
+  # Apply QC thresholds for individual cells
   cell_lib_filter <- library_sizes >= 1000
   cell_mito_filter <- mito_percent <= 15
   cell_gene_filter <- genes_per_cell >= 500
   
-  # Updated gene filter: expressed in >= 5% of cells
-  min_cells <- ceiling(0.05 * ncol(cnt_matrix))  # 5% of total cells
-  gene_cell_filter <- cells_per_gene >= min_cells
+  # Combine individual cell filters
+  cell_qc_pass <- cell_lib_filter & cell_mito_filter & cell_gene_filter
   
-  # Combine filters
-  cells_to_keep <- cell_lib_filter & cell_mito_filter & cell_gene_filter
-  genes_to_keep <- gene_cell_filter
-  
-  print("=== QC FILTERING SUMMARY ===")
+  print("=== INITIAL QC FILTERING ===")
   print(paste("Library size filter (>=1000):", sum(cell_lib_filter), "/", length(cell_lib_filter), "cells pass"))
   print(paste("Mitochondrial filter (<=15%):", sum(cell_mito_filter), "/", length(cell_mito_filter), "cells pass"))
   print(paste("Genes per cell filter (>=500):", sum(cell_gene_filter), "/", length(cell_gene_filter), "cells pass"))
-  print(paste("Combined cell filters:", sum(cells_to_keep), "/", length(cells_to_keep), "cells pass"))
-  print(paste("Gene filter (>=5% of cells):", sum(genes_to_keep), "/", length(genes_to_keep), "genes pass"))
+  print(paste("Combined individual filters:", sum(cell_qc_pass), "/", length(cell_qc_pass), "cells pass"))
+  
+  # DONOR BALANCING: Keep same number of cells per donor
+  print("=== DONOR BALANCING ===")
+  
+  # Get donor information
+  unique_donors <- unique(col_data$donor_id)
+  print(paste("Number of unique donors:", length(unique_donors)))
+  
+  # Count QC-passing cells per donor
+  donor_qc_counts <- table(col_data$donor_id[cell_qc_pass])
+  print("QC-passing cells per donor:")
+  print(donor_qc_counts)
+  
+  # Find minimum number of QC-passing cells across donors
+  min_cells_per_donor <- min(donor_qc_counts)
+  print(paste("Minimum QC-passing cells per donor:", min_cells_per_donor))
+  
+  if (min_cells_per_donor == 0) {
+    stop("At least one donor has no cells passing QC filters!")
+  }
+  
+  # For each donor, randomly select min_cells_per_donor from QC-passing cells
+  set.seed(RANDOM_SEED)  # For reproducible donor balancing
+  cells_to_keep_balanced <- c()
+  
+  for (donor in unique_donors) {
+    donor_cells <- which(col_data$donor_id == donor)
+    donor_qc_cells <- donor_cells[cell_qc_pass[donor_cells]]
+    
+    if (length(donor_qc_cells) >= min_cells_per_donor) {
+      # Randomly sample min_cells_per_donor cells from this donor
+      selected_cells <- sample(donor_qc_cells, min_cells_per_donor, replace = FALSE)
+      cells_to_keep_balanced <- c(cells_to_keep_balanced, selected_cells)
+      print(paste("Donor", donor, "- kept", min_cells_per_donor, "cells out of", length(donor_qc_cells), "QC-passing cells"))
+    } else {
+      stop(paste("Donor", donor, "has only", length(donor_qc_cells), "QC-passing cells, less than minimum", min_cells_per_donor))
+    }
+  }
+  
+  # Create final cell filter
+  final_cell_filter <- rep(FALSE, ncol(cnt_matrix))
+  final_cell_filter[cells_to_keep_balanced] <- TRUE
+  
+  # Gene filtering (same as before)
+  min_cells_for_gene <- ceiling(0.05 * sum(final_cell_filter))  # 5% of final cells
+  gene_cell_filter <- rowSums(cnt_matrix[, final_cell_filter] > 0) >= min_cells_for_gene
+  
+  print("=== FINAL FILTERING SUMMARY ===")
+  print(paste("Balanced cell selection:", sum(final_cell_filter), "/", ncol(cnt_matrix), "cells kept"))
+  print(paste("Cells per donor after balancing:", min_cells_per_donor))
+  print(paste("Total donors retained:", length(unique_donors)))
+  print(paste("Gene filter (>=5% of final cells):", sum(gene_cell_filter), "/", nrow(cnt_matrix), "genes pass"))
+  
+  # Verify donor balance
+  final_donor_counts <- table(col_data$donor_id[final_cell_filter])
+  print("Final cells per donor:")
+  print(final_donor_counts)
+  
+  if (length(unique(final_donor_counts)) > 1) {
+    warning("Donor balancing failed - unequal cell counts per donor!")
+  } else {
+    print("✓ Donor balancing successful - all donors have equal cell counts")
+  }
   
   # Apply filters
-  cnt_matrix_filtered <- cnt_matrix[genes_to_keep, cells_to_keep]
-  col_data_filtered <- col_data[cells_to_keep, ]
+  cnt_matrix_filtered <- cnt_matrix[gene_cell_filter, final_cell_filter]
+  col_data_filtered <- col_data[final_cell_filter, ]
   
-  print(paste("After QC filtering:", nrow(cnt_matrix_filtered), "genes x", ncol(cnt_matrix_filtered), "cells"))
+  print(paste("After balanced QC filtering:", nrow(cnt_matrix_filtered), "genes x", ncol(cnt_matrix_filtered), "cells"))
   
   return(list(cnt_matrix = cnt_matrix_filtered, col_data = col_data_filtered))
 }
@@ -327,7 +384,7 @@ for (dataset_name in dataset_names) {
     cnt_matrix <- dataset$cnt_mat
     col_data <- dataset$meta
     
-    # Apply QC filtering
+    # Apply QC filtering with donor balancing
     filtered_data <- apply_qc_filtering(cnt_matrix, col_data)
     cnt_matrix <- filtered_data$cnt_matrix
     col_data <- filtered_data$col_data
@@ -408,101 +465,3 @@ if (length(all_results) > 0) {
 } else {
   print("No datasets were successfully processed!")
 }
-
-stop()
-
-final_results = readRDS("celltype_results.rds")
-
-# =============================================================================
-# VISUALIZATION
-# =============================================================================
-
-# Calculate method ordering based on mean DEGs across all cell types
-method_order <- final_results %>%
-  group_by(method) %>%
-  summarise(mean_deg = mean(n_deg, na.rm = TRUE)) %>%
-  arrange(mean_deg) %>%
-  pull(method)
-
-# Create comprehensive plot
-p1 <- final_results %>% 
-  mutate(
-    method = factor(method, levels = method_order),
-    expression_group = factor(expression_group, levels = c("low", "medium", "high")),
-    seq = ifelse(grepl("Pb", method), "Pseudo-bulk", "Single-cell")
-  ) %>% 
-  ggplot(aes(x = method, y = n_deg, fill = expression_group)) +
-  geom_bar(stat = "identity", position = "dodge") +
-  facet_grid(cell_type ~ experiment_type, scales = "free") +
-  coord_flip() +
-  theme_bw() +
-  labs(
-    title = "Differential Expression Analysis Results by Cell Type",
-    subtitle = "Comparison of Bio-replicates vs Pseudo-replicates",
-    x = "Method",
-    y = "Number of DEGs",
-    fill = "Expression Group"
-  ) +
-  theme(
-    strip.background = element_rect(fill = "lightgray"),
-    legend.position = "bottom",
-    axis.text.x = element_text(angle = 45, hjust = 1)
-  )
-
-print(p1)
-
-# Alternative plot - focus on differences between experiment types
-p2 <- final_results %>% 
-  select(cell_type, experiment_type, method, expression_group, n_deg) %>%
-  pivot_wider(names_from = experiment_type, values_from = n_deg) %>%
-  mutate(
-    deg_difference = pseudo_replicates - bio_replicates,
-    method = factor(method, levels = method_order)
-  ) %>%
-  ggplot(aes(x = method, y = deg_difference, fill = expression_group)) +
-  geom_bar(stat = "identity", position = "dodge") +
-  facet_wrap(~cell_type, scales = "free") +
-  coord_flip() +
-  theme_bw() +
-  labs(
-    title = "Difference in DEG Detection: Pseudo-replicates - Bio-replicates",
-    subtitle = "Positive values indicate more DEGs detected with pseudo-replicates",
-    x = "Method",
-    y = "Difference in Number of DEGs",
-    fill = "Expression Group"
-  ) +
-  theme(
-    strip.background = element_rect(fill = "lightgray"),
-    legend.position = "bottom"
-  ) +
-  geom_hline(yintercept = 0, linetype = "dashed", alpha = 0.5)
-
-print(p2)
-
-# Summary statistics
-print("=== SUMMARY STATISTICS ===")
-summary_stats <- final_results %>%
-  group_by(cell_type, experiment_type, method, expression_group) %>%
-  summarise(
-    n_deg = first(n_deg),
-    prop_deg = first(prop_deg),
-    .groups = "drop"
-  )
-
-print(summary_stats)
-
-# Summary by cell type
-print("=== SUMMARY BY CELL TYPE ===")
-celltype_summary <- final_results %>%
-  group_by(cell_type, experiment_type) %>%
-  summarise(
-    total_deg = sum(n_deg),
-    mean_prop_deg = mean(prop_deg),
-    .groups = "drop"
-  )
-
-print(celltype_summary)
-
-# Save results (optional)
-# write_csv(final_results, "de_analysis_celltype_results.csv")
-# write_csv(summary_stats, "de_analysis_celltype_summary.csv")
